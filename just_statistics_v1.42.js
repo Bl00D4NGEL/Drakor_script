@@ -130,7 +130,7 @@ function SetupLog(){
                 AddOption(gainedMaterials[i], document.getElementById("selectLogMaterial"));
             }
             for(var j=0;j<multiCollections.length;j++){
-                if(multiCollections[j] === undefined){
+                if(multiCollections[j] !== undefined){
                     AddOption(multiCollections[j], document.getElementById("selectLogMulti"));
                 }
             }
