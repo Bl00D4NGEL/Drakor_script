@@ -159,20 +159,20 @@ Pretty self-explaining. It basically resets the variables to their base state.
 This only gets triggered by the reset-button (id=buttonResetStatistics) and every time the log gets built and the "totalStatistics" variable is set to false
 */
 function ResetStatistics(){
-    var totalExp = 0;
-    var avgExp = 0;
-    var thenLength = 0;			//This is to prevent the interval to loop over the drop more than once
-    var totalLength = 1;		//Same as "thenLength" variable, just that this is for a total statistic reference
-    var rarities = ["Common", "Superior", "Rare", "Epic", "Legendary"];
-    var raritiesCollected = [0,0,0,0,0];	//Array of 0's for the rarity-meter
-    var amountNothing = 0;		//Used for the "Nothing x" output
-    var amountMaterials = [];	//Array for how much of the item that dropped/ has been created was dropped/made exactly
-    var gainedMaterials = [];	//Same as "amountMaterials" just for the name storage (I might change this to a dictionary at some point)
-    var multiCollections = [];
-    var totalStatistics = false;
-    var avgMaterials = 0;
-    var materialDic= {};
-    var multiDic = {};
+    totalExp = 0;
+    avgExp = 0;
+    thenLength = 0;			//This is to prevent the interval to loop over the drop more than once
+    totalLength = 1;		//Same as "thenLength" variable, just that this is for a total statistic reference
+    rarities = ["Common", "Superior", "Rare", "Epic", "Legendary"];
+    raritiesCollected = [0,0,0,0,0];	//Array of 0's for the rarity-meter
+    amountNothing = 0;		//Used for the "Nothing x" output
+    amountMaterials = [];	//Array for how much of the item that dropped/ has been created was dropped/made exactly
+    gainedMaterials = [];	//Same as "amountMaterials" just for the name storage (I might change this to a dictionary at some point)
+    multiCollections = [];
+    totalStatistics = false;
+    avgMaterials = 0;
+    materialDic = {};
+    multiDic = {};
     console.log("Everything has been re-set");
 }
 
@@ -371,4 +371,5 @@ Patch notes 1.42
 -   Renamed script to "Just statistics v1.42" instead of the original name "Collection history"
 Ninja patch:
 -   Added everything to it's own div inside the original div (class ="skillresultsheader")
+-	Fixed a bug where the select(s) would not reset their data properly
 */
