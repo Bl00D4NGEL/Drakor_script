@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Just statistics v1.42
 // @version      1.42
-// @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more
+// @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more...)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://www.drakor.com
 // ==/UserScript==
@@ -23,36 +23,39 @@ var multiCollections = [];
 var totalStatistics = false;
 var avgMaterials = 0;
 var materialDic = {};
+var multiDic = {};
 
 /*
 This function updates the log under the rarity-bar whenever the select has changed it's object
 The printed log gets built up in the interval each time something is collected
-The function itself just prints out the dictionary value
+The function itself takes the select value(var = value) and the dictionary entry(var = logText)
 */
-function UpdateMaterialHistory(){
-    var materialToDisplay = document.getElementById("selectLogMaterial").value;
+function UpdateHistory(){
     if(document.getElementById("materialLog") !== null){
         document.getElementById("logDiv").removeChild(document.getElementById("materialLog"));
     }
-    if(materialToDisplay !== "---Select a material---"){
-        var materialLog = document.createElement("small");
-        materialLog.innerHTML = materialDic[materialToDisplay];
-        materialLog.id = "materialLog";
-        materialLog.style.fontSize = "14px";
-        document.getElementById("logDiv").appendChild(materialLog);
+    var filterArray = [materialDic[document.getElementById("selectLogMaterial").value], multiDic[document.getElementById("selectLogMulti").value]];
+    var materialLog = document.createElement("small");
+    materialLog.innerHTML = "";
+    materialLog.id = "materialLog";
+    materialLog.style.fontSize = "14px";
+    for(var i=0;i<filterArray.length;i++){
+        if( filterArray[i] !== "---Select a material---"  &&  filterArray[i] !== "---Select a multi---" && filterArray[i] !== undefined){
+            materialLog.innerHTML += filterArray[i];
+        }
     }
+    document.getElementById("logDiv").appendChild(materialLog);
 }
 
 /*
 Simple and self-explaining function:
-Adds an option to the dropdown, argument = option, gets called if the collected material hasn't been added yet
+Adds an option to the select, option = thing to add to the select, select = select to add to, gets called if the collected material/multi hasn't been added yet
 */
-function AddOption(option){
-    obj = document.getElementById("selectLogMaterial");
+function AddOption(option, select){
     var newOption = document.createElement("option");
     newOption.text= option;
     newOption.value = option;
-    obj.add(newOption);
+    select.add(newOption);
 }
 
 /*
@@ -67,21 +70,23 @@ function SetupLog(){
             var buttonResetStatistics = document.createElement("button");
             var buttonResetStatisticsText = document.createTextNode("Reset Statistics");
             var selectLogMaterial = document.createElement("select");
+            var selectLogMulti = document.createElement("select");
             var logDiv = document.createElement("div");
             logDiv.style.maxHeight = "400px";
             logDiv.style.overflowX = "hidden";
             logDiv.style.overflowY = "scroll";
+            logDiv.style.fontSize = "14px";
             logDiv.id = "logDiv";
             var fragment = document.createDocumentFragment();
             buttonResetStatistics.appendChild(buttonResetStatisticsText);
             checkBoxTotalStatisticsText.innerHTML = "Track total statistics? </br>";
             emptyLine.innerHTML = "</br>";
-            checkBoxTotalStatisticsText.style.fontSize = "14px";
-            selectLogMaterial.style.fontSize = "14px";
+            selectLogMulti.style.padding = "4px";
             selectLogMaterial.style.padding = "4px";
             checkBoxTotalStatistics.type = "checkbox";
             checkBoxTotalStatistics.id = "checkBoxTotalStatistics";
             selectLogMaterial.id = "selectLogMaterial";
+            selectLogMulti.id = "selectLogMulti";
             buttonResetStatistics.id = "buttonResetStatistics";
             if(totalStatistics === true){
                 checkBoxTotalStatistics.checked = true;
@@ -93,6 +98,7 @@ function SetupLog(){
             fragment.appendChild(checkBoxTotalStatisticsText);
             fragment.appendChild(selectLogMaterial);
             fragment.appendChild(emptyLine);
+            fragment.appendChild(selectLogMulti);
             fragment.appendChild(emptyLine);
             fragment.appendChild(buttonResetStatistics);
             document.getElementsByClassName("skillBox")[0].appendChild(fragment);
@@ -105,14 +111,28 @@ function SetupLog(){
                 ResetStatistics();
             });
             selectLogMaterial.addEventListener("change",function(){
-                UpdateMaterialHistory();
+                UpdateHistory();
+            });
+            selectLogMulti.addEventListener("change",function(){
+                UpdateHistory();
             });
             if(totalStatistics === false){
                 ResetStatistics();
             }
-            AddOption("---Select a material---");
+            AddOption("---Select a material---",  document.getElementById("selectLogMaterial"));
+            AddOption("---Select a multi---",  document.getElementById("selectLogMulti"));
+            /*
+            This will only trigger if totalStatistics is true.
+            The selects won't keep their data because the log gets rebuilt for each node...
+            Therefore I needed to "hard-code" this on
+            */
             for(var i=0; i<gainedMaterials.length;i++){
-                AddOption(gainedMaterials[i]);
+                AddOption(gainedMaterials[i], document.getElementById("selectLogMaterial"));
+            }
+            for(var j=0;j<multiCollections.length;j++){
+                if(multiCollections[j] === undefined){
+                    AddOption(multiCollections[j], document.getElementById("selectLogMulti"));
+                }
             }
         }
     }
@@ -152,6 +172,7 @@ function ResetStatistics(){
     var totalStatistics = false;
     var avgMaterials = 0;
     var materialDic= {};
+    var multiDic = {};
     console.log("Everything has been re-set");
 }
 
@@ -195,6 +216,7 @@ function UpdateStatisticDivs(rarityArray, totalLength){
 Simple function to parse in a string and then return the same string just with blank spaces, plus signs and brackets removed.
 */
 function createAmountString(stringtoBeConverted){
+    stringtoBeConverted = stringtoBeConverted.replace(" ","");
     stringtoBeConverted = stringtoBeConverted.replace("+","");
     stringtoBeConverted = stringtoBeConverted.replace("(","");
     return stringtoBeConverted;
@@ -237,14 +259,15 @@ setInterval(function(){
         if(isNaN(totalExp)){
             totalExp = "invalid input";
         }
+        var rawAmount = amount;
         amount = amount.replace(" ", "");
         if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
             lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
-            if(gainedMaterials.indexOf(lastCollectedMaterial) == -1){ //If the collected material is not in the gainedMaterials array, the indexOf returns -1, thus it adds this variable to the array
+            if(gainedMaterials.indexOf(lastCollectedMaterial) == -1){ //If the collected material is not in the gainedMaterials array, the indexOf returns -1, thus it adds this variable to the array and everything else
                 gainedMaterials.push(lastCollectedMaterial);
                 amountMaterials.push(0);
-                AddOption(lastCollectedMaterial);
-                materialDic[lastCollectedMaterial] = "" + resultsText.slice(1, resultsText.indexOf("]")) +  " - " + resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]")) + " x" + amount;
+                AddOption(lastCollectedMaterial,  document.getElementById("selectLogMaterial"));
+                materialDic[lastCollectedMaterial] = "</br>" + resultsText.slice(1, resultsText.indexOf("]")) +  " - " + resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]")) + " x" + amount;
             }
             else{
                 materialDic[lastCollectedMaterial] += "</br>" + resultsText.slice(1, resultsText.indexOf("]")) +  " - " + resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]")) + " x" + amount;
@@ -270,6 +293,8 @@ setInterval(function(){
         //Please. Do. Not. Hate. Me. I know this leaves a lot of "undefined" entries in the array, but I have yet to find a different way to handle this
         if(multiCollections[amount] === undefined && amount !== ""){
             multiCollections[amount] = 1;
+            AddOption(amount, document.getElementById("selectLogMulti"));
+            multiDic[amount] = "</br>" + resultsText.slice(1, resultsText.indexOf("]")) +  " - " + resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]")) + " x" + rawAmount;
         }
         else if(amount === ""){
             multiCollections[0] = amountNothing;
@@ -277,6 +302,7 @@ setInterval(function(){
         else
         {
             multiCollections[amount]++;
+            multiDic[amount] += "</br>" + resultsText.slice(1, resultsText.indexOf("]")) +  " - " + resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]")) + " x" + rawAmount;
         }
         avgMaterials = 0; //Reset this to 0 to avoid wrong output (Would get way too high if not re-set)
         //This adds up the total multi-collections or -creations that you have achieved and finally add it to the output
@@ -302,7 +328,7 @@ setInterval(function(){
             }
         }
         UpdateStatisticDivs(raritiesCollected, totalLength);
-        UpdateMaterialHistory();
+        UpdateHistory();
         totalLength++;
     }
     thenLength = results.length;
@@ -338,7 +364,7 @@ Patch notes 1.42
 - 	Created fall-back else in the amount,expDropped and totalExp if-clause to report an error to the console
 11th.June.2016
 -   Added a dictionary variable "materialDic" that helps build up the displayed log of a specific material
--   Added a history log for specific materials
+-   Added a history log for specific materials/multis
 -   Removed alert from ResetStatistics as it was kind of annoying
 -   Removed the Limit function since it was a pointless (and unallowed) feature anyway
 -   Reworded some labels on the checkbox and console outputs
