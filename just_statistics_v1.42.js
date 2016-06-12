@@ -224,7 +224,7 @@ function createAmountString(stringtoBeConverted){
 
 setInterval(function(){
     var results = document.getElementsByClassName("roundResult areaName");
-    if(results.length === 0){ //Setup the log if the node just got clicked. This currently loops over (too often)
+    if(results.length === 0 || document.getElementsByClassName("skillBox")[0].lastChild.id === "slots-remaining"){ //Setup the log if the node just got clicked. This currently loops over (too often)
         SetupLog();
     }
     //This if-clause is to prevent looping over the same thing too often, it'll only execute every time the node drops something
