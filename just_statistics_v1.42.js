@@ -104,6 +104,8 @@ function SetupLog(){
             document.getElementsByClassName("skillBox")[0].appendChild(fragment);
             document.getElementsByClassName("skillResultsHeader")[0].innerHTML = "";
             document.getElementsByClassName("skillResultsHeader")[0].appendChild(logDiv);
+            AddOption("---Select a material---",  document.getElementById("selectLogMaterial"));
+            AddOption("---Select a multi---",  document.getElementById("selectLogMulti"));
             checkBoxTotalStatistics.addEventListener("click", function(){
                 SetTotalStatistics();
             });
@@ -119,8 +121,6 @@ function SetupLog(){
             if(totalStatistics === false){
                 ResetStatistics();
             }
-            AddOption("---Select a material---",  document.getElementById("selectLogMaterial"));
-            AddOption("---Select a multi---",  document.getElementById("selectLogMulti"));
             /*
             This will only trigger if totalStatistics is true.
             The selects won't keep their data because the log gets rebuilt for each node...
@@ -129,9 +129,12 @@ function SetupLog(){
             for(var i=0; i<gainedMaterials.length;i++){
                 AddOption(gainedMaterials[i], document.getElementById("selectLogMaterial"));
             }
-            for(var j=0;j<multiCollections.length;j++){
-                if(multiCollections[j] !== undefined){
-                    AddOption(multiCollections[j], document.getElementById("selectLogMulti"));
+            if(multiCollections[0] > 0){
+            AddOption("nothing", document.getElementById("selectLogMulti"));
+            }
+            for(var j=0;j<(multiCollections.length-1);j++){
+                if(multiCollections[(j+1)] !== undefined){
+                    AddOption((j+1), document.getElementById("selectLogMulti"));
                 }
             }
         }
@@ -173,6 +176,8 @@ function ResetStatistics(){
     avgMaterials = 0;
     materialDic = {};
     multiDic = {};
+    document.getElementById("selectLogMulti").options.length = 1;
+    document.getElementById("selectLogMaterial").options.length = 1;
     console.log("Everything has been re-set");
 }
 
@@ -387,4 +392,5 @@ Ninja patch:
 -   Fixed a bug where the multi would display "ou" if you didn't find anything
 -   Also fixed the display of this so it does not display the time twice
 -   Fixed a bug where if you would execute the jquery command to get this script while you have already collected/created materials it would not execute the script correctly
+-   Fixed a bug where the multi-select would not reset/rebuild properly
 */
