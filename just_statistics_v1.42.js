@@ -290,14 +290,25 @@ setInterval(function(){
             output += "</br>Nothing x" + amountNothing;
         }
         output += "</br>and " + totalExp + " total experience(" + avgExp + " average experience)</br>on this node.</br>";
+        if(amount === "ou"){
+            amount = "nothing";
+        }
         //Please. Do. Not. Hate. Me. I know this leaves a lot of "undefined" entries in the array, but I have yet to find a different way to handle this
-        if(multiCollections[amount] === undefined && amount !== ""){
+        if(multiCollections[amount] === undefined && amount !== "nothing"){
             multiCollections[amount] = 1;
             AddOption(amount, document.getElementById("selectLogMulti"));
             multiDic[amount] = "</br>" + resultsText.slice(1, resultsText.indexOf("]")) +  " - " + resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]")) + " x" + rawAmount;
         }
-        else if(amount === ""){
-            multiCollections[0] = amountNothing;
+        else if(amount === "nothing"){
+            if( $("#selectLogMulti option[value='nothing']").length === 0){ // "nothing" as an option for multi instead of displaying "ou" if it is not present already
+                AddOption(amount, document.getElementById("selectLogMulti"));
+                multiCollections[0] = 1;
+                multiDic[amount] = "</br>" + resultsText.slice(1, resultsText.indexOf("]")) +  " - " + "You didn't find anything.";
+            }
+            else{
+                multiCollections[0] = amountNothing;
+                multiDic[amount] += "</br>" + resultsText.slice(1, resultsText.indexOf("]")) +  " - " + "You didn't find anything.";
+            }
         }
         else
         {
@@ -372,4 +383,7 @@ Patch notes 1.42
 Ninja patch:
 -   Added everything to it's own div inside the original div (class ="skillresultsheader")
 -	Fixed a bug where the select(s) would not reset their data properly
+12th.June.2016
+-   Fixed a bug where the multi would display "ou" if you didn't find anything
+-   Also fixed the display of this so it does not display the time twice
 */
