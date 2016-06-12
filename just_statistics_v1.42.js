@@ -386,4 +386,5 @@ Ninja patch:
 12th.June.2016
 -   Fixed a bug where the multi would display "ou" if you didn't find anything
 -   Also fixed the display of this so it does not display the time twice
+-   Fixed a bug where if you would execute the jquery command to get this script while you have already collected/created materials it would not execute the script correctly
 */
