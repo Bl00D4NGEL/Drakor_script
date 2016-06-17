@@ -355,19 +355,27 @@ Interval to set the Drakor title to the node remaining or to the combines that a
 Whatever case occurs gets written down.
 */
 setInterval(function(){
-    if(document.getElementsByClassName("roundResult damage areaDepleted").length !== 0){
-        document.getElementsByTagName("title")[0].innerText = "Node depleted";
-        alert("Node depleted");}
+        var foodBuffInfo = "[NBA] ";
+        if(document.getElementsByClassName("drIcon cardNone slot_default").length === 0){
+        foodBuffInfo = "[BA] ";
+        }
+        else
+        {
+        foodBuffInfo = "[NBA] ";
+        }
+        if(document.getElementsByClassName("roundResult damage areaDepleted").length !== 0){
+            document.getElementsByTagName("title")[0].innerText = foodBuffInfo +"Node depleted";
+            alert("Node depleted");}
 
-    else{
-        if(document.getElementsByClassName("nodeRemaining").length !== 0){
-            console.log(document.getElementsByClassName("nodeRemaining")[0].innerText);
-            document.getElementsByTagName("title")[0].innerText = document.getElementsByClassName("nodeRemaining")[0].innerText;
+        else{
+            if(document.getElementsByClassName("nodeRemaining").length !== 0){
+                console.log(document.getElementsByClassName("nodeRemaining")[0].innerText);
+                document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("nodeRemaining")[0].innerText.slice(0, document.getElementsByClassName("nodeRemaining")[0].innerText.indexOf("%")+1) + " left";
+            }
+            else if(document.getElementsByClassName("titleHeader").length > 0){
+                document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("titleHeader")[0].innerText.slice(document.getElementsByClassName("titleHeader")[0].innerText.indexOf("]")+ 1);
+            }
         }
-        else if(document.getElementsByClassName("titleHeader").length > 0 && document.getElementsByTagName("title")[0].innerText !== "Your limit has been hit"){
-            document.getElementsByTagName("title")[0].innerText = document.getElementsByClassName("titleHeader")[0].innerText.slice(document.getElementsByClassName("titleHeader")[0].innerText.indexOf("]")+ 1);
-        }
-    }
 }, 65000);
 
 /*
