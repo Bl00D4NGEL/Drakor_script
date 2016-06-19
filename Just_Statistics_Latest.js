@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Just statistics v1.51
-// @version      1.51
+// @name         Just statistics v1.52
+// @version      1.52
 // @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more...)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://www.drakor.com*
@@ -10,7 +10,7 @@
 Variable declaration
 PS: Global vars are ugly
 */
-var version = "v1.51";
+var version = "v1.52";
 //Variable declaration; getting the data out of local storage
 var showLog = false; //Change this to true to display  more detailed information about what gets saved to localstorage or loaded out of it
 var thenLength =  0;//This is to prevent the interval to loop over the drop more than once
@@ -62,20 +62,27 @@ setInterval(function(){ //This might be ugly, but currently I don't know a way t
     }
 }, 5000);
 
+/*
+Gets called each time the checkbox "display rarities below" is ticked.
+If is has a "true" value it'll display the rarities and some other info about them below everything else
+If it has a "false" value it'll delete the child to remove the data until it gets called again
+*/
 function DisplayRarities(){
     if(document.getElementById("checkBoxRarities").checked){
-        UpdateStatisticDivs();
         var lengthVar = totalLength - 1;
-        rarityLog = document.createElement("small");
-        rarityLog.innerHTML = "</br>";
-        rarityLog.id = "rarityLog";
-        rarityLog.style.fontSize = "14px";
-        rarityLog.innerHTML = "<b>Rarities collected: </b></br>";
-        for(var rarity = 0; rarity<rarities.length;rarity++){
-            rarityLog.innerHTML += rarities[rarity] + ": " + raritiesCollected[rarity] + "/" + lengthVar + " " + (100*(raritiesCollected[rarity]/lengthVar)).toFixed(1) +  "%</br>";
+        if(totalLength > 1){
+            UpdateStatisticDivs();
+            rarityLog = document.createElement("small");
+            rarityLog.innerHTML = "</br>";
+            rarityLog.id = "rarityLog";
+            rarityLog.style.fontSize = "14px";
+            rarityLog.innerHTML = "<b>Rarities collected: </b></br>";
+            for(var rarity = 0; rarity<rarities.length;rarity++){
+                rarityLog.innerHTML += rarities[rarity] + ": " + raritiesCollected[rarity] + "/" + lengthVar + " " + (100*(raritiesCollected[rarity]/lengthVar)).toFixed(1) +  "%</br>";
+            }
+            rarityLog.innerHTML += "Nothing: " + amountNothing + "/" + lengthVar + " " + (100*(amountNothing/lengthVar)).toFixed(1) + "%";
+            document.getElementById("logDiv").appendChild(rarityLog);
         }
-        rarityLog.innerHTML += "Nothing: " + amountNothing + "/" + lengthVar + " " + (100*(amountNothing/lengthVar)).toFixed(1) + "%";
-        document.getElementById("logDiv").appendChild(rarityLog);
     }
     else if(document.getElementById("rarityLog") !== null){
         document.getElementById("logDiv").removeChild(document.getElementById("rarityLog"));
@@ -329,7 +336,7 @@ function SetupLog(){
         UpdateHistory();
     });
     if(totalStatistics === false){
-        ResetStatistics(false);
+        ResetStatistics();
     }
     /*
     This will only trigger if totalStatistics is true.
@@ -339,7 +346,7 @@ function SetupLog(){
     for(var i=0; i<gainedMaterials.length;i++){
         AddOption(gainedMaterials[i], document.getElementById("selectLogMaterial"));
     }
-    if(multiDic[nothingString].length > 1){
+    if(amountNothing > 0){
         AddOption("nothing", document.getElementById("selectLogMulti"));
     }
     for(var j=0;j<(multiCollections.length-1);j++){
@@ -384,8 +391,13 @@ function ResetStatistics(){
     multiDic = {};
     rarities = ["Common", "Superior", "Rare", "Epic", "Legendary"];
     totalStatistics = SetStorageVariable("totalStatistics", document.getElementById("checkBoxTotalStatistics").checked, showLog);
+    displayRarity = SetStorageVariable("displayRarity", document.getElementById("checkBoxRarities").checked, showLog);
     document.getElementById("selectLogMulti").options.length = 1;
     document.getElementById("selectLogMaterial").options.length = 1;
+    document.getElementById("logDiv").innerHTML = "";
+    if(document.getElementById("checkBoxRarities").checked){
+        DisplayRarities();
+    }
     console.log("Everything has been re-set");
 }
 
@@ -404,12 +416,12 @@ function UpdateStatisticDivs(){
         for(var i=0; i<raritiesCollected.length;i++){
             if(raritiesCollected[i] > 0){
                 div = document.createElement("div");
-                div.innerText = Math.round(raritiesCollected[i] / totalLength * 100) + "%";
+                div.innerText = Math.round(raritiesCollected[i] / (totalLength-1) * 100) + "%";
                 div.style.float= "left";
                 div.id = "rarityDiv" + i;
                 div.style.backgroundColor = colorArray[i];
-                div.style.width = (raritiesCollected[i] / totalLength * 492) + "px";
-                divWidth += raritiesCollected[i] / totalLength * 492;
+                div.style.width = (raritiesCollected[i] / (totalLength-1) * 492) + "px";
+                divWidth += raritiesCollected[i] / (totalLength-1) * 492;
                 mainDiv.appendChild(div);
             }
         }
@@ -455,7 +467,7 @@ function MainLoop(timerVar, loopOnce){
                 newTime = newDate.getTime();
                 timeDiff = newTime - startTimeInMS;
                 timeString = ConvertIntoSmallerTimeFormat(timeDiff);
-                var output = "You have been on this node for " + timeString + ".</br>";
+                var output = "You have been working on this node/pattern for " + timeString + ".</br>";
                 var currentTime = timerText.slice(timerText.indexOf("(")+1, timerText.indexOf(")"));
                 if((timerVar/1000) % currentTime > 5 && !loopOnce){
                     console.log("Refresh time is over 5 seconds off.");
@@ -464,8 +476,13 @@ function MainLoop(timerVar, loopOnce){
                     }, 5000, mainInterval);
                     GetRightTiming();
                 }
+                var resultsHTML = document.getElementsByClassName("roundResult areaName")[0].innerHTML;
                 var resultsText = document.getElementsByClassName("roundResult areaName")[0].innerText;
-                output += "You have collected/ created:";
+                if(resultsText.indexOf("Your combines are complete.") === 0){
+                    resultsHTML = document.getElementsByClassName("roundResult areaName")[1].innerHTML;
+                    resultsText = document.getElementsByClassName("roundResult areaName")[1].innerText;
+                }
+                output += "You have collected/created:";
                 /*
                 This two if clauses are necessary because Goz made two different exp-display ways.
                 Because of this the code checks for both types of classes and if either of them has a length greater than 1,
@@ -497,7 +514,14 @@ function MainLoop(timerVar, loopOnce){
                 }
                 var rawAmount = amount;
                 amount = amount.replace(" ", "");
-                if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
+                if(resultsText.indexOf("found") === -1 && resultsText.indexOf("created") === -1){
+                    amountNothing++;
+                    SetStorageVariable("amountNothing", amountNothing, showLog);
+                }
+                else if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
+                    if(resultsText.indexOf("Your combines are complete.") === -1){
+                        console.log("Normal attempts");
+                    }
                     lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
                     if(gainedMaterials.indexOf(lastCollectedMaterial) == -1){ //If the collected material is not in the gainedMaterials array, the indexOf returns -1, thus it adds this variable to the array and everything else
                         gainedMaterials.push(lastCollectedMaterial);
@@ -510,10 +534,6 @@ function MainLoop(timerVar, loopOnce){
                         materialDic[lastCollectedMaterial] += resultsText.slice(1, resultsText.indexOf("]")) +  " - " + resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]")) + " x" + amount + "</br>";
                         SetStorageVariable(("materialDic_" + lastCollectedMaterial), materialDic[lastCollectedMaterial], showLog);
                     }
-                }
-                else{ //If "nothing" drops, the variable gets +1 (Used later on)
-                    amountNothing++;
-                    SetStorageVariable("amountNothing", amountNothing, showLog);
                 }
                 if(amount.length > 3){ //This should only execute when mastery, Create Rate/Drop Rate or whatever procs on the drop.
                     amount = resultsText.slice(resultsText.lastIndexOf("]")+3,resultsText.lastIndexOf("]")+6);
@@ -578,21 +598,21 @@ function MainLoop(timerVar, loopOnce){
                 }
                 avgMaterials = (avgMaterials / totalLength).toFixed(2);
                 output += "Average materials collected/created: " + avgMaterials + "</br>";
-                output += "Total collection attempts on this node: " + results.length + "</br>";
-                output += "Total collection attempts in general: " + totalLength + "</br>";
+                output += "Total collection attempts/creations on this node/pattern: " + results.length + "</br>";
+                output += "Total collection attempts/creations in general: " + totalLength + "</br>";
                 document.getElementById("logDiv").innerHTML = output; //print output to the html of that div (Jquery is love)
                 output = ""; //Reset output variable since it gets build it up every time from scratch; This might eat resources(?)
                 for(var  k=0;k<rarities.length;k++){ //for-loop iterates how many materials of each rarity have been collected.
-                    if(results[0].innerHTML.indexOf(rarities[k]) !== -1){
+                    if(resultsHTML.indexOf(rarities[k]) !== -1){
                         raritiesCollected[k]++;
                         SetStorageVariable(("rarity" + k), raritiesCollected[k], showLog);
                     }
                 }
                 UpdateHistory();
+                totalLength++;
                 if(document.getElementById("checkBoxRarities").checked){
                     DisplayRarities();
                 }
-                totalLength++;
                 SetStorageVariable("totalLength", totalLength, showLog);
 
             }
@@ -688,4 +708,11 @@ Patch notes 1.51
 -   Added a checkbox to the top to display the rarities below
 -   Changed the conditions for the rarity-meter to be displayed and added it to the new checkbox
 -   Changed SetTotalStatstics => WriteCheckboxStatus, this will wrrite the value of the checkbox into the local storage
+-   Adjusted the text of how long you've been working on a node as it was only "covering" collection and not crafting
+-   Adjusted the total-attempt display as it was only "covering" collection but not crafting
+
+Patch notes 1.52
+19th.June.2016
+-   Fixed a bug where the last attempt of a crafting skill would cause a some weird stuff e.g. nothingrarity +1 and so on
+-   Adjusted the ResetStatistics function to be up to latest standards
 */
