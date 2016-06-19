@@ -11,16 +11,17 @@ Variable declaration
 PS: Global vars are ugly
 */
 var version = "v1.52";
+console.log("You're currently using version " + version);
 //Variable declaration; getting the data out of local storage
-var showLog = false; //Change this to true to display  more detailed information about what gets saved to localstorage or loaded out of it
 var thenLength =  0;//This is to prevent the interval to loop over the drop more than once
-var totalExp = Number(RetrieveVariable("totalExp", 0, showLog));
-var totalLength = Number(RetrieveVariable("totalLength", 1, showLog));		//this is for a total statistic reference
-var amountNothing = Number(RetrieveVariable("amountNothing", 0, showLog));		//Used for the "Nothing x" output
-var totalStatistics = RetrieveVariable("totalStatistics", false, showLog);
-var displayRarity = RetrieveVariable("displayRarity", false, showLog);
-var maxMulti = Number(RetrieveVariable("maxMulti", 0, showLog));
-var collected = Number(RetrieveVariable("collected", 0, showLog));
+var displayNerdStuff = RetrieveVariable("displayNerdStuff", false, "true");
+var totalExp = Number(RetrieveVariable("totalExp", 0, displayNerdStuff));
+var totalLength = Number(RetrieveVariable("totalLength", 1, displayNerdStuff));		//this is for a total statistic reference
+var amountNothing = Number(RetrieveVariable("amountNothing", 0, displayNerdStuff));		//Used for the "Nothing x" output
+var totalStatistics = RetrieveVariable("totalStatistics", false, displayNerdStuff);
+var displayRarity = RetrieveVariable("displayRarity", false, displayNerdStuff);
+var maxMulti = Number(RetrieveVariable("maxMulti", 0, displayNerdStuff));
+var collected = Number(RetrieveVariable("collected", 0, displayNerdStuff));
 var rarities = ["Common", "Superior", "Rare", "Epic", "Legendary"];
 
 
@@ -30,30 +31,29 @@ var amountMaterials = [];	//Array for how much of the item that dropped/ has bee
 var gainedMaterials = [];	//Same as "amountMaterials" just for the name storage (I might change this to a dictionary at some point)
 var multiCollections = [];
 for(var rarity =0; rarity<5; rarity++){
-    raritiesCollected[rarity] = Number(RetrieveVariable(("rarity" +rarity), 0, showLog));
+    raritiesCollected[rarity] = Number(RetrieveVariable(("rarity" +rarity), 0, displayNerdStuff));
 }
 for(var multiCollection = 0; multiCollection < maxMulti; multiCollection++){
-    multiCollections[multiCollection] = Number(RetrieveVariable(("multiCollection" + multiCollection), 0, showLog));
+    multiCollections[multiCollection] = Number(RetrieveVariable(("multiCollection" + multiCollection), 0, displayNerdStuff));
 }
 for(var item = 0; item < collected; item++){
-    amountMaterials[item] = Number(RetrieveVariable(("amountMaterials" + item), 0, showLog));
-    gainedMaterials[item] = RetrieveVariable(("gainedMaterials" + item), "", showLog);
+    amountMaterials[item] = Number(RetrieveVariable(("amountMaterials" + item), 0, displayNerdStuff));
+    gainedMaterials[item] = RetrieveVariable(("gainedMaterials" + item), "", displayNerdStuff);
 }
 
 // Object declaration; getting the data out of local storage
 var materialDic = {};
 var multiDic = {};
 nothingString = "nothing"; //Just a string containing the word "nothing" to remove the warnings from other things.
-multiDic[nothingString] = RetrieveVariable("multiDic_nothing", " ", showLog); //Need to hardcode this because mutliDic_Nothing does not have a number..
+multiDic[nothingString] = RetrieveVariable("multiDic_nothing", " ", displayNerdStuff); //Need to hardcode this because mutliDic_Nothing does not have a number..
 for(var materialDiCEntry = 0; materialDiCEntry < collected; materialDiCEntry++){
     var materialDicName = ("materialDic_"+ GetStorageVariable(("gainedMaterials"+materialDiCEntry))); //String built to reduce length of following line
     materialName = GetStorageVariable(("gainedMaterials"+materialDiCEntry)); //String built to reduce length of following line
-    materialDic[materialName] = RetrieveVariable(materialDicName, "", showLog);
+    materialDic[materialName] = RetrieveVariable(materialDicName, "", displayNerdStuff);
 }
 for(var multiDiCEntry = 0; multiDiCEntry < maxMulti; multiDiCEntry++){
-    multiDic[multiDiCEntry] = RetrieveVariable(("multiDic_" + multiDiCEntry), "", showLog);
+    multiDic[multiDiCEntry] = RetrieveVariable(("multiDic_" + multiDiCEntry), "", displayNerdStuff);
 }
-console.log("You're currently using version " + version);
 setInterval(function(){ //This might be ugly, but currently I don't know a way to solve an auto-rebuilding setup more dynamically
     if(document.getElementsByClassName("skillBox").length > 0){ //If the titleHeader class has a length of above 0, create the graphical log part
         if(document.getElementById("logDiv") === null){ //If there is not "logDiv" div start the setup of the log
@@ -69,27 +69,25 @@ If it has a "false" value it'll delete the child to remove the data until it get
 */
 function DisplayRarities(){
     if(document.getElementById("checkBoxRarities").checked){
+        var colorArray = ["#999", "#48c730", "#2f84c7", "#bd33de", "#f14c02"]; //Colors of each rarity ordered by common -> legendary
         var lengthVar = totalLength - 1;
         if(totalLength > 1){
-            UpdateStatisticDivs();
             rarityLog = document.createElement("small");
             rarityLog.innerHTML = "</br>";
             rarityLog.id = "rarityLog";
             rarityLog.style.fontSize = "14px";
-            rarityLog.innerHTML = "<b>Rarities collected: </b></br>";
+            rarityLog.innerHTML = "<b>Rarities collected: </b>";
             for(var rarity = 0; rarity<rarities.length;rarity++){
-                rarityLog.innerHTML += rarities[rarity] + ": " + raritiesCollected[rarity] + "/" + lengthVar + " " + (100*(raritiesCollected[rarity]/lengthVar)).toFixed(1) +  "%</br>";
+                rarityLog.innerHTML += "<p style='color:" + colorArray[rarity] + "'>" + rarities[rarity] + ": " + raritiesCollected[rarity] + "/" + lengthVar + " " + (100*(raritiesCollected[rarity]/lengthVar)).toFixed(1) +  "%</p>";
             }
-            rarityLog.innerHTML += "Nothing: " + amountNothing + "/" + lengthVar + " " + (100*(amountNothing/lengthVar)).toFixed(1) + "%";
+            rarityLog.innerHTML += "<p style='color:#fff'>Nothing: " + amountNothing + "/" + lengthVar + " " + (100*(amountNothing/lengthVar)).toFixed(1) + "%</p>";
             document.getElementById("logDiv").appendChild(rarityLog);
         }
     }
     else if(document.getElementById("rarityLog") !== null){
         document.getElementById("logDiv").removeChild(document.getElementById("rarityLog"));
-        UpdateStatisticDivs();
     }
 }
-
 /*
 timeInMs gets calculated down to hours, minutes and seconds and gets output as a string
 example ConvertIntoSmallerTimeFormat(3600000) [1 hour in milliseconds]
@@ -166,7 +164,7 @@ boolShow: If the function is called and boolShow is true, the console will log t
 */
 function GetStorageVariable(varName, boolShow){
     var output =  localStorage.getItem(varName);
-    if(boolShow){
+    if(boolShow=== "true"){
         console.log("local storage -> " + varName + " - Result: " + output);
     }
     return output;
@@ -178,7 +176,7 @@ boolShow: If the function is called and boolShow is true, the console will log t
 */
 function SetStorageVariable(varName, varValue, boolShow){
     localStorage.setItem(varName, varValue);
-    if(boolShow){
+    if(boolShow === "true"){
         console.log(varName  + " -> local storage - Value: " + varValue);
     }
     return varValue;
@@ -259,8 +257,10 @@ This sets up the collection log("rarity-bar", checkBox to keep totalStatistics o
 function SetupLog(){
     var checkBoxTotalStatistics = document.createElement("input");
     var checkBoxRarities = document.createElement("input");
+    var checkBoxNerdStuff = document.createElement("input");
     var checkBoxTotalStatisticsText = document.createElement("small");
     var checkBoxRaritiesText = document.createElement("small");
+    var checkBoxNerdStuffText = document.createElement("small");
     var emptyLine = document.createElement("small");
     var buttonResetStatistics = document.createElement("button");
     var buttonHelp = document.createElement("button");
@@ -279,6 +279,7 @@ function SetupLog(){
     buttonResetStatistics.appendChild(buttonResetStatisticsText);
     checkBoxTotalStatisticsText.innerHTML = "Track total statistics? </br>";
     checkBoxRaritiesText.innerHTML = "Display rarities below? </br>";
+    checkBoxNerdStuffText.innerHTML = "Display the nerdy things in the console? </br>";
     emptyLine.innerHTML = "</br>";
     selectLogMulti.style.padding = "4px";
     selectLogMaterial.style.padding = "4px";
@@ -286,10 +287,12 @@ function SetupLog(){
     checkBoxTotalStatistics.id = "checkBoxTotalStatistics";
     checkBoxRarities.type = "checkbox";
     checkBoxRarities.id = "checkBoxRarities";
+    checkBoxNerdStuff.type = "checkbox";
+    checkBoxNerdStuff.id = "checkBoxNerdStuff";
     selectLogMaterial.id = "selectLogMaterial";
     selectLogMulti.id = "selectLogMulti";
     buttonResetStatistics.id = "buttonResetStatistics";
-    if(totalStatistics === "true" || totalStatistics === true){
+    if(totalStatistics === "true"){
         checkBoxTotalStatistics.checked = true;
     }
     else{
@@ -301,10 +304,18 @@ function SetupLog(){
     else{
         checkBoxRarities.checked = false;
     }
+    if(displayNerdStuff === "true"){
+        checkBoxNerdStuff.checked = true;
+    }
+    else{
+        checkBoxNerdStuff.checked = false;
+    }
     fragment.appendChild(checkBoxTotalStatistics);
     fragment.appendChild(checkBoxTotalStatisticsText);
     fragment.appendChild(checkBoxRarities);
     fragment.appendChild(checkBoxRaritiesText);
+    fragment.appendChild(checkBoxNerdStuff);
+    fragment.appendChild(checkBoxNerdStuffText);
     fragment.appendChild(selectLogMaterial);
     fragment.appendChild(emptyLine);
     fragment.appendChild(selectLogMulti);
@@ -323,6 +334,9 @@ function SetupLog(){
         DisplayRarities();
         WriteCheckboxStatus(checkBoxRarities, "displayRarity");
     }, checkBoxRarities);
+    checkBoxNerdStuff.addEventListener("click", function(){
+        WriteCheckboxStatus(checkBoxNerdStuff, "displayNerdStuff");
+    }, checkBoxNerdStuff);
     buttonResetStatistics.addEventListener("click", function(){
         ResetStatistics(true);
     });
@@ -365,7 +379,7 @@ If someone clicks on a checkBox this gets executed
 Takes two argument, the checkbox that got clicked and the associated variable that should be written into localstorage
 */
 function WriteCheckboxStatus(checkBox, variableToChange){
-    SetStorageVariable(variableToChange, checkBox.checked, showLog);
+    SetStorageVariable(variableToChange, checkBox.checked, "true");
 }
 
 /*
@@ -374,15 +388,16 @@ This only gets triggered by the reset-button (id=buttonResetStatistics) and ever
 */
 function ResetStatistics(){
     localStorage.clear(); //Clear the local storage and set all the vars to their base value after
-    totalExp = Number(SetStorageVariable("totalExp", 0, showLog));
-    thenLength = Number(SetStorageVariable("thenLength", 0, showLog));			//This is to prevent the interval to loop over the drop more than once
-    totalLength = Number(SetStorageVariable("totalLength", 1, showLog));		//Same as "thenLength" variable, just that this is for a total statistic reference
-    amountNothing = Number(SetStorageVariable("amountNothing", 0, showLog));		//Used for the "Nothing x" output
+    displayNerdStuff = SetStorageVariable("displayNerdStuff", document.getElementById("checkBoxNerdStuff").checked, displayNerdStuff);
+    totalExp = Number(SetStorageVariable("totalExp", 0, displayNerdStuff));
+    thenLength = Number(SetStorageVariable("thenLength", 0, displayNerdStuff));			//This is to prevent the interval to loop over the drop more than once
+    totalLength = Number(SetStorageVariable("totalLength", 1, displayNerdStuff));		//Same as "thenLength" variable, just that this is for a total statistic reference
+    amountNothing = Number(SetStorageVariable("amountNothing", 0, displayNerdStuff));		//Used for the "Nothing x" output
     maxMulti = 0;
-    Number(SetStorageVariable("maxMulti", 0, showLog));
-    collected = Number(SetStorageVariable("collected", 0, showLog));
+    Number(SetStorageVariable("maxMulti", 0, displayNerdStuff));
+    collected = Number(SetStorageVariable("collected", 0, displayNerdStuff));
     for(var rarity = 0; rarity<5; rarity++){
-        raritiesCollected[rarity] = Number(SetStorageVariable(("rarity" +rarity), 0, showLog));
+        raritiesCollected[rarity] = Number(SetStorageVariable(("rarity" +rarity), 0, displayNerdStuff));
     }
     multiCollections = [];
     amountMaterials = [];
@@ -390,8 +405,8 @@ function ResetStatistics(){
     materialDic = {};
     multiDic = {};
     rarities = ["Common", "Superior", "Rare", "Epic", "Legendary"];
-    totalStatistics = SetStorageVariable("totalStatistics", document.getElementById("checkBoxTotalStatistics").checked, showLog);
-    displayRarity = SetStorageVariable("displayRarity", document.getElementById("checkBoxRarities").checked, showLog);
+    totalStatistics = SetStorageVariable("totalStatistics", document.getElementById("checkBoxTotalStatistics").checked, displayNerdStuff);
+    displayRarity = SetStorageVariable("displayRarity", document.getElementById("checkBoxRarities").checked, displayNerdStuff);
     document.getElementById("selectLogMulti").options.length = 1;
     document.getElementById("selectLogMaterial").options.length = 1;
     document.getElementById("logDiv").innerHTML = "";
@@ -399,46 +414,6 @@ function ResetStatistics(){
         DisplayRarities();
     }
     console.log("Everything has been re-set");
-}
-
-/*
-This updates the colorful div that displays the rarity-meter.
-Gets called by the clicking the checkbox "Display rarities below?"
-*/
-function UpdateStatisticDivs(){
-    if(document.getElementById("mainDiv") === null){
-        var divWidth = 0;
-        var colorArray = ["#999", "#48c730", "#2f84c7", "#bd33de", "#f14c02"]; //Colors of each rarity ordered by nothing -> legendary
-        mainDiv = document.createElement("div");
-        mainDiv.id = "mainDiv";
-        mainDiv.style.overflow = "hidden";
-        mainDiv.style.color = "black";
-        for(var i=0; i<raritiesCollected.length;i++){
-            if(raritiesCollected[i] > 0){
-                div = document.createElement("div");
-                div.innerText = Math.round(raritiesCollected[i] / (totalLength-1) * 100) + "%";
-                div.style.float= "left";
-                div.id = "rarityDiv" + i;
-                div.style.backgroundColor = colorArray[i];
-                div.style.width = (raritiesCollected[i] / (totalLength-1) * 492) + "px";
-                divWidth += raritiesCollected[i] / (totalLength-1) * 492;
-                mainDiv.appendChild(div);
-            }
-        }
-        if(divWidth <490){
-            div = document.createElement("div");
-            div.innerText = Math.round((492-divWidth)/492 * 100)+ "%";
-            div.style.float= "left";
-            div.id = "rarityDivNothing";
-            div.style.backgroundColor = "#fff";
-            div.style.width = (492 - divWidth) + "px";
-            mainDiv.appendChild(div);
-        }
-        document.getElementById("logDiv").appendChild(mainDiv);
-    }
-    else{
-        document.getElementById("logDiv").removeChild(document.getElementById("mainDiv"));
-    }
 }
 
 /*
@@ -505,7 +480,7 @@ function MainLoop(timerVar, loopOnce){
                     totalExp=0;
                 }
                 var avgExp = Math.floor(totalExp/(totalLength));
-                SetStorageVariable("totalExp", totalExp, showLog);
+                SetStorageVariable("totalExp", totalExp, displayNerdStuff);
                 if(isNaN(avgExp)){ //If exp values happen to be NaN you can see that in the output later on.
                     avgExp = "invalid input";
                 }
@@ -516,11 +491,10 @@ function MainLoop(timerVar, loopOnce){
                 amount = amount.replace(" ", "");
                 if(resultsText.indexOf("found") === -1 && resultsText.indexOf("created") === -1){
                     amountNothing++;
-                    SetStorageVariable("amountNothing", amountNothing, showLog);
+                    SetStorageVariable("amountNothing", amountNothing, displayNerdStuff);
                 }
                 else if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
                     if(resultsText.indexOf("Your combines are complete.") === -1){
-                        console.log("Normal attempts");
                     }
                     lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
                     if(gainedMaterials.indexOf(lastCollectedMaterial) == -1){ //If the collected material is not in the gainedMaterials array, the indexOf returns -1, thus it adds this variable to the array and everything else
@@ -528,25 +502,25 @@ function MainLoop(timerVar, loopOnce){
                         amountMaterials.push(0);
                         AddOption(lastCollectedMaterial,  document.getElementById("selectLogMaterial"));
                         materialDic[lastCollectedMaterial] = resultsText.slice(1, resultsText.indexOf("]")) +  " - " + resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]")) + " x" + amount + "</br>";
-                        SetStorageVariable(("materialDic_" + lastCollectedMaterial), materialDic[lastCollectedMaterial], showLog);
+                        SetStorageVariable(("materialDic_" + lastCollectedMaterial), materialDic[lastCollectedMaterial], displayNerdStuff);
                     }
                     else{
                         materialDic[lastCollectedMaterial] += resultsText.slice(1, resultsText.indexOf("]")) +  " - " + resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]")) + " x" + amount + "</br>";
-                        SetStorageVariable(("materialDic_" + lastCollectedMaterial), materialDic[lastCollectedMaterial], showLog);
+                        SetStorageVariable(("materialDic_" + lastCollectedMaterial), materialDic[lastCollectedMaterial], displayNerdStuff);
                     }
                 }
                 if(amount.length > 3){ //This should only execute when mastery, Create Rate/Drop Rate or whatever procs on the drop.
                     amount = resultsText.slice(resultsText.lastIndexOf("]")+3,resultsText.lastIndexOf("]")+6);
                 }
                 if(collected < gainedMaterials.length){
-                    collected = Number(SetStorageVariable("collected", gainedMaterials.length, showLog));
+                    collected = Number(SetStorageVariable("collected", gainedMaterials.length, displayNerdStuff));
                 }
                 amount = createAmountString(amount);
                 for(var i=0; i<gainedMaterials.length; i++){ //This for-loop is to get the amount that was gathered/created and afterwards puts it into the output string.
                     if(resultsText.indexOf(gainedMaterials[i]) != -1){
                         amountMaterials[i] += Number(amount);
-                        amountMaterials[i] = Number(SetStorageVariable(("amountMaterials" + i), amountMaterials[i], showLog));
-                        gainedMaterials[i] = SetStorageVariable(("gainedMaterials" + i), gainedMaterials[i], showLog);
+                        amountMaterials[i] = Number(SetStorageVariable(("amountMaterials" + i), amountMaterials[i], displayNerdStuff));
+                        gainedMaterials[i] = SetStorageVariable(("gainedMaterials" + i), gainedMaterials[i], displayNerdStuff);
                     }
                     output += "</br>"+ gainedMaterials[i] + " x" + amountMaterials[i];
                 }
@@ -563,30 +537,30 @@ function MainLoop(timerVar, loopOnce){
                         AddOption(amount, document.getElementById("selectLogMulti"));
                         multiCollections[0] = 1;
                         multiDic[amount] = resultsText.slice(1, resultsText.indexOf("]")) +  " - You didn't find anything.</br>";
-                        SetStorageVariable(("multiDic_" + amount), multiDic[amount], showLog);
+                        SetStorageVariable(("multiDic_" + amount), multiDic[amount], displayNerdStuff);
                     }
                     else{
                         multiCollections[0] = amountNothing;
                         multiDic[amount] += resultsText.slice(1, resultsText.indexOf("]")) +  " - You didn't find anything.</br>";
-                        SetStorageVariable(("multiDic_" + amount), multiDic[amount], showLog);
+                        SetStorageVariable(("multiDic_" + amount), multiDic[amount], displayNerdStuff);
                     }
                 }
                 else if(multiCollections[amount] === undefined || multiCollections[amount] === 0){
                     multiCollections[amount] = 1;
-                    multiCollections[amount] = Number(SetStorageVariable(("multiCollection" + amount), multiCollections[amount], showLog));
+                    multiCollections[amount] = Number(SetStorageVariable(("multiCollection" + amount), multiCollections[amount], displayNerdStuff));
                     AddOption(amount, document.getElementById("selectLogMulti"));
                     multiDic[amount] = resultsText.slice(1, resultsText.indexOf("]")) +  " - " + resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]")) + " x" + rawAmount + "</br>";
-                    SetStorageVariable(("multiDic_" + amount), multiDic[amount], showLog);
+                    SetStorageVariable(("multiDic_" + amount), multiDic[amount], displayNerdStuff);
                 }
                 else
                 {
                     multiCollections[amount]++;
-                    multiCollections[amount] = Number(SetStorageVariable(("multiCollection" + amount), multiCollections[amount], showLog));
+                    multiCollections[amount] = Number(SetStorageVariable(("multiCollection" + amount), multiCollections[amount], displayNerdStuff));
                     multiDic[amount] += resultsText.slice(1, resultsText.indexOf("]")) +  " - " + resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]")) + " x" + rawAmount + "</br>";
-                    SetStorageVariable(("multiDic_" + amount), multiDic[amount], showLog);
+                    SetStorageVariable(("multiDic_" + amount), multiDic[amount], displayNerdStuff);
                 }
                 if(maxMulti < multiCollections.length){ //Only if the maxMulti is lower than the actual multiColletions array -> write to local storage
-                    maxMulti = Number(SetStorageVariable("maxMulti", multiCollections.length, showLog));
+                    maxMulti = Number(SetStorageVariable("maxMulti", multiCollections.length, displayNerdStuff));
                 }
                 var avgMaterials = 0; //Reset this to 0 to avoid wrong output (Would get way too high if not re-set)
                 //This adds up the total multi-collections or -creations that you have achieved and finally add it to the output
@@ -605,7 +579,7 @@ function MainLoop(timerVar, loopOnce){
                 for(var  k=0;k<rarities.length;k++){ //for-loop iterates how many materials of each rarity have been collected.
                     if(resultsHTML.indexOf(rarities[k]) !== -1){
                         raritiesCollected[k]++;
-                        SetStorageVariable(("rarity" + k), raritiesCollected[k], showLog);
+                        SetStorageVariable(("rarity" + k), raritiesCollected[k], displayNerdStuff);
                     }
                 }
                 UpdateHistory();
@@ -613,12 +587,12 @@ function MainLoop(timerVar, loopOnce){
                 if(document.getElementById("checkBoxRarities").checked){
                     DisplayRarities();
                 }
-                SetStorageVariable("totalLength", totalLength, showLog);
+                SetStorageVariable("totalLength", totalLength, displayNerdStuff);
 
             }
         }
         thenLength = results.length;
-        SetStorageVariable("thenLength", thenLength, showLog);
+        SetStorageVariable("thenLength", thenLength, displayNerdStuff);
         var foodBuffInfo = "[NBA] ";
         if(document.getElementsByClassName("drIcon cardNone slot_default").length === 0){
             foodBuffInfo = "[BA] ";
@@ -715,4 +689,6 @@ Patch notes 1.52
 19th.June.2016
 -   Fixed a bug where the last attempt of a crafting skill would cause a some weird stuff e.g. nothingrarity +1 and so on
 -   Adjusted the ResetStatistics function to be up to latest standards
+-   Added a checkbox for the "nerdy" stuff (Basically a log of what gets written/ loaded into/out of local storage)
+-   Removed the rarity-meter (RIP somewhere around early June - 19th.June.2016)
 */
