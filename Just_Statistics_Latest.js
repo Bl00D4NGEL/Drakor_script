@@ -1,7 +1,6 @@
-
 // ==UserScript==
-// @name         Just statistics v1.5
-// @version      1.5
+// @name         Just statistics v1.51
+// @version      1.51
 // @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more...)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://www.drakor.com*
@@ -11,7 +10,7 @@
 Variable declaration
 PS: Global vars are ugly
 */
-var version = "v1.5";
+var version = "v1.51";
 //Variable declaration; getting the data out of local storage
 var showLog = false; //Change this to true to display  more detailed information about what gets saved to localstorage or loaded out of it
 var thenLength =  0;//This is to prevent the interval to loop over the drop more than once
@@ -19,10 +18,10 @@ var totalExp = Number(RetrieveVariable("totalExp", 0, showLog));
 var totalLength = Number(RetrieveVariable("totalLength", 1, showLog));		//this is for a total statistic reference
 var amountNothing = Number(RetrieveVariable("amountNothing", 0, showLog));		//Used for the "Nothing x" output
 var totalStatistics = RetrieveVariable("totalStatistics", false, showLog);
+var displayRarity = RetrieveVariable("displayRarity", false, showLog);
 var maxMulti = Number(RetrieveVariable("maxMulti", 0, showLog));
 var collected = Number(RetrieveVariable("collected", 0, showLog));
 var rarities = ["Common", "Superior", "Rare", "Epic", "Legendary"];
-var startTimeInM;
 
 
 // Array declaration; getting the data out of local storage
@@ -62,6 +61,27 @@ setInterval(function(){ //This might be ugly, but currently I don't know a way t
         }
     }
 }, 5000);
+
+function DisplayRarities(){
+    if(document.getElementById("checkBoxRarities").checked){
+        UpdateStatisticDivs();
+        var lengthVar = totalLength - 1;
+        rarityLog = document.createElement("small");
+        rarityLog.innerHTML = "</br>";
+        rarityLog.id = "rarityLog";
+        rarityLog.style.fontSize = "14px";
+        rarityLog.innerHTML = "<b>Rarities collected: </b></br>";
+        for(var rarity = 0; rarity<rarities.length;rarity++){
+            rarityLog.innerHTML += rarities[rarity] + ": " + raritiesCollected[rarity] + "/" + lengthVar + " " + (100*(raritiesCollected[rarity]/lengthVar)).toFixed(1) +  "%</br>";
+        }
+        rarityLog.innerHTML += "Nothing: " + amountNothing + "/" + lengthVar + " " + (100*(amountNothing/lengthVar)).toFixed(1) + "%";
+        document.getElementById("logDiv").appendChild(rarityLog);
+    }
+    else if(document.getElementById("rarityLog") !== null){
+        document.getElementById("logDiv").removeChild(document.getElementById("rarityLog"));
+        UpdateStatisticDivs();
+    }
+}
 
 /*
 timeInMs gets calculated down to hours, minutes and seconds and gets output as a string
@@ -158,7 +178,7 @@ function SetStorageVariable(varName, varValue, boolShow){
 }
 
 /*
-This function updates the log under the rarity-bar whenever the select has changed it's object
+This function updates the log over the rarity-bar whenever the select has changed it's object
 The printed log gets built up in the interval each time something is collected
 */
 function UpdateHistory(){
@@ -231,7 +251,9 @@ This sets up the collection log("rarity-bar", checkBox to keep totalStatistics o
 */
 function SetupLog(){
     var checkBoxTotalStatistics = document.createElement("input");
+    var checkBoxRarities = document.createElement("input");
     var checkBoxTotalStatisticsText = document.createElement("small");
+    var checkBoxRaritiesText = document.createElement("small");
     var emptyLine = document.createElement("small");
     var buttonResetStatistics = document.createElement("button");
     var buttonHelp = document.createElement("button");
@@ -249,11 +271,14 @@ function SetupLog(){
     var fragment = document.createDocumentFragment();
     buttonResetStatistics.appendChild(buttonResetStatisticsText);
     checkBoxTotalStatisticsText.innerHTML = "Track total statistics? </br>";
+    checkBoxRaritiesText.innerHTML = "Display rarities below? </br>";
     emptyLine.innerHTML = "</br>";
     selectLogMulti.style.padding = "4px";
     selectLogMaterial.style.padding = "4px";
     checkBoxTotalStatistics.type = "checkbox";
     checkBoxTotalStatistics.id = "checkBoxTotalStatistics";
+    checkBoxRarities.type = "checkbox";
+    checkBoxRarities.id = "checkBoxRarities";
     selectLogMaterial.id = "selectLogMaterial";
     selectLogMulti.id = "selectLogMulti";
     buttonResetStatistics.id = "buttonResetStatistics";
@@ -263,8 +288,16 @@ function SetupLog(){
     else{
         checkBoxTotalStatistics.checked = false;
     }
+    if(displayRarity === "true"){
+        checkBoxRarities.checked = true;
+    }
+    else{
+        checkBoxRarities.checked = false;
+    }
     fragment.appendChild(checkBoxTotalStatistics);
     fragment.appendChild(checkBoxTotalStatisticsText);
+    fragment.appendChild(checkBoxRarities);
+    fragment.appendChild(checkBoxRaritiesText);
     fragment.appendChild(selectLogMaterial);
     fragment.appendChild(emptyLine);
     fragment.appendChild(selectLogMulti);
@@ -277,8 +310,12 @@ function SetupLog(){
     AddOption("---Select a material---",  document.getElementById("selectLogMaterial"));
     AddOption("---Select a multi---",  document.getElementById("selectLogMulti"));
     checkBoxTotalStatistics.addEventListener("click", function(){
-        SetTotalStatistics();
-    });
+        WriteCheckboxStatus(checkBoxTotalStatistics, "totalStatistics");
+    }, checkBoxTotalStatistics);
+    checkBoxRarities.addEventListener("click", function(){
+        DisplayRarities();
+        WriteCheckboxStatus(checkBoxRarities, "displayRarity");
+    }, checkBoxRarities);
     buttonResetStatistics.addEventListener("click", function(){
         ResetStatistics(true);
     });
@@ -313,22 +350,15 @@ function SetupLog(){
     newStart = new Date();
     startTimeInMS = newStart.getTime();
     GetRightTiming();
+    DisplayRarities();
 }
 
 /*
-If someone clicks on the checkBox (id=checkBoxTotalStatistics) it will execute this code.
-It update the "totalStatistics" variable and prints into console what the current state of data-keeping is
+If someone clicks on a checkBox this gets executed
+Takes two argument, the checkbox that got clicked and the associated variable that should be written into localstorage
 */
-function SetTotalStatistics(){
-    checkBox = document.getElementById("checkBoxTotalStatistics");
-    if(checkBox.checked === true){
-        SetStorageVariable("totalStatistics", "true", true);
-        console.log("Now tracking total statistics");
-    }
-    else{
-        SetStorageVariable("totalStatistics", "false", true);
-        console.log("Now collecting statistics from this node only");
-    }
+function WriteCheckboxStatus(checkBox, variableToChange){
+    SetStorageVariable(variableToChange, checkBox.checked, showLog);
 }
 
 /*
@@ -361,38 +391,42 @@ function ResetStatistics(){
 
 /*
 This updates the colorful div that displays the rarity-meter.
-It takes the rarityArray, which was created earlier with the for-loop and the totalLength variable to set the width of the different divs
-setting the nothing-div afterwards might be optimisable.
+Gets called by the clicking the checkbox "Display rarities below?"
 */
-function UpdateStatisticDivs(rarityArray, totalLength){
-    var divWidth = 0;
-    var colorArray = ["#999", "#48c730", "#2f84c7", "#bd33de", "#f14c02"]; //Colors of each rarity ordered by nothing -> legendary
-    mainDiv = document.createElement("div");
-    mainDiv.id = "mainDiv";
-    mainDiv.style.overflow = "hidden";
-    mainDiv.style.color = "black";
-    for(var i=0; i<rarityArray.length;i++){
-        if(rarityArray[i] > 0){
+function UpdateStatisticDivs(){
+    if(document.getElementById("mainDiv") === null){
+        var divWidth = 0;
+        var colorArray = ["#999", "#48c730", "#2f84c7", "#bd33de", "#f14c02"]; //Colors of each rarity ordered by nothing -> legendary
+        mainDiv = document.createElement("div");
+        mainDiv.id = "mainDiv";
+        mainDiv.style.overflow = "hidden";
+        mainDiv.style.color = "black";
+        for(var i=0; i<raritiesCollected.length;i++){
+            if(raritiesCollected[i] > 0){
+                div = document.createElement("div");
+                div.innerText = Math.round(raritiesCollected[i] / totalLength * 100) + "%";
+                div.style.float= "left";
+                div.id = "rarityDiv" + i;
+                div.style.backgroundColor = colorArray[i];
+                div.style.width = (raritiesCollected[i] / totalLength * 492) + "px";
+                divWidth += raritiesCollected[i] / totalLength * 492;
+                mainDiv.appendChild(div);
+            }
+        }
+        if(divWidth <490){
             div = document.createElement("div");
-            div.innerText = Math.round(rarityArray[i] / totalLength * 100) + "%";
+            div.innerText = Math.round((492-divWidth)/492 * 100)+ "%";
             div.style.float= "left";
-            div.id = "rarityDiv" + i;
-            div.style.backgroundColor = colorArray[i];
-            div.style.width = (rarityArray[i] / totalLength * 492) + "px";
-            divWidth += rarityArray[i] / totalLength * 492;
+            div.id = "rarityDivNothing";
+            div.style.backgroundColor = "#fff";
+            div.style.width = (492 - divWidth) + "px";
             mainDiv.appendChild(div);
         }
+        document.getElementById("logDiv").appendChild(mainDiv);
     }
-    if(divWidth <490){
-        div = document.createElement("div");
-        div.innerText = Math.round((492-divWidth)/492 * 100)+ "%";
-        div.style.float= "left";
-        div.id = "rarityDivNothing";
-        div.style.backgroundColor = "#fff";
-        div.style.width = (492 - divWidth) + "px";
-        mainDiv.appendChild(div);
+    else{
+        document.getElementById("logDiv").removeChild(document.getElementById("mainDiv"));
     }
-    document.getElementById("logDiv").appendChild(mainDiv);
 }
 
 /*
@@ -545,7 +579,7 @@ function MainLoop(timerVar, loopOnce){
                 avgMaterials = (avgMaterials / totalLength).toFixed(2);
                 output += "Average materials collected/created: " + avgMaterials + "</br>";
                 output += "Total collection attempts on this node: " + results.length + "</br>";
-                output += "Total collection attempts in general: " + totalLength;
+                output += "Total collection attempts in general: " + totalLength + "</br>";
                 document.getElementById("logDiv").innerHTML = output; //print output to the html of that div (Jquery is love)
                 output = ""; //Reset output variable since it gets build it up every time from scratch; This might eat resources(?)
                 for(var  k=0;k<rarities.length;k++){ //for-loop iterates how many materials of each rarity have been collected.
@@ -554,8 +588,10 @@ function MainLoop(timerVar, loopOnce){
                         SetStorageVariable(("rarity" + k), raritiesCollected[k], showLog);
                     }
                 }
-                UpdateStatisticDivs(raritiesCollected, totalLength);
                 UpdateHistory();
+                if(document.getElementById("checkBoxRarities").checked){
+                    DisplayRarities();
+                }
                 totalLength++;
                 SetStorageVariable("totalLength", totalLength, showLog);
 
@@ -637,13 +673,19 @@ Patch notes 1.5
 -   Optimized the GetRightTiming function a little more and tried to fix a few more bugs connected to it
 -   Added a 5 second interval that loops over, only really executes code if the graphical log isn't built yet
 -   Fixed a "typo" in the ouput variable of the Mainloop, "You have collected" => "You have collected/ created"
-17.June.2016
+17th.June.2016
 -   Re-did the whole GetRightTiming function that it now waits until the attempt will end in 2 seconds and then do it's thing
 -   Now checking if the refresh vs real time is synced in the MainLoop
 -   Added a food buff status-tag to the title header. (NBA = No Buff Active; BA = Buff Active) - Also made this available in v1.42 as this was easy to implement
-18.June.2016
+18th.June.2016
 -   Finalized the data-over-session storage of statistics. This is still experimental so no guarantee that it will work 100%
 -   You can now see how long you have been working on a node
 -   Added the display of how many total attempts and how many node attempts you've done
 -   Added a few lines to the help-file
+
+Patch notes 1.51
+18th.June.2016
+-   Added a checkbox to the top to display the rarities below
+-   Changed the conditions for the rarity-meter to be displayed and added it to the new checkbox
+-   Changed SetTotalStatstics => WriteCheckboxStatus, this will wrrite the value of the checkbox into the local storage
 */
