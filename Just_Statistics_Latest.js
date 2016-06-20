@@ -349,7 +349,7 @@ function SetupLog(){
     selectLogMulti.addEventListener("change",function(){
         UpdateHistory();
     });
-    if(totalStatistics === false){
+    if(totalStatistics === "false"){
         ResetStatistics();
     }
     /*
@@ -566,7 +566,7 @@ function MainLoop(timerVar, loopOnce){
                 //This adds up the total multi-collections or -creations that you have achieved and finally add it to the output
                 for(var j=0;j<multiCollections.length;j++){
                     if(multiCollections[j] !== 0 && multiCollections[j] !== undefined){
-                        output += "You found/created a material x"+j + " " + multiCollections[j] + " time(s).</br>";
+                        output += "You found/created a material x"+j + " " + multiCollections[j] + " time(s). (" + (multiCollections[j]/totalLength*100).toFixed(1) + "%)</br>";
                         avgMaterials += (j) * multiCollections[j];
                     }
                 }
@@ -691,4 +691,5 @@ Patch notes 1.52
 -   Adjusted the ResetStatistics function to be up to latest standards
 -   Added a checkbox for the "nerdy" stuff (Basically a log of what gets written/ loaded into/out of local storage)
 -   Removed the rarity-meter (RIP somewhere around early June - 19th.June.2016)
+-   Added a small % to the "You'Ve collected something x amount of times" thing
 */
