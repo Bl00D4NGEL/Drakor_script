@@ -595,7 +595,6 @@ function MainLoop(timerVar, loopOnce){
                     resultsHTML = document.getElementsByClassName("roundResult areaName")[1].innerHTML;
                     resultsText = document.getElementsByClassName("roundResult areaName")[1].innerText;
                 }
-                output += "You have collected/created:";
                 /*
                 This two if clauses are necessary because Goz made two different exp-display ways.
                 Because of this the code checks for both types of classes and if either of them has a length greater than 1,
@@ -636,46 +635,16 @@ function MainLoop(timerVar, loopOnce){
                 if(maxMulti < multiCollections.length){ //Only if the maxMulti is lower than the actual multiColletions array -> write to local storage
                     maxMulti = Number(SetStorageVariable("maxMulti", multiCollections.length, displayNerdStuff));
                 }
-                var avgMaterials = 0; //Reset this to 0 to avoid wrong output (Would get way too high if not re-set)
-                output = ""; //Reset output variable since it gets build it up every time from scratch; This might eat resources(?)
                 for(var  k=0;k<rarities.length;k++){ //for-loop iterates how many materials of each rarity have been collected.
                     if(resultsHTML.indexOf(rarities[k]) !== -1){
                         droppedRarity = rarities[k];
-                        //   raritiesCollected[k]++;
-                        // SetStorageVariable(("rarity" + k), raritiesCollected[k], displayNerdStuff);
                     }
                 }
                 UpdateHistory();
                 AddData(lastCollectedMaterial, amount, droppedRarity, expDropped,  (lastCollectedMaterial + " x" + rawAmount), timeStamp, document.getElementsByClassName("roundResult areaName").length);
             }
         }
-        thenLength = results.length;/*
-        SetStorageVariable("thenLength", thenLength, displayNerdStuff);
-        var foodBuffInfo = "[NBA] ";
-        if(document.getElementsByClassName("drIcon cardNone slot_default").length === 0){
-            foodBuffInfo = "[BA] ";
-        }
-        else
-        {
-            foodBuffInfo = "[NBA] ";
-        }
-        if(document.getElementsByClassName("roundResult damage areaDepleted").length !== 0){
-            document.getElementsByTagName("title")[0].innerText = foodBuffInfo +"Node depleted";
-            alert("Node depleted");}
-
-        else{
-            if(document.getElementsByClassName("nodeRemaining").length !== 0){
-                console.log(document.getElementsByClassName("nodeRemaining")[0].innerText);
-                document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("nodeRemaining")[0].innerText.slice(0, document.getElementsByClassName("nodeRemaining")[0].innerText.indexOf("%")+1) + " left";
-            }
-            else if(document.getElementsByClassName("titleHeader").length > 0){
-                document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("titleHeader")[0].innerText.slice(document.getElementsByClassName("titleHeader")[0].innerText.indexOf("]")+ 1);
-            }
-            else{
-                document.getElementsByTagName("title")[0].innerText = 'Drakor "Innovative & Unique Browser Based RPG." (PBBG, MPOG, MMORPG) [BETA]';
-            }
-        }
-        */
+        thenLength = results.length;
         if(loopOnce){
             clearInterval(mainInterval);
         }
