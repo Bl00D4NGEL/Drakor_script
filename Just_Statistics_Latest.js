@@ -89,6 +89,7 @@ function DisplayRarities(){
     }
 }
 /*
+CURRENTLY JUST A LEFTOVER I MIGHT NEED LATER
 timeInMs gets calculated down to hours, minutes and seconds and gets output as a string
 example ConvertIntoSmallerTimeFormat(3600000) [1 hour in milliseconds]
 output: 1 Hour(s) 0 Minute(s) 0 Second(s)
@@ -187,10 +188,9 @@ This function updates the log over the rarity-bar whenever the select has change
 The printed log gets built up in the interval each time something is collected
 */
 function UpdateHistory(){
-    var filterArray = [];
+    var filterArray = [materialDic[document.getElementById("selectLogMaterial").value], multiDic[document.getElementById("selectLogMulti").value]];
     var materialLog;
     if(document.getElementById("materialLog") === null){ //If the material log hasn't been build yet, do so, else just change the innerHTML
-        filterArray = [materialDic[document.getElementById("selectLogMaterial").value], multiDic[document.getElementById("selectLogMulti").value]];
         materialLog = document.createElement("small");
         materialLog.innerHTML = "";
         materialLog.id = "materialLog";
@@ -198,12 +198,11 @@ function UpdateHistory(){
         document.getElementById("logDiv").appendChild(materialLog);
     }
     else{
-        filterArray = [materialDic[document.getElementById("selectLogMaterial").value], multiDic[document.getElementById("selectLogMulti").value]];
         materialLog = document.getElementById("materialLog");
         materialLog.innerHTML = "";
     }
     for(var i=0;i<filterArray.length;i++){
-        if( filterArray[i] !== "---Select a material---"  &&  filterArray[i] !== "---Select a multi---" && filterArray[i] !== undefined){
+        if(filterArray[i] !== "---Select a material---"  &&  filterArray[i] !== "---Select a multi---" && filterArray[i] !== undefined){
             materialLog.innerHTML += filterArray[i];
         }
     }
@@ -292,24 +291,6 @@ function SetupLog(){
     selectLogMaterial.id = "selectLogMaterial";
     selectLogMulti.id = "selectLogMulti";
     buttonResetStatistics.id = "buttonResetStatistics";
-    if(totalStatistics === "true"){
-        checkBoxTotalStatistics.checked = true;
-    }
-    else{
-        checkBoxTotalStatistics.checked = false;
-    }
-    if(displayRarity === "true"){
-        checkBoxRarities.checked = true;
-    }
-    else{
-        checkBoxRarities.checked = false;
-    }
-    if(displayNerdStuff === "true"){
-        checkBoxNerdStuff.checked = true;
-    }
-    else{
-        checkBoxNerdStuff.checked = false;
-    }
     fragment.appendChild(checkBoxTotalStatistics);
     fragment.appendChild(checkBoxTotalStatisticsText);
     fragment.appendChild(checkBoxRarities);
@@ -349,7 +330,25 @@ function SetupLog(){
     selectLogMulti.addEventListener("change",function(){
         UpdateHistory();
     });
-    if(totalStatistics === "false"){
+    if(RetrieveVariable("totalStatistics", false, displayNerdStuff) === "true"){
+        checkBoxTotalStatistics.checked = true;
+    }
+    else{
+        checkBoxTotalStatistics.checked = false;
+    }
+    if(RetrieveVariable("displayRarity", false, displayNerdStuff) === "true"){
+        checkBoxRarities.checked = true;
+    }
+    else{
+        checkBoxRarities.checked = false;
+    }
+    if(RetrieveVariable("displayNerdStuff", false, displayNerdStuff) === "true"){
+        checkBoxNerdStuff.checked = true;
+    }
+    else{
+        checkBoxNerdStuff.checked = false;
+    }
+    if(RetrieveVariable("totalStatistics", false, displayNerdStuff) === "false"){
         ResetStatistics();
     }
     /*
@@ -491,17 +490,19 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
         if( $("#selectLogMulti option[value='0']").length === 0){ // "nothing" as an option for multi if it is not present already
             AddOption(materialAmount, document.getElementById("selectLogMulti"));
             multiCollections[materialAmount] = 1;
+            multiCollections[materialAmount] = Number(SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff));
             multiDic[materialAmount] = timeOfDrop +  " - You didn't find anything.</br>";
             SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
         }
         else{
             multiCollections[materialAmount]++;
+            multiCollections[materialAmount] = Number(SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff));
             multiDic[materialAmount] += timeOfDrop +  " - You didn't find anything.</br>";
             SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
         }
     }
     else if(multiCollections[materialAmount] === undefined || multiCollections[materialAmount] === 0){
-        console.log("multiCollections before: " + multiCollections[materialAmount]);
+       // console.log("multiCollections before: " + multiCollections[materialAmount]);
         multiCollections[materialAmount] = 1;
         multiCollections[materialAmount] = Number(SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff));
         AddOption(materialAmount, document.getElementById("selectLogMulti"));
@@ -547,10 +548,11 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     {
         foodBuffInfo = "[NBA] ";
     }
-    if(document.getElementsByClassName("roundResult damage areaDepleted").length !== 0){
+    if(document.getElementById("skillResults").children[0].innerText.indexOf("depleted") !== -1){
         document.getElementsByTagName("title")[0].innerText = foodBuffInfo +"Node depleted";
-        alert("Node depleted");}
-
+        console.log("Node depleted");
+        alert("Node depleted");
+    }
     else{
         if(document.getElementsByClassName("nodeRemaining").length !== 0){
             console.log(document.getElementsByClassName("nodeRemaining")[0].innerText);
@@ -560,6 +562,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
             document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("titleHeader")[0].innerText.slice(document.getElementsByClassName("titleHeader")[0].innerText.indexOf("]")+ 1);
         }
         else{
+            console.log("Something that has no x left of % left");
             document.getElementsByTagName("title")[0].innerText = 'Drakor "Innovative & Unique Browser Based RPG." (PBBG, MPOG, MMORPG) [BETA]';
         }
     }
@@ -601,12 +604,12 @@ function MainLoop(timerVar, loopOnce){
                 it'll start slicing the result array for the exp dropped(and total experience) and the dropped amount
                 */
                 if(document.getElementsByClassName("hourMin xsmall").length >0){
-                    amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("hourMin xsmall")[0].innerText.length * (-1));
+                    amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("hourMin xsmall")[0].innerText.length * (-1)-1);
                     expDropped = document.getElementsByClassName("hourMin xsmall")[0].innerText;
                     expDropped = Number(expDropped.slice(1,expDropped.indexOf("total")-1));
                 }
                 else if(document.getElementsByClassName("statValue").length >0){
-                    amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("statValue")[0].innerText.length * (-1));
+                    amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("statValue")[0].innerText.length * (-1)-1);
                     expDropped = document.getElementsByClassName("statValue")[0].innerHTML;
                     expDropped =  Number(expDropped.substring(0, expDropped.indexOf("E")-1));
                 }
@@ -615,21 +618,22 @@ function MainLoop(timerVar, loopOnce){
                     amount =0;
                     expDropped=0;
                 }
+             //   amount = amount.replace(" ","");
                 rawAmount = amount;
-                amount = amount.replace(" ", "");
                 if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
                     lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
                 }
+                else{
+                    amount = 0;
+                    lastCollecteDMaterial = "Nothing";
+                    droppedRarity = "Nothing";
+                }
                 if(amount.length > 3){ //This should only execute when mastery, Create Rate/Drop Rate or whatever procs on the drop.
-                    amount = resultsText.slice(resultsText.lastIndexOf("]")+3,resultsText.lastIndexOf("]")+6);
+                    amount = resultsText.slice(resultsText.lastIndexOf("]")+3,resultsText.lastIndexOf("]")+5);
+                    amount = createAmountString(amount);
                 }
                 if(collected < gainedMaterials.length){
                     collected = Number(SetStorageVariable("collected", gainedMaterials.length, displayNerdStuff));
-                }
-                amount = createAmountString(amount);
-                if(resultsText.indexOf("found") === -1 && resultsText.indexOf("created") === -1){
-                    amount = 0;
-                    droppedRarity = "Nothing";
                 }
                 timeStamp = resultsText.slice(1, resultsText.indexOf("]"));
                 if(maxMulti < multiCollections.length){ //Only if the maxMulti is lower than the actual multiColletions array -> write to local storage
