@@ -58,6 +58,28 @@ setInterval(function(){ //This might be ugly, but currently I don't know a way t
     }
 }, 5000);
 
+function GetAttemptsToNextLevel(avgExp){
+    var maxLevel = 50;
+    var currentLevel = Number(document.getElementById("skillLevel").innerText.slice(6));
+    if(!isNaN(avgExp) && document.getElementById("expDiv") !== null){
+        var output = "";
+        if(currentLevel < maxLevel){
+            var expText = document.getElementsByClassName("expBar")[0].innerText;
+            var currExp = Number((expText.slice(5, expText.indexOf("/")-1)).replace(",",""));
+            var expToLevel = Number((expText.slice(expText.indexOf("/")+2,expText.indexOf("(")-1)).replace(",",""));
+            var expLeft = expToLevel-currExp;
+            var attemptsToLevel = Math.floor(expLeft/avgExp);
+        var timeToLevelInMs = attemptsToLevel * 60000;
+            console.log();
+            output = "<span style='color:#bb0'>Exp left to level: <b>" + expLeft + "</b></br>Average attempts to level: <b>" + attemptsToLevel + "</b></br>Estimated time to level-up: <b>" + ConvertIntoSmallerTimeFormat(timeToLevelInMs) + "</b></span>";
+        }
+        else{
+            output = "<span style='color:#F00'><b>You're currently not able to level-up since you're max-level.</b></span>";
+            }
+        document.getElementById("expDiv").innerHTML = output;
+    }
+}
+
 /*
 Gets called each time the checkbox "display rarities below" is ticked.
 If is has a "true" value it'll display the rarities and some other info about them below everything else
@@ -101,7 +123,7 @@ function ConvertIntoSmallerTimeFormat(timeInMs){
     timeInMs = timeInMs / 1000;
     if(timeInMs > 0){
         seconds = timeInMs % 60;
-        output = seconds + " and Second(s)" + output;
+        output = " and " + seconds + " Second(s)" + output;
         timeInMs -= seconds;
         timeInMs = timeInMs / 60;
         if(timeInMs > 0){
@@ -113,6 +135,10 @@ function ConvertIntoSmallerTimeFormat(timeInMs){
                 hours = timeInMs % 24;
                 output = hours + " Hour(s) " + output;
                 timeInMs -= hours;
+                timeInMs = timeInMs / 24;
+                if(timeInMs > 0){
+                    output = timeInMs + " Days " + output;
+                }
             }
         }
     }
@@ -143,17 +169,26 @@ function GetRightTiming(){
     var timerSet = false; //Using this variable to prevent multi-starting of mainLoops
     var myTimer = setInterval(function(){ //Starting the timer in 500 ms interval to look for the 2 second left thing
         if(document.getElementsByClassName("skillTimer").length > 0){ //Preventing error-message spam because it would otherwise try to read the text of this
-            timerText = document.getElementById("skill-timer").innerText;
-            if(timerText.indexOf("(2)") !== -1 && !timerSet){ //If the timer only has 2 seconds left, start a timeout for 3 seconds
-                timerSet = true;
-                setTimeout(function(){
-                    var newTime = timerText.slice(timerText.indexOf("(")+1, timerText.indexOf(")"));
-                    newTime = Number(newTime) + 1; //Add 1 because of the 3 seconds timeout, this can cause off-numbers but this gets handlded in the mainInterval
-                    console.log("Refreshing every " + newTime + " seconds");
-                    MainLoop(2000, true);
-                    MainLoop(newTime*1000);
-                    clearInterval(myTimer); //Clear the mess that got started
-                }, 3000, myTimer);
+            var skillResultsText = document.getElementById("skillResults").innerText;
+            if(skillResultsText.indexOf("depleted") === -1){
+                timerText = document.getElementById("skill-timer").innerText;
+                if(timerText.indexOf("(2)") !== -1 && !timerSet){ //If the timer only has 2 seconds left, start a timeout for 3 seconds
+                    timerSet = true;
+                    setTimeout(function(){
+                        var newTime = timerText.slice(timerText.indexOf("(")+1, timerText.indexOf(")"));
+                        newTime = Number(newTime) + 1; //Add 1 because of the 3 seconds timeout, this can cause off-numbers but this gets handlded in the mainInterval
+                        console.log("Refreshing every " + newTime + " seconds");
+                        MainLoop(2000, true);
+                        MainLoop(newTime*1000);
+                        clearInterval(myTimer); //Clear the mess that got started
+                    }, 3000, myTimer);
+                }
+            }
+            else{
+                console.log("Node depleted!");
+                alert("Node depleted!");
+                MainLoop(2000, true);
+                clearInterval(myTimer); //Clear the mess that got started
             }
         }
     }, 500);
@@ -202,7 +237,7 @@ function UpdateHistory(){
         materialLog.innerHTML = "";
     }
     for(var i=0;i<filterArray.length;i++){
-        if(filterArray[i] !== "---Select a material---"  &&  filterArray[i] !== "---Select a multi---" && filterArray[i] !== undefined){
+        if(filterArray[i] !== "Select a material"  &&  filterArray[i] !== "Select a multi" && filterArray[i] !== undefined){
             materialLog.innerHTML += filterArray[i];
         }
     }
@@ -268,12 +303,17 @@ function SetupLog(){
     var buttonResetStatisticsText = document.createTextNode("Reset Statistics");
     var selectLogMaterial = document.createElement("select");
     var selectLogMulti = document.createElement("select");
+    selectLogMaterial.style.fontSize = "14px";
+    selectLogMulti.style.fontSize = "14px";
     var logDiv = document.createElement("div");
     logDiv.style.maxHeight = "400px";
     logDiv.style.overflowX = "hidden";
     logDiv.style.overflowY = "scroll";
     logDiv.style.fontSize = "14px";
     logDiv.id = "logDiv";
+    var expDiv = document.createElement("div");
+    expDiv.fontSize = "14px";
+    expDiv.id = "expDiv";
     var fragment = document.createDocumentFragment();
     buttonResetStatistics.appendChild(buttonResetStatisticsText);
     checkBoxTotalStatisticsText.innerHTML = "Track total statistics? </br>";
@@ -291,6 +331,7 @@ function SetupLog(){
     selectLogMaterial.id = "selectLogMaterial";
     selectLogMulti.id = "selectLogMulti";
     buttonResetStatistics.id = "buttonResetStatistics";
+    fragment.appendChild(expDiv);
     fragment.appendChild(checkBoxTotalStatistics);
     fragment.appendChild(checkBoxTotalStatisticsText);
     fragment.appendChild(checkBoxRarities);
@@ -306,8 +347,8 @@ function SetupLog(){
     document.getElementsByClassName("skillBox")[0].appendChild(fragment);
     document.getElementsByClassName("skillResultsHeader")[0].innerHTML = "";
     document.getElementsByClassName("skillResultsHeader")[0].appendChild(logDiv);
-    AddOption("---Select a material---",  document.getElementById("selectLogMaterial"));
-    AddOption("---Select a multi---",  document.getElementById("selectLogMulti"));
+    AddOption("Select a material",  document.getElementById("selectLogMaterial"));
+    AddOption("Select a multi",  document.getElementById("selectLogMulti"));
     checkBoxTotalStatistics.addEventListener("click", function(){
         WriteCheckboxStatus(checkBoxTotalStatistics, "totalStatistics");
     }, checkBoxTotalStatistics);
@@ -452,6 +493,13 @@ Legendary: 0/1 0.0%
 Nothing: 0/1 0.0%
 */
 function AddData(materialName, materialAmount, materialRarity, expAmount, droplog, timeOfDrop, numberOfAttempt){
+    if(isNaN(materialAmount) || isNaN(expAmount)){
+        materialAmount = -1;
+        expAmount = 0;
+    }
+    if(materialName.indexOf(":") !== -1){
+        materialName = "Invalid Drop/Creation";
+    }
     totalAttempts = SetStorageVariable("totalAttempts", (totalAttempts+1), displayNerdStuff);
     totalExp += Number(expAmount);
     totalExp = SetStorageVariable("totalExp", totalExp, displayNerdStuff);
@@ -502,7 +550,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
         }
     }
     else if(multiCollections[materialAmount] === undefined || multiCollections[materialAmount] === 0){
-       // console.log("multiCollections before: " + multiCollections[materialAmount]);
+        // console.log("multiCollections before: " + multiCollections[materialAmount]);
         multiCollections[materialAmount] = 1;
         multiCollections[materialAmount] = Number(SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff));
         AddOption(materialAmount, document.getElementById("selectLogMulti"));
@@ -539,6 +587,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     document.getElementById("logDiv").innerHTML = output; //print output to the html of that div
     UpdateHistory();
     DisplayRarities();
+    GetAttemptsToNextLevel(avgExp);
     //output is now "done"
     var foodBuffInfo = "[NBA] ";
     if(document.getElementsByClassName("drIcon cardNone slot_default").length === 0){
@@ -548,23 +597,25 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     {
         foodBuffInfo = "[NBA] ";
     }
-    if(document.getElementById("skillResults").children[0].innerText.indexOf("depleted") !== -1){
-        document.getElementsByTagName("title")[0].innerText = foodBuffInfo +"Node depleted";
-        console.log("Node depleted");
-        alert("Node depleted");
-    }
-    else{
-        if(document.getElementsByClassName("nodeRemaining").length !== 0){
-            console.log(document.getElementsByClassName("nodeRemaining")[0].innerText);
-            document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("nodeRemaining")[0].innerText.slice(0, document.getElementsByClassName("nodeRemaining")[0].innerText.indexOf("%")+1) + " left";
-        }
-        else if(document.getElementsByClassName("titleHeader").length > 0){
-            document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("titleHeader")[0].innerText.slice(document.getElementsByClassName("titleHeader")[0].innerText.indexOf("]")+ 1);
+    if(document.getElementsByClassName("nodeRemaining").length > 0){
+        var nodePercentText = document.getElementsByClassName("nodeRemaining")[0].innerText.slice(0, document.getElementsByClassName("nodeRemaining")[0].innerText.indexOf("%")+1);
+        var skillResultsText = document.getElementById("skillResults").innerText;
+        if(skillResultsText.indexOf("depleted") !== -1){
+            document.getElementsByTagName("title")[0].innerText = foodBuffInfo +"Node depleted";
+            console.log("Node depleted");
+            alert("Node depleted");
         }
         else{
-            console.log("Something that has no x left of % left");
-            document.getElementsByTagName("title")[0].innerText = 'Drakor "Innovative & Unique Browser Based RPG." (PBBG, MPOG, MMORPG) [BETA]';
+            console.log(document.getElementsByClassName("nodeRemaining")[0].innerText);
+            document.getElementsByTagName("title")[0].innerText = foodBuffInfo + nodePercentText + " left";
         }
+    }
+    else if(document.getElementsByClassName("titleHeader").length > 0){ //If you're not working on a node but on a pattern
+        document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("titleHeader")[0].innerText.slice(document.getElementsByClassName("titleHeader")[0].innerText.indexOf("]")+ 1);
+    }
+    else{
+        console.log("Something that has no x left of % left");
+        document.getElementsByTagName("title")[0].innerText = 'Drakor "Innovative & Unique Browser Based RPG." (PBBG, MPOG, MMORPG) [BETA]';
     }
 }
 function MainLoop(timerVar, loopOnce){
@@ -618,14 +669,14 @@ function MainLoop(timerVar, loopOnce){
                     amount =0;
                     expDropped=0;
                 }
-             //   amount = amount.replace(" ","");
+                //   amount = amount.replace(" ","");
                 rawAmount = amount;
                 if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
                     lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
                 }
                 else{
                     amount = 0;
-                    lastCollecteDMaterial = "Nothing";
+                    lastCollectedMaterial = "Nothing";
                     droppedRarity = "Nothing";
                 }
                 if(amount.length > 3){ //This should only execute when mastery, Create Rate/Drop Rate or whatever procs on the drop.
