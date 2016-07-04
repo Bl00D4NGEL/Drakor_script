@@ -629,6 +629,12 @@ function MainLoop(timerVar, loopOnce){
         else{
             //This if-clause is to prevent looping over the same thing too often in case the timer-variable thing goes wrong or there is lag or anything else that would cause multi-logging
             if(results.length > thenLength){
+                var resultsHTML = document.getElementsByClassName("roundResult areaName")[0].innerHTML;
+                var resultsText = document.getElementsByClassName("roundResult areaName")[0].innerText;
+                if(resultsText.indexOf("Your combines are complete.") === 0){
+                    resultsHTML = document.getElementsByClassName("roundResult areaName")[1].innerHTML;
+                    resultsText = document.getElementsByClassName("roundResult areaName")[1].innerText;
+                }
                 if(resultsText.indexOf("skill is now level") !== -1){ //If you get a level-up, write into the console and then skip the rest of the cycle, else do the normal thing
                     console.log("Level up, yay!");
                 }
@@ -643,12 +649,6 @@ function MainLoop(timerVar, loopOnce){
                             clearInterval(mainInterval);
                         }, 5000, mainInterval);
                         GetRightTiming();
-                    }
-                    var resultsHTML = document.getElementsByClassName("roundResult areaName")[0].innerHTML;
-                    var resultsText = document.getElementsByClassName("roundResult areaName")[0].innerText;
-                    if(resultsText.indexOf("Your combines are complete.") === 0){
-                        resultsHTML = document.getElementsByClassName("roundResult areaName")[1].innerHTML;
-                        resultsText = document.getElementsByClassName("roundResult areaName")[1].innerText;
                     }
                     /*
                 This two if clauses are necessary because Goz made two different exp-display ways.
