@@ -1,6 +1,7 @@
 // ==UserScript==
 // @name         Just statistics v1.6
-// @version      1.6
+// @version      1.61
+// @downloadURL  https://github.com/Bl00D4NGEL/Drakor_script/blob/master/Just_Statistics_Latest.js
 // @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more...)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://www.drakor.com*
@@ -58,6 +59,36 @@ setInterval(function(){ //This might be ugly, but currently I don't know a way t
     }
 }, 5000);
 
+function ChangeTitle(){
+    var foodBuffInfo = "[NBA] ";
+    if(document.getElementsByClassName("drIcon cardNone slot_default").length === 0){
+        foodBuffInfo = "[BA] ";
+    }
+    else
+    {
+        foodBuffInfo = "[NBA] ";
+    }
+    if(document.getElementsByClassName("nodeRemaining").length > 0){
+        var nodePercentText = document.getElementsByClassName("nodeRemaining")[0].innerText.slice(0, document.getElementsByClassName("nodeRemaining")[0].innerText.indexOf("%")+1);
+        var skillResultsText = document.getElementById("skillResults").innerText;
+        if(skillResultsText.indexOf("depleted") !== -1){
+            document.getElementsByTagName("title")[0].innerText = foodBuffInfo +"Node depleted";
+            console.log("Node depleted");
+            alert("Node depleted");
+        }
+        else{
+            console.log(document.getElementsByClassName("nodeRemaining")[0].innerText);
+            document.getElementsByTagName("title")[0].innerText = foodBuffInfo + nodePercentText + " left";
+        }
+    }
+    else if(document.getElementsByClassName("titleHeader").length > 0){ //If you're not working on a node but on a pattern
+        document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("titleHeader")[0].innerText.slice(document.getElementsByClassName("titleHeader")[0].innerText.indexOf("]")+ 1);
+    }
+    else{
+        console.log("Something that has no x left of % left");
+        document.getElementsByTagName("title")[0].innerText = 'Drakor "Innovative & Unique Browser Based RPG." (PBBG, MPOG, MMORPG) [BETA]';
+    }
+}
 function GetAttemptsToNextLevel(avgExp){
     var maxLevel = 50;
     var currentLevel = Number(document.getElementById("skillLevel").innerText.slice(6));
@@ -587,36 +618,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     document.getElementById("logDiv").innerHTML = output; //print output to the html of that div
     UpdateHistory();
     DisplayRarities();
-    GetAttemptsToNextLevel(avgExp);
     //output is now "done"
-    var foodBuffInfo = "[NBA] ";
-    if(document.getElementsByClassName("drIcon cardNone slot_default").length === 0){
-        foodBuffInfo = "[BA] ";
-    }
-    else
-    {
-        foodBuffInfo = "[NBA] ";
-    }
-    if(document.getElementsByClassName("nodeRemaining").length > 0){
-        var nodePercentText = document.getElementsByClassName("nodeRemaining")[0].innerText.slice(0, document.getElementsByClassName("nodeRemaining")[0].innerText.indexOf("%")+1);
-        var skillResultsText = document.getElementById("skillResults").innerText;
-        if(skillResultsText.indexOf("depleted") !== -1){
-            document.getElementsByTagName("title")[0].innerText = foodBuffInfo +"Node depleted";
-            console.log("Node depleted");
-            alert("Node depleted");
-        }
-        else{
-            console.log(document.getElementsByClassName("nodeRemaining")[0].innerText);
-            document.getElementsByTagName("title")[0].innerText = foodBuffInfo + nodePercentText + " left";
-        }
-    }
-    else if(document.getElementsByClassName("titleHeader").length > 0){ //If you're not working on a node but on a pattern
-        document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("titleHeader")[0].innerText.slice(document.getElementsByClassName("titleHeader")[0].innerText.indexOf("]")+ 1);
-    }
-    else{
-        console.log("Something that has no x left of % left");
-        document.getElementsByTagName("title")[0].innerText = 'Drakor "Innovative & Unique Browser Based RPG." (PBBG, MPOG, MMORPG) [BETA]';
-    }
 }
 function MainLoop(timerVar, loopOnce){
     var mainInterval = setInterval(function(){
@@ -627,78 +629,83 @@ function MainLoop(timerVar, loopOnce){
         else{
             //This if-clause is to prevent looping over the same thing too often in case the timer-variable thing goes wrong or there is lag or anything else that would cause multi-logging
             if(results.length > thenLength){
-                //Following part is just a quick test if the timer-variable is okay, since if it is asynced by over 5 seconds it should calculated a new one.
-                //Otherwise this is just sitting here, doing nothing.
-                timerText = document.getElementById("skill-timer").innerText;
-                newDate = new Date();
-                newTime = newDate.getTime();
-                timeDiff = newTime - startTimeInMS;
-                timeString = ConvertIntoSmallerTimeFormat(timeDiff);
-                var output = "You have been working on this node/pattern for " + timeString + ".</br>";
-                var currentTime = timerText.slice(timerText.indexOf("(")+1, timerText.indexOf(")"));
-                if((timerVar/1000) % currentTime > 5 && !loopOnce){
-                    console.log("Refresh time is over 5 seconds off.");
-                    setTimeout(function(){
-                        clearInterval(mainInterval);
-                    }, 5000, mainInterval);
-                    GetRightTiming();
+                if(resultsText.indexOf("skill is now level") !== -1){ //If you get a level-up, write into the console and then skip the rest of the cycle, else do the normal thing
+                    console.log("Level up, yay!");
                 }
-                var resultsHTML = document.getElementsByClassName("roundResult areaName")[0].innerHTML;
-                var resultsText = document.getElementsByClassName("roundResult areaName")[0].innerText;
-                if(resultsText.indexOf("Your combines are complete.") === 0){
-                    resultsHTML = document.getElementsByClassName("roundResult areaName")[1].innerHTML;
-                    resultsText = document.getElementsByClassName("roundResult areaName")[1].innerText;
-                }
-                /*
+                else{
+                    //Following part is just a quick test if the timer-variable is okay, since if it is asynced by over 5 seconds it should calculated a new one.
+                    //Otherwise this is just sitting here, doing nothing.
+                    timerText = document.getElementById("skill-timer").innerText;
+                    var currentTime = timerText.slice(timerText.indexOf("(")+1, timerText.indexOf(")"));
+                    if((timerVar/1000) % currentTime > 5 && !loopOnce){
+                        console.log("Refresh time is over 5 seconds off.");
+                        setTimeout(function(){
+                            clearInterval(mainInterval);
+                        }, 5000, mainInterval);
+                        GetRightTiming();
+                    }
+                    var resultsHTML = document.getElementsByClassName("roundResult areaName")[0].innerHTML;
+                    var resultsText = document.getElementsByClassName("roundResult areaName")[0].innerText;
+                    if(resultsText.indexOf("Your combines are complete.") === 0){
+                        resultsHTML = document.getElementsByClassName("roundResult areaName")[1].innerHTML;
+                        resultsText = document.getElementsByClassName("roundResult areaName")[1].innerText;
+                    }
+                    /*
                 This two if clauses are necessary because Goz made two different exp-display ways.
                 Because of this the code checks for both types of classes and if either of them has a length greater than 1,
                 it'll start slicing the result array for the exp dropped(and total experience) and the dropped amount
                 */
-                if(document.getElementsByClassName("hourMin xsmall").length >0){
-                    amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("hourMin xsmall")[0].innerText.length * (-1)-1);
-                    expDropped = document.getElementsByClassName("hourMin xsmall")[0].innerText;
-                    expDropped = Number(expDropped.slice(1,expDropped.indexOf("total")-1));
-                }
-                else if(document.getElementsByClassName("statValue").length >0){
-                    amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("statValue")[0].innerText.length * (-1)-1);
-                    expDropped = document.getElementsByClassName("statValue")[0].innerHTML;
-                    expDropped =  Number(expDropped.substring(0, expDropped.indexOf("E")-1));
-                }
-                else{
-                    console.log("ERROR: Exp-display changed, please contact creator of this script or similar responsibles");
-                    amount =0;
-                    expDropped=0;
-                }
-                //   amount = amount.replace(" ","");
-                rawAmount = amount;
-                if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
-                    lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
-                }
-                else{
-                    amount = 0;
-                    lastCollectedMaterial = "Nothing";
-                    droppedRarity = "Nothing";
-                }
-                if(amount.length > 3){ //This should only execute when mastery, Create Rate/Drop Rate or whatever procs on the drop.
-                    amount = resultsText.slice(resultsText.lastIndexOf("]")+3,resultsText.lastIndexOf("]")+5);
-                    amount = createAmountString(amount);
-                }
-                if(collected < gainedMaterials.length){
-                    collected = Number(SetStorageVariable("collected", gainedMaterials.length, displayNerdStuff));
-                }
-                timeStamp = resultsText.slice(1, resultsText.indexOf("]"));
-                if(maxMulti < multiCollections.length){ //Only if the maxMulti is lower than the actual multiColletions array -> write to local storage
-                    maxMulti = Number(SetStorageVariable("maxMulti", multiCollections.length, displayNerdStuff));
-                }
-                for(var  k=0;k<rarities.length;k++){ //for-loop iterates how many materials of each rarity have been collected.
-                    if(resultsHTML.indexOf(rarities[k]) !== -1){
-                        droppedRarity = rarities[k];
+                    if(document.getElementsByClassName("hourMin xsmall").length >0){
+                        amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("hourMin xsmall")[0].innerText.length * (-1)-1);
+                        expDropped = document.getElementsByClassName("hourMin xsmall")[0].innerText;
+                        expDropped = Number(expDropped.slice(1,expDropped.indexOf("total")-1));
                     }
+                    else if(document.getElementsByClassName("statValue").length >0){
+                        amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("statValue")[0].innerText.length * (-1)-1);
+                        expDropped = document.getElementsByClassName("statValue")[0].innerHTML;
+                        expDropped =  Number(expDropped.substring(0, expDropped.indexOf("E")-1));
+                    }
+                    else{
+                        console.log("ERROR: Exp-display changed, please contact creator of this script or similar responsibles");
+                        amount =0;
+                        expDropped=0;
+                    }
+                    rawAmount = amount;
+                    if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
+                        if(resultsHTML.indexOf("cLinkType") !== -1){
+                            lastCollectedMaterial = resultsHTML.slice(resultsHTML.indexOf("cLinkType")+11, resultsHTML.indexOf("</span></div>"));
+
+                        }
+                        lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
+                    }
+                    else{
+                        amount = 0;
+                        lastCollectedMaterial = "Nothing";
+                        droppedRarity = "Nothing";
+                    }
+                    if(amount.length > 3){ //This should only execute when mastery, Create Rate/Drop Rate or whatever procs on the drop.
+                        amount = resultsText.slice(resultsText.lastIndexOf("]")+3,resultsText.lastIndexOf("]")+5);
+                        amount = createAmountString(amount);
+                    }
+                    if(collected < gainedMaterials.length){
+                        collected = Number(SetStorageVariable("collected", gainedMaterials.length, displayNerdStuff));
+                    }
+                    timeStamp = resultsText.slice(1, resultsText.indexOf("]"));
+                    if(maxMulti < multiCollections.length){ //Only if the maxMulti is lower than the actual multiColletions array -> write to local storage
+                        maxMulti = Number(SetStorageVariable("maxMulti", multiCollections.length, displayNerdStuff));
+                    }
+                    for(var  k=0;k<rarities.length;k++){ //for-loop iterates how many materials of each rarity have been collected.
+                        if(resultsHTML.indexOf(rarities[k]) !== -1){
+                            droppedRarity = rarities[k];
+                        }
+                    }
+                    UpdateHistory();
+                    AddData(lastCollectedMaterial, amount, droppedRarity, expDropped,  (lastCollectedMaterial + " x" + rawAmount), timeStamp, document.getElementsByClassName("roundResult areaName").length);
                 }
-                UpdateHistory();
-                AddData(lastCollectedMaterial, amount, droppedRarity, expDropped,  (lastCollectedMaterial + " x" + rawAmount), timeStamp, document.getElementsByClassName("roundResult areaName").length);
             }
         }
+        ChangeTitle();
+        GetAttemptsToNextLevel(avgExp);
         thenLength = results.length;
         if(loopOnce){
             clearInterval(mainInterval);
