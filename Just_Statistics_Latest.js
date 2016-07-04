@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Just statistics v1.6
+// @name         Just statistics v1.61
 // @version      1.61
 // @downloadURL  https://github.com/Bl00D4NGEL/Drakor_script/blob/master/Just_Statistics_Latest.js
 // @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more...)
@@ -11,7 +11,7 @@
 Variable declaration
 PS: Global vars are ugly
 */
-var version = "v1.6";
+var version = "v1.61";
 console.log("You're currently using version " + version);
 //Variable declaration; getting the data out of local storage
 var thenLength =  0;//This is to prevent the interval to loop over the drop more than once
