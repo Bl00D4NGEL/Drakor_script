@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Just statistics v1.61
-// @version      1.61
+// @name         Just statistics v1.62
+// @version      1.62
 // @downloadURL  https://github.com/Bl00D4NGEL/Drakor_script/blob/master/Just_Statistics_Latest.js
 // @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more...)
 // @author       Dominik "Bl00D4NGEL" Peters
@@ -11,7 +11,7 @@
 Variable declaration
 PS: Global vars are ugly
 */
-var version = "v1.61";
+var version = "v1.62";
 console.log("You're currently using version " + version);
 //Variable declaration; getting the data out of local storage
 var thenLength =  0;//This is to prevent the interval to loop over the drop more than once
@@ -672,10 +672,6 @@ function MainLoop(timerVar, loopOnce){
                     }
                     rawAmount = amount;
                     if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
-                        if(resultsHTML.indexOf("cLinkType") !== -1){
-                            lastCollectedMaterial = resultsHTML.slice(resultsHTML.indexOf("cLinkType")+11, resultsHTML.indexOf("</span></div>"));
-
-                        }
                         lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
                     }
                     else{
@@ -698,6 +694,21 @@ function MainLoop(timerVar, loopOnce){
                         if(resultsHTML.indexOf(rarities[k]) !== -1){
                             droppedRarity = rarities[k];
                         }
+                    }
+                    if(resultsHTML.indexOf("cLinkLvl") !== -1){ //Item that is clickable/linkable
+                        amount = resultsHTML.split("x1").length -1;
+                        if(document.getElementsByClassName("hourMin xsmall").length >0){
+                            rawAmount = resultsHTML.slice(resultsHTML.lastIndexOf("x1"), document.getElementsByClassName("hourMin xsmall")[0].innerText.length * (-1)-1);
+                        }
+                        else if(document.getElementsByClassName("statValue").length >0){
+                            rawAmount = resultsHTML.slice(resultsHTML.lastIndexOf("x1"), document.getElementsByClassName("statValue")[0].innerText.length * (-1)-1);
+                        }
+                        else{
+                            console.log("ERROR: Exp-display changed, please contact creator of this script or similar responsibles");
+                        }
+                        // Item created: resultsHTML.split('cLinkType">')[1].slice(0, resultsHTML.split('cLinkType">')[1].indexOf("</span>"))
+                        // Level of item created: resultsHTML.split('cLinkLvl">')[1][log.split('cLinkLvl">')[1].indexOf("</span>")-1]
+                        lastCollectedMaterial = resultsHTML.split('cLinkType">')[1].slice(0, resultsHTML.split('cLinkType">')[1].indexOf("</span>")) + " Level:" + resultsHTML.split('cLinkLvl">')[1][log.split('cLinkLvl">')[1].indexOf("</span>")-1];
                     }
                     UpdateHistory();
                     AddData(lastCollectedMaterial, amount, droppedRarity, expDropped,  (lastCollectedMaterial + " x" + rawAmount), timeStamp, document.getElementsByClassName("roundResult areaName").length);
