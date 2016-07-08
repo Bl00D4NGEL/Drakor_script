@@ -398,7 +398,7 @@ function SetupLog(){
             effect: "blind",
             duration: 500
         },
-        width: 800,
+        width: 640,
         height: 400
     });
     checkBoxTotalStatistics.addEventListener("click", function(){
