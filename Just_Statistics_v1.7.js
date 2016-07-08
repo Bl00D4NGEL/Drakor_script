@@ -101,7 +101,7 @@ function ChangeTitle(){
 }
 function GetAttemptsToNextLevel(avgExp){
     var maxLevel = 50;
-    var currentLevel = Number(document.getElementById("skillLevel").innerText.slice(6));
+    var currentLevel = Number(document.getElementsByClassName("skillLevel")[0].innerText.slice(6));
     if(!isNaN(avgExp) && document.getElementById("expDiv") !== null){
         var output = "";
         if(currentLevel < maxLevel){
