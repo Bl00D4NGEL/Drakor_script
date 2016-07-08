@@ -17,6 +17,7 @@ console.log("You're currently using version " + version);
 var thenLength =  0;//This is to prevent the interval to loop over the drop more than once
 var displayNerdStuff = RetrieveVariable("displayNerdStuff", false, false);
 var totalStatistics = RetrieveVariable("totalStatistics", false, displayNerdStuff);
+var runLog = RetrieveVariable("runLog", "true", displayNerdStuff);
 var totalExp = Number(RetrieveVariable("totalExp", 0, displayNerdStuff));
 var maxMulti = Number(RetrieveVariable("maxMulti", 0, displayNerdStuff));
 var collected = Number(RetrieveVariable("collected", 0, displayNerdStuff));
@@ -51,8 +52,6 @@ for(var multiDiCEntry = 0; multiDiCEntry < maxMulti; multiDiCEntry++){
     multiDic[multiDiCEntry] = RetrieveVariable(("multiDic_" + multiDiCEntry), "", displayNerdStuff);
 }
 
-//var myObj = JSON.parse(materialDic);
-//console.log(myObj);
 setInterval(function(){ //This might be ugly, but currently I don't know a way to solve an auto-rebuilding setup more dynamically
     if(document.getElementsByClassName("skillBox").length > 0){ //If the titleHeader class has a length of above 0, create the graphical log part
         if(document.getElementById("logDiv") === null){ //If there is not "logDiv" div start the setup of the log
@@ -122,9 +121,7 @@ function GetAttemptsToNextLevel(avgExp){
 }
 
 /*
-Gets called each time the checkbox "display rarities below" is ticked.
-If is has a "true" value it'll display the rarities and some other info about them below everything else
-If it has a "false" value it'll delete the child to remove the data until it gets called again
+This is to build up the text of the "Rarities div" in the log thingie
 */
 function DisplayRarities(){
     var colorArray = ["#999", "#48c730", "#2f84c7", "#bd33de", "#f14c02", "#0aa"]; //Colors of each rarity ordered by common -> legendary -> nothing
@@ -291,6 +288,10 @@ function SetupLog(){
     checkBoxNerdStuffText.innerHTML = "Display the nerdy things in the console? </br>";
     var emptyLine = document.createElement("small");
     emptyLine.innerHTML = "</br>";
+    var buttonPauseScript = document.createElement("button");
+    var buttonPauseScriptText = document.createTextNode("Pause script?");
+    buttonPauseScript.appendChild(buttonPauseScriptText);
+    buttonPauseScript.id = "buttonPauseScript";
     var buttonResetStatistics = document.createElement("button");
     var buttonResetStatisticsText = document.createTextNode("Reset Statistics");
     buttonResetStatistics.appendChild(buttonResetStatisticsText);
@@ -378,6 +379,28 @@ function SetupLog(){
         fragment.appendChild(fragmentContent[k]);
     }
     document.getElementsByClassName("skillBox")[0].appendChild(fragment);
+    multiDiv.appendChild(multiDivText);
+    multiDiv.appendChild(selectLogMulti);
+    multiDiv.appendChild(multiDivSelect);
+    materialDiv.appendChild(materialDivText);
+    materialDiv.appendChild(selectLogMaterial);
+    materialDiv.appendChild(materialDivSelect);
+    optionDiv.appendChild(checkBoxTotalStatistics);
+    optionDiv.appendChild(checkBoxTotalStatisticsText);
+    optionDiv.appendChild(checkBoxNerdStuff);
+    optionDiv.appendChild(checkBoxNerdStuffText);
+    optionDiv.appendChild(buttonResetStatistics);
+    optionDiv.appendChild(buttonPauseScript);
+    $("#logDiv").tabs();
+    $("#logDiv").dialog({
+        autoOpen: false,
+        show: {
+            effect: "blind",
+            duration: 500
+        },
+        width: 800,
+        height: 400
+    });
     checkBoxTotalStatistics.addEventListener("click", function(){
         WriteCheckboxStatus(checkBoxTotalStatistics, "totalStatistics");
     }, checkBoxTotalStatistics);
@@ -396,20 +419,28 @@ function SetupLog(){
     buttonShowLog.addEventListener("click", function(){
         $("#logDiv").dialog("open");
     });
+    buttonPauseScript.addEventListener("click", function(){
+        if(RetrieveVariable("runLog", false, displayNerdStuff) === "false"){
+            buttonPauseScript.innerHTML = "Script running";
+            runLog = SetStorageVariable("runLog", "true", displayNerdStuff);
+        }
+        else{
+            buttonPauseScript.innerHTML = "Script paused";
+            runLog = SetStorageVariable("runLog", "false", displayNerdStuff);
+        }
+    },displayNerdStuff);
     if(RetrieveVariable("totalStatistics", false, displayNerdStuff) === "true"){
         checkBoxTotalStatistics.checked = true;
     }
     else{
         checkBoxTotalStatistics.checked = false;
+        ResetStatistics();
     }
     if(RetrieveVariable("displayNerdStuff", false, displayNerdStuff) === "true"){
         checkBoxNerdStuff.checked = true;
     }
     else{
         checkBoxNerdStuff.checked = false;
-    }
-    if(RetrieveVariable("totalStatistics", false, displayNerdStuff) === "false"){
-        ResetStatistics();
     }
     AddOption("Select a material",  document.getElementById("selectLogMaterial"));
     AddOption("Select a multi",  document.getElementById("selectLogMulti"));
@@ -421,27 +452,6 @@ function SetupLog(){
     for(var i=0; i<gainedMaterials.length;i++){
         AddOption(gainedMaterials[i], document.getElementById("selectLogMaterial"));
     }
-    multiDiv.appendChild(multiDivText);
-    multiDiv.appendChild(selectLogMulti);
-    multiDiv.appendChild(multiDivSelect);
-    materialDiv.appendChild(materialDivText);
-    materialDiv.appendChild(selectLogMaterial);
-    materialDiv.appendChild(materialDivSelect);
-    optionDiv.appendChild(checkBoxTotalStatistics);
-    optionDiv.appendChild(checkBoxTotalStatisticsText);
-    optionDiv.appendChild(checkBoxNerdStuff);
-    optionDiv.appendChild(checkBoxNerdStuffText);
-    optionDiv.appendChild(buttonResetStatistics);
-    $("#logDiv").tabs();
-    $("#logDiv").dialog({
-        autoOpen: false,
-        show: {
-            effect: "blind",
-            duration: 500
-        },
-        width: 800,
-        height: 400
-    });
     SortMultisInSelect();
     newStart = new Date();
     startTimeInMS = newStart.getTime();
@@ -465,6 +475,7 @@ function ResetStatistics(){
     localStorage.clear(); //Clear the local storage and set all the vars to their base value after
     displayNerdStuff = SetStorageVariable("displayNerdStuff", document.getElementById("checkBoxNerdStuff").checked, displayNerdStuff);
     totalExp = Number(SetStorageVariable("totalExp", 0, displayNerdStuff));
+    runLog = SetStorageVariable("runLog", true, displayNerdStuff);
     thenLength = Number(SetStorageVariable("thenLength", 0, displayNerdStuff));			//This is to prevent the interval to loop over the drop more than once
     totalAttempts = Number(SetStorageVariable("totalAttempts", 0, displayNerdStuff));
     maxMulti = Number(SetStorageVariable("maxMulti", 0, displayNerdStuff));
@@ -641,7 +652,7 @@ function MainLoop(timerVar, loopOnce){
         if(results.length === 0){ //If-clause to clear the interval to prevent multiple mainloops running at the same time.
             clearInterval(mainInterval);
         }
-        else{
+        else if(RetrieveVariable("runLog", true, displayNerdStuff) === "true"){
             //This if-clause is to prevent looping over the same thing too often in case the timer-variable thing goes wrong or there is lag or anything else that would cause multi-logging
             if(results.length > thenLength){
                 var resultsHTML = document.getElementsByClassName("roundResult areaName")[0].innerHTML;
@@ -649,6 +660,7 @@ function MainLoop(timerVar, loopOnce){
                 if(resultsText.indexOf("Your combines are complete.") === 0){
                     resultsHTML = document.getElementsByClassName("roundResult areaName")[1].innerHTML;
                     resultsText = document.getElementsByClassName("roundResult areaName")[1].innerText;
+                    alert("Combines complete!");
                 }
                 if(resultsText.indexOf("skill is now level") !== -1){ //If you get a level-up, write into the console and then skip the rest of the cycle, else do the normal thing
                     console.log("Level up, yay!");
@@ -723,9 +735,9 @@ function MainLoop(timerVar, loopOnce){
                     AddData(lastCollectedMaterial, amount, droppedRarity, expDropped,  (lastCollectedMaterial + " x" + rawAmount), timeStamp, document.getElementsByClassName("roundResult areaName").length);
                 }
             }
+            GetAttemptsToNextLevel(avgExp);
         }
         ChangeTitle();
-        GetAttemptsToNextLevel(avgExp);
         thenLength = results.length;
         if(loopOnce){
             clearInterval(mainInterval);
