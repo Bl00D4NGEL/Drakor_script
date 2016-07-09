@@ -23,8 +23,9 @@ var maxMulti = Number(RetrieveVariable("maxMulti", 0, displayNerdStuff));
 var collected = Number(RetrieveVariable("collected", 0, displayNerdStuff));
 var totalAttempts = Number(RetrieveVariable("totalAttempts", 0, displayNerdStuff));
 var materialOutput = RetrieveVariable("materialOutput","",displayNerdStuff);
-var multiOutput = RetrieveVariable("multiDivText","",displayNerdStuff);
-var miscOutput = RetrieveVariable("miscDiv","",displayNerdStuff);
+var multiOutput = RetrieveVariable("multiOutput","",displayNerdStuff);
+var miscOutput = RetrieveVariable("miscOutput","",displayNerdStuff);
+var expOutput = RetrieveVariable("expOutput","",displayNerdStuff);
 var rarities = ["Common", "Superior", "Rare", "Epic", "Legendary", "Nothing"];
 
 // Array declaration; getting the data out of local storage
@@ -102,7 +103,7 @@ function ChangeTitle(){
     }
 }
 function GetAttemptsToNextLevel(avgExp){
-    var maxLevel = 50;
+    var maxLevel = document.getElementById("setMaxLevel").value;
     var currentLevel = Number(document.getElementsByClassName("skillLevel")[0].innerText.slice(6));
     if(!isNaN(avgExp) && document.getElementById("expDiv") !== null){
         var output = "";
@@ -114,12 +115,13 @@ function GetAttemptsToNextLevel(avgExp){
             var attemptsToLevel = Math.floor(expLeft/avgExp);
             var timeToLevelInMs = attemptsToLevel * 60000;
             console.log();
-            output = "<span style='color:#bb0'>Exp left to level: <b>" + expLeft + "</b></br>Average attempts to level: <b>" + attemptsToLevel + "</b></br>Estimated time to level-up: <b>" + ConvertIntoSmallerTimeFormat(timeToLevelInMs) + "</b></span>";
+            output = "<p>Exp left to level: <b>" + expLeft + "</b></br>Average attempts to level: <b>" + attemptsToLevel + "</b></br>Estimated time to level-up: <b>" + ConvertIntoSmallerTimeFormat(timeToLevelInMs) + "</b></p>";
         }
         else{
             output = "<span style='color:#F00'><b>You're currently not able to level-up since you're max-level.</b></span>";
         }
         document.getElementById("expDiv").innerHTML = output;
+        SetStorageVariable("expOutput",output,displayNerdStuff);
     }
 }
 
@@ -342,12 +344,27 @@ function SetupLog(){
     multiDiv.id = "multiDiv";
     var miscDiv = document.createElement("div");
     miscDiv.id = "miscDiv";
+    miscDiv.style.textAlign = "left";
+    miscDiv.style.display= "inherit";
+    var miscDivText = document.createElement("label");
+    miscDivText.id = "miscDivText";
+    miscDivText.style.display= "inherit";
+    miscDivText.style.textAlign = "left";
     var rarityDiv = document.createElement("label");
     rarityDiv.id = "rarityDiv";
     rarityDiv.style.fontSize = "14px";
     rarityDiv.style.textAlign = "center";
     var optionDiv = document.createElement("div");
     optionDiv.id = "optionDiv";
+    var maxLevelLabel = document.createElement("label");
+    maxLevelLabel.innerHTML = "Set Max Level";
+    var maxLevel = document.createElement("input");
+    maxLevel.type = "number";
+    maxLevel.id = "setMaxLevel";
+    maxLevel.min = 1;
+    maxLevel.value = 50;
+    maxLevel.style.textAlign = "center";
+    maxLevel.style.width = "35px";
     var helpDiv = document.createElement("div");
     helpDiv.id = "helpDiv";
     helpDiv.innerHTML ="<h5>What does that [NBA] and [BA] mean in front of my title?</h5>" +
@@ -366,6 +383,8 @@ function SetupLog(){
     logDiv.appendChild(miscDiv);
     var expDiv = document.createElement("div");
     expDiv.fontSize = "14px";
+    expDiv.style.display= "inherit";
+    expDiv.style.textAlign = "left";
     expDiv.id = "expDiv";
     var fragment = document.createDocumentFragment();
     var fragmentContent = [checkBoxTotalStatistics,checkBoxTotalStatisticsText,
@@ -383,10 +402,15 @@ function SetupLog(){
     materialDiv.appendChild(materialDivText);
     materialDiv.appendChild(selectLogMaterial);
     materialDiv.appendChild(materialDivSelect);
+    miscDiv.appendChild(miscDivText);
+    miscDiv.appendChild(expDiv);
     optionDiv.appendChild(checkBoxTotalStatistics);
     optionDiv.appendChild(checkBoxTotalStatisticsText);
     optionDiv.appendChild(checkBoxNerdStuff);
     optionDiv.appendChild(checkBoxNerdStuffText);
+    optionDiv.appendChild(maxLevelLabel);
+    optionDiv.appendChild(maxLevel);
+    optionDiv.appendChild(emptyLine);
     optionDiv.appendChild(buttonResetStatistics);
     optionDiv.appendChild(buttonPauseScript);
     $("#logDiv").tabs();
@@ -415,7 +439,7 @@ function SetupLog(){
         UpdateHistory();
     });
     hrefShowLog.addEventListener("click", function(){
-          $("#logDiv").dialog("open");
+        $("#logDiv").dialog("open");
     });
     buttonPauseScript.addEventListener("click", function(){
         if(RetrieveVariable("runLog", false, displayNerdStuff) === "false"){
@@ -452,7 +476,8 @@ function SetupLog(){
     }
     materialDivText.innerHTML = RetrieveVariable("materialOutput", "", displayNerdStuff); //print output to the html of that div
     multiDivText.innerHTML =  RetrieveVariable("multiOutput", "", displayNerdStuff); //print output to the html of that div
-    miscDiv.innerHTML =  RetrieveVariable("miscOutput", "", displayNerdStuff); //print output to the html of that div
+    miscDivText.innerHTML =  RetrieveVariable("miscOutput", "", displayNerdStuff); //print output to the html of that div
+    expDiv.innerHTML =  RetrieveVariable("expOutput", "", displayNerdStuff); //print output to the html of that div
     SortMultisInSelect();
     newStart = new Date();
     startTimeInMS = newStart.getTime();
@@ -644,7 +669,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     SetStorageVariable("miscOutput", miscOutput, displayNerdStuff);
     document.getElementById("materialDivText").innerHTML = materialOutput; //print output to the html of that div
     document.getElementById("multiDivText").innerHTML = multiOutput; //print output to the html of that div
-    document.getElementById("miscDiv").innerHTML = miscOutput; //print output to the html of that div
+    document.getElementById("miscDivText").innerHTML = miscOutput; //print output to the html of that div
     UpdateHistory();
     DisplayRarities();
     //output is now "done"
@@ -652,106 +677,98 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
 
 function MainLoop(timerVar, loopOnce){
     var mainInterval = setInterval(function(){
-        var results = document.getElementsByClassName("roundResult areaName");
-        if(results.length === 0){ //If-clause to clear the interval to prevent multiple mainloops running at the same time.
-            clearInterval(mainInterval);
-        }
-        else if(RetrieveVariable("runLog", true, displayNerdStuff) === "true"){
-            //This if-clause is to prevent looping over the same thing too often in case the timer-variable thing goes wrong or there is lag or anything else that would cause multi-logging
-            if(results.length > thenLength){
-                var resultsHTML = document.getElementsByClassName("roundResult areaName")[0].innerHTML;
-                var resultsText = document.getElementsByClassName("roundResult areaName")[0].innerText;
-                if(resultsText.indexOf("Your combines are complete.") === 0){
-                    resultsHTML = document.getElementsByClassName("roundResult areaName")[1].innerHTML;
-                    resultsText = document.getElementsByClassName("roundResult areaName")[1].innerText;
-                    alert("Combines complete!");
-                }
-                if(resultsText.indexOf("skill is now level") !== -1){ //If you get a level-up, write into the console and then skip the rest of the cycle, else do the normal thing
-                    console.log("Level up, yay!");
-                }
-                else{
-                    //Following part is just a quick test if the timer-variable is okay, since if it is asynced by over 5 seconds it should calculated a new one.
-                    //Otherwise this is just sitting here, doing nothing.
-                    timerText = document.getElementById("skill-timer").innerText;
-                    var currentTime = timerText.slice(timerText.indexOf("(")+1, timerText.indexOf(")"));
-                    if((timerVar/1000) % currentTime > 5 && !loopOnce){
-                        console.log("Refresh time is over 5 seconds off.");
-                        setTimeout(function(){
-                            clearInterval(mainInterval);
-                        }, 5000, mainInterval);
-                        GetRightTiming();
+        if(document.getElementsByClassName("roundResult areaName").length > 0){
+            var results = document.getElementsByClassName("roundResult areaName");
+            if(RetrieveVariable("runLog", true, displayNerdStuff) === "true"){
+                //This if-clause is to prevent looping over the same thing too often in case the timer-variable thing goes wrong or there is lag or anything else that would cause multi-logging
+                if(results.length > thenLength){
+                    var resultsHTML = document.getElementsByClassName("roundResult areaName")[0].innerHTML;
+                    var resultsText = document.getElementsByClassName("roundResult areaName")[0].innerText;
+                    if(resultsText.indexOf("Your combines are complete.") === 0){
+                        resultsHTML = document.getElementsByClassName("roundResult areaName")[1].innerHTML;
+                        resultsText = document.getElementsByClassName("roundResult areaName")[1].innerText;
+                        alert("Combines complete!");
                     }
-                    /*
+                    if(resultsText.indexOf("skill is now level") !== -1){ //If you get a level-up, write into the console and then skip the rest of the cycle, else do the normal thing
+                        console.log("Level up, yay!");
+                    }
+                    else{
+                        //Following part is just a quick test if the timer-variable is okay, since if it is asynced by over 5 seconds it should calculated a new one.
+                        //Otherwise this is just sitting here, doing nothing.
+                        timerText = document.getElementById("skill-timer").innerText;
+                        var currentTime = timerText.slice(timerText.indexOf("(")+1, timerText.indexOf(")"));
+                        if((timerVar/1000) % currentTime > 5 && !loopOnce){
+                            console.log("Refresh time is over 5 seconds off.");
+                            setTimeout(function(){
+                                clearInterval(mainInterval);
+                            }, 5000, mainInterval);
+                            GetRightTiming();
+                        }
+                        /*
                 This two if clauses are necessary because Goz made two different exp-display ways.
                 Because of this the code checks for both types of classes and if either of them has a length greater than 1,
                 it'll start slicing the result array for the exp dropped(and total experience) and the dropped amount
                 */
-                    if(document.getElementsByClassName("hourMin xsmall").length >0){
-                        amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("hourMin xsmall")[0].innerText.length * (-1)-1);
-                        expDropped = document.getElementsByClassName("hourMin xsmall")[0].innerText;
-                        expDropped = Number(expDropped.slice(1,expDropped.indexOf("total")-1));
-                    }
-                    else if(document.getElementsByClassName("statValue").length >0){
-                        amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("statValue")[0].innerText.length * (-1)-1);
-                        expDropped = document.getElementsByClassName("statValue")[0].innerHTML;
-                        expDropped =  Number(expDropped.substring(0, expDropped.indexOf("E")-1));
-                    }
-                    else{
-                        console.log("ERROR: Exp-display changed, please contact creator of this script or similar responsibles");
-                        amount =0;
-                        expDropped=0;
-                    }
-                    rawAmount = amount;
-                    if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
-                        lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
-                    }
-                    else{
-                        amount = 0;
-                        lastCollectedMaterial = "Nothing";
-                        droppedRarity = "Nothing";
-                    }
-                    if(amount.length > 3){ //This should only execute when mastery, Create Rate/Drop Rate or whatever procs on the drop.
-                        amount = resultsText.slice(resultsText.lastIndexOf("]")+3,resultsText.lastIndexOf("]")+5);
-                        amount = createAmountString(amount);
-                    }
-                    timeStamp = resultsText.slice(1, resultsText.indexOf("]"));
-                    for(var  k=0;k<rarities.length;k++){ //for-loop iterates how many materials of each rarity have been collected.
-                        if(resultsHTML.indexOf(rarities[k]) !== -1){
-                            droppedRarity = rarities[k];
-                        }
-                    }
-                    if(resultsHTML.indexOf("cLinkLvl") !== -1){ //Item that is clickable/linkable
-                        amount = resultsHTML.split("x1").length -1;
                         if(document.getElementsByClassName("hourMin xsmall").length >0){
-                            rawAmount = resultsHTML.slice(resultsHTML.lastIndexOf("x1"), document.getElementsByClassName("hourMin xsmall")[0].innerText.length * (-1)-1);
+                            amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("hourMin xsmall")[0].innerText.length * (-1)-1);
+                            expDropped = document.getElementsByClassName("hourMin xsmall")[0].innerText;
+                            expDropped = Number(expDropped.slice(1,expDropped.indexOf("total")-1));
                         }
                         else if(document.getElementsByClassName("statValue").length >0){
-                            rawAmount = resultsHTML.slice(resultsHTML.lastIndexOf("x1"), document.getElementsByClassName("statValue")[0].innerText.length * (-1)-1);
+                            amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("statValue")[0].innerText.length * (-1)-1);
+                            expDropped = document.getElementsByClassName("statValue")[0].innerHTML;
+                            expDropped =  Number(expDropped.substring(0, expDropped.indexOf("E")-1));
                         }
                         else{
                             console.log("ERROR: Exp-display changed, please contact creator of this script or similar responsibles");
+                            amount =0;
+                            expDropped=0;
                         }
-                        // Item created: resultsHTML.split('cLinkType">')[1].slice(0, resultsHTML.split('cLinkType">')[1].indexOf("</span>"))
-                        // Level of item created: resultsHTML.split('cLinkLvl">')[1][log.split('cLinkLvl">')[1].indexOf("</span>")-1]
-                        lastCollectedMaterial = resultsHTML.split('cLinkType">')[1].slice(0, resultsHTML.split('cLinkType">')[1].indexOf("</span>")) + " Level:" + resultsHTML.split('cLinkLvl">')[1][log.split('cLinkLvl">')[1].indexOf("</span>")-1];
+                        rawAmount = amount;
+                        if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
+                            lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
+                        }
+                        else{
+                            amount = 0;
+                            lastCollectedMaterial = "Nothing";
+                            droppedRarity = "Nothing";
+                        }
+                        if(amount.length > 3){ //This should only execute when mastery, Create Rate/Drop Rate or whatever procs on the drop.
+                            amount = resultsText.slice(resultsText.lastIndexOf("]")+3,resultsText.lastIndexOf("]")+5);
+                            amount = createAmountString(amount);
+                        }
+                        timeStamp = resultsText.slice(1, resultsText.indexOf("]"));
+                        for(var  k=0;k<rarities.length;k++){ //for-loop iterates how many materials of each rarity have been collected.
+                            if(resultsHTML.indexOf(rarities[k]) !== -1){
+                                droppedRarity = rarities[k];
+                            }
+                        }
+                        if(resultsHTML.indexOf("cLinkLvl") !== -1){ //Item that is clickable/linkable
+                            amount = resultsHTML.split("x1").length -1;
+                            if(document.getElementsByClassName("hourMin xsmall").length >0){
+                                rawAmount = resultsHTML.slice(resultsHTML.lastIndexOf("x1"), document.getElementsByClassName("hourMin xsmall")[0].innerText.length * (-1)-1);
+                            }
+                            else if(document.getElementsByClassName("statValue").length >0){
+                                rawAmount = resultsHTML.slice(resultsHTML.lastIndexOf("x1"), document.getElementsByClassName("statValue")[0].innerText.length * (-1)-1);
+                            }
+                            else{
+                                console.log("ERROR: Exp-display changed, please contact creator of this script or similar responsibles");
+                            }
+                            // Item created: resultsHTML.split('cLinkType">')[1].slice(0, resultsHTML.split('cLinkType">')[1].indexOf("</span>"))
+                            // Level of item created: resultsHTML.split('cLinkLvl">')[1][log.split('cLinkLvl">')[1].indexOf("</span>")-1]
+                            lastCollectedMaterial = resultsHTML.split('cLinkType">')[1].slice(0, resultsHTML.split('cLinkType">')[1].indexOf("</span>")) + " Level:" + resultsHTML.split('cLinkLvl">')[1][log.split('cLinkLvl">')[1].indexOf("</span>")-1];
+                        }
+                        UpdateHistory();
+                        AddData(lastCollectedMaterial, amount, droppedRarity, expDropped,  (lastCollectedMaterial + " x" + rawAmount), timeStamp, document.getElementsByClassName("roundResult areaName").length);
                     }
-                    UpdateHistory();
-                    AddData(lastCollectedMaterial, amount, droppedRarity, expDropped,  (lastCollectedMaterial + " x" + rawAmount), timeStamp, document.getElementsByClassName("roundResult areaName").length);
                 }
+                GetAttemptsToNextLevel(avgExp);
             }
-            GetAttemptsToNextLevel(avgExp);
-        }
-        ChangeTitle();
-        thenLength = results.length;
-        if(loopOnce){
-            clearInterval(mainInterval);
-        }
-        else if(loopOnce && document.getElementById("logDiv").innerHTML === ""){
-            console.log("Something went wrong building up the main log.. trying again in 5 seconds");
-            clearInterval(mainInterval);
-            setTimeout(function(){
-                MainLoop(100,true);
-            }, 5000);
+            ChangeTitle();
+            thenLength = results.length;
+            if(loopOnce){
+                clearInterval(mainInterval);
+            }
         }
     }, timerVar, timerVar);
 }
