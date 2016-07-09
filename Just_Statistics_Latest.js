@@ -88,6 +88,7 @@ function ChangeTitle(){
             document.getElementsByTagName("title")[0].innerText = foodBuffInfo +"Node depleted";
             console.log("Node depleted");
             alert("Node depleted");
+            GetRightTiming();
         }
         else{
             console.log(document.getElementsByClassName("nodeRemaining")[0].innerText);
@@ -98,7 +99,7 @@ function ChangeTitle(){
         document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("titleHeader")[0].innerText.slice(document.getElementsByClassName("titleHeader")[0].innerText.indexOf("]")+ 1);
     }
     else{
-        console.log("Something that has no x left of % left");
+        console.log("Not creating or collecting something right now");
         document.getElementsByTagName("title")[0].innerText = 'Drakor "Innovative & Unique Browser Based RPG." (PBBG, MPOG, MMORPG) [BETA]';
     }
 }
@@ -218,6 +219,11 @@ function GetRightTiming(){
                 MainLoop(2000, true);
                 clearInterval(myTimer); //Clear the mess that got started
             }
+        }
+        else
+        {
+            GetRightTiming();
+            clearInterval(myTimer);
         }
     }, 500);
 }
