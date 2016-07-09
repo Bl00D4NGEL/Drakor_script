@@ -22,6 +22,9 @@ var totalExp = Number(RetrieveVariable("totalExp", 0, displayNerdStuff));
 var maxMulti = Number(RetrieveVariable("maxMulti", 0, displayNerdStuff));
 var collected = Number(RetrieveVariable("collected", 0, displayNerdStuff));
 var totalAttempts = Number(RetrieveVariable("totalAttempts", 0, displayNerdStuff));
+var materialOutput = RetrieveVariable("materialOutput","",displayNerdStuff);
+var multiOutput = RetrieveVariable("multiDivText","",displayNerdStuff);
+var miscOutput = RetrieveVariable("miscDiv","",displayNerdStuff);
 var rarities = ["Common", "Superior", "Rare", "Epic", "Legendary", "Nothing"];
 
 // Array declaration; getting the data out of local storage
@@ -51,14 +54,14 @@ for(var materialDiCEntry = 0; materialDiCEntry < collected; materialDiCEntry++){
 for(var multiDiCEntry = 0; multiDiCEntry < maxMulti; multiDiCEntry++){
     multiDic[multiDiCEntry] = RetrieveVariable(("multiDic_" + multiDiCEntry), "", displayNerdStuff);
 }
-
-setInterval(function(){ //This might be ugly, but currently I don't know a way to solve an auto-rebuilding setup more dynamically
-    if(document.getElementsByClassName("skillBox").length > 0){ //If the titleHeader class has a length of above 0, create the graphical log part
-        if(document.getElementById("logDiv") === null){ //If there is not "logDiv" div start the setup of the log
-            SetupLog();
-        }
-    }
-}, 5000);
+$(document).ready(function(){
+    var hrefShowLog = document.createElement("a");
+    hrefShowLog.innerHTML = "Show Log";
+    hrefShowLog.id = "hrefShowLog";
+    hrefShowLog.className = "gs_topmenu_item";
+    document.getElementById("gs_topmenu").appendChild(hrefShowLog);
+    SetupLog();
+});
 
 function SortMultisInSelect(){
     document.getElementById("selectLogMulti").options.length = 1;
@@ -124,13 +127,16 @@ function GetAttemptsToNextLevel(avgExp){
 This is to build up the text of the "Rarities div" in the log thingie
 */
 function DisplayRarities(){
-    var colorArray = ["#999", "#48c730", "#2f84c7", "#bd33de", "#f14c02", "#0aa"]; //Colors of each rarity ordered by common -> legendary -> nothing
+    var rarityLog = document.getElementById("rarityDiv");
+    rarityLog.innerHTML = "<b>Rarities collected: </b>";
     if(totalAttempts > 0){
-        var rarityLog = document.getElementById("rarityDiv");
-        rarityLog.innerHTML = "<b>Rarities collected: </b>";
+        var colorArray = ["#999", "#48c730", "#2f84c7", "#bd33de", "#f14c02", "#0aa"]; //Colors of each rarity ordered by common -> legendary -> nothing
         for(var rarity = 0; rarity<rarities.length;rarity++){
             rarityLog.innerHTML += "<p style='color:" + colorArray[rarity] + "'>" + rarities[rarity] + ": " + raritiesCollected[rarity] + "/" + totalAttempts + " " + (100*(raritiesCollected[rarity]/totalAttempts)).toFixed(1) +  "%</p>";
         }
+    }
+    else{
+        rarityLog.innerHTML = "No rarity-data found";
     }
 }
 /*
@@ -190,8 +196,8 @@ function GetRightTiming(){
     console.log("Starting to find correct refresh-rate");
     var timerSet = false; //Using this variable to prevent multi-starting of mainLoops
     var myTimer = setInterval(function(){ //Starting the timer in 500 ms interval to look for the 2 second left thing
-        if(document.getElementsByClassName("skillTimer").length > 0){ //Preventing error-message spam because it would otherwise try to read the text of this
-            var skillResultsText = document.getElementById("skillResults").innerText;
+        if(document.getElementsByClassName("skillResults").length > 0){ //Preventing error-message spam because it would otherwise try to read the text of this
+            var skillResultsText = document.getElementsByClassName("skillResults")[0].innerText;
             if(skillResultsText.indexOf("depleted") === -1){
                 timerText = document.getElementById("skill-timer").innerText;
                 if(timerText.indexOf("(2)") !== -1 && !timerSet){ //If the timer only has 2 seconds left, start a timeout for 3 seconds
@@ -201,14 +207,12 @@ function GetRightTiming(){
                         newTime = Number(newTime) + 1; //Add 1 because of the 3 seconds timeout, this can cause off-numbers but this gets handlded in the mainInterval
                         console.log("Refreshing every " + newTime + " seconds");
                         MainLoop(2000, true);
-                        MainLoop(newTime*1000);
+                        MainLoop(newTime*1000+100);
                         clearInterval(myTimer); //Clear the mess that got started
                     }, 3000, myTimer);
                 }
             }
             else{
-                console.log("Node depleted!");
-                alert("Node depleted!");
                 MainLoop(2000, true);
                 clearInterval(myTimer); //Clear the mess that got started
             }
@@ -251,7 +255,7 @@ function UpdateHistory(){
         document.getElementById("materialDivSelect").innerHTML = materialValue;
     }
     else{
-    document.getElementById("materialDivSelect").innerHTML = "";
+        document.getElementById("materialDivSelect").innerHTML = "";
     }
     if(multiValue !== undefined){
         document.getElementById("multiDivSelect").innerHTML = multiValue;
@@ -276,6 +280,7 @@ function AddOption(option, select){
 This sets up the collection log("rarity-bar", checkBox to keep totalStatistics or, the reset button and anything else)
 */
 function SetupLog(){
+    var hrefShowLog = document.getElementById("hrefShowLog");
     var checkBoxTotalStatistics = document.createElement("input");
     var checkBoxNerdStuff = document.createElement("input");
     checkBoxTotalStatistics.type = "checkbox";
@@ -296,11 +301,6 @@ function SetupLog(){
     var buttonResetStatisticsText = document.createTextNode("Reset Statistics");
     buttonResetStatistics.appendChild(buttonResetStatisticsText);
     buttonResetStatistics.id = "buttonResetStatistics";
-    var buttonShowLog = document.createElement("button");
-    var buttonShowLogText = document.createTextNode("Show Log");
-    buttonShowLog.appendChild(buttonShowLogText);
-    buttonShowLog.id = "buttonShowLog";
-    buttonShowLog.style.marginTop = "10px";
     var selectLogMaterial = document.createElement("select");
     var selectLogMulti = document.createElement("select");
     selectLogMaterial.style.fontSize = "14px";
@@ -368,17 +368,15 @@ function SetupLog(){
     expDiv.fontSize = "14px";
     expDiv.id = "expDiv";
     var fragment = document.createDocumentFragment();
-    var fragmentContent = [expDiv,
-                           checkBoxTotalStatistics,checkBoxTotalStatisticsText,
+    var fragmentContent = [checkBoxTotalStatistics,checkBoxTotalStatisticsText,
                            checkBoxNerdStuff,checkBoxNerdStuffText,
                            selectLogMulti, selectLogMaterial,
                            buttonResetStatistics,
-                           buttonShowLog,
                            logDiv];
     for(var k=0;k<fragmentContent.length;k++){
         fragment.appendChild(fragmentContent[k]);
     }
-    document.getElementsByClassName("skillBox")[0].appendChild(fragment);
+    document.getElementById("gs_topmenu").appendChild(fragment);
     multiDiv.appendChild(multiDivText);
     multiDiv.appendChild(selectLogMulti);
     multiDiv.appendChild(multiDivSelect);
@@ -398,7 +396,7 @@ function SetupLog(){
             effect: "blind",
             duration: 500
         },
-        width: 640,
+        width: 700,
         height: 400
     });
     checkBoxTotalStatistics.addEventListener("click", function(){
@@ -416,19 +414,19 @@ function SetupLog(){
     selectLogMulti.addEventListener("change",function(){
         UpdateHistory();
     });
-    buttonShowLog.addEventListener("click", function(){
-        $("#logDiv").dialog("open");
+    hrefShowLog.addEventListener("click", function(){
+          $("#logDiv").dialog("open");
     });
     buttonPauseScript.addEventListener("click", function(){
         if(RetrieveVariable("runLog", false, displayNerdStuff) === "false"){
             buttonPauseScript.innerHTML = "Script running";
-            runLog = SetStorageVariable("runLog", "true", displayNerdStuff);
+            runLog = SetStorageVariable("runLog", "true", true);
         }
         else{
             buttonPauseScript.innerHTML = "Script paused";
-            runLog = SetStorageVariable("runLog", "false", displayNerdStuff);
+            runLog = SetStorageVariable("runLog", "false", true);
         }
-    },displayNerdStuff);
+    });
     if(RetrieveVariable("totalStatistics", false, displayNerdStuff) === "true"){
         checkBoxTotalStatistics.checked = true;
     }
@@ -452,6 +450,9 @@ function SetupLog(){
     for(var i=0; i<gainedMaterials.length;i++){
         AddOption(gainedMaterials[i], document.getElementById("selectLogMaterial"));
     }
+    materialDivText.innerHTML = RetrieveVariable("materialOutput", "", displayNerdStuff); //print output to the html of that div
+    multiDivText.innerHTML =  RetrieveVariable("multiOutput", "", displayNerdStuff); //print output to the html of that div
+    miscDiv.innerHTML =  RetrieveVariable("miscOutput", "", displayNerdStuff); //print output to the html of that div
     SortMultisInSelect();
     newStart = new Date();
     startTimeInMS = newStart.getTime();
@@ -556,7 +557,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     totalExp += Number(expAmount);
     totalExp = SetStorageVariable("totalExp", totalExp, displayNerdStuff);
     avgExp = Math.round(totalExp / totalAttempts);
-    var materialOutput = "<p>You have collected...</p>";
+    materialOutput = "<p>You have collected...</p>";
     numberOfAttempt = Number(numberOfAttempt);
     if(materialAmount === 0){
         materialRarity = "Nothing";
@@ -585,7 +586,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
         }
         materialOutput += "<p>"+ gainedMaterials[i] + " x" + amountMaterials[i] + "</p>"; //General output of resource collected
     }
-    var miscOutput = "You have gained " + totalExp + " total experience(" + avgExp + " average experience)</br>on this node/pattern.</br>";
+    miscOutput = "You have gained " + totalExp + " total experience(" + avgExp + " average experience)</br>on this node/pattern.</br>";
     if(materialAmount === 0){ //If nothing dropped, execute this
         if( $("#selectLogMulti option[value='0']").length === 0){ // "nothing" as an option for multi if it is not present already
             AddOption(materialAmount, document.getElementById("selectLogMulti"));
@@ -621,24 +622,26 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
         maxMulti = Number(SetStorageVariable("maxMulti", multiCollections.length, displayNerdStuff));
     }
     var avgMaterials = 0; //Reset this to 0 to avoid wrong output (Would get way too high if not re-set)
-    var multiOutput = "";
+    multiOutput = "";
     //This adds up the total multi-collections or -creations that you have achieved and finally add it to the output
     for(var j=0;j<multiCollections.length;j++){
         if(multiCollections[j] !== 0 && multiCollections[j] !== undefined){
-            multiOutput += "You found/created a material x"+ j + " " + multiCollections[j] + " time(s). (" + (multiCollections[j]/totalAttempts*100).toFixed(1) + "%)</br>";
+            multiOutput += "<p>You found/created a material x"+ j + " " + multiCollections[j] + " time(s). (" + (multiCollections[j]/totalAttempts*100).toFixed(1) + "%)</p>";
             avgMaterials += (j) * multiCollections[j];
         }
     }
     avgMaterials = (avgMaterials / totalAttempts).toFixed(2);
-    miscOutput += "Average materials collected/created: " + avgMaterials + "</br>";
-    miscOutput += "Total collection attempts/creations on this node/pattern: " + numberOfAttempt + "</br>";
-    miscOutput += "Total collection attempts/creations in general: " + totalAttempts + "</br>";
+    miscOutput += "<p>Average materials collected/created: " + avgMaterials + "</p><p>Total collection attempts/creations on this node/pattern: " +
+        numberOfAttempt + "</p><p>Total collection attempts/creations in general: " + totalAttempts + "</p>";
     for(var  k=0;k<rarities.length;k++){ //for-loop iterates how many materials of each rarity have been collected.
         if(materialRarity === rarities[k]){
             raritiesCollected[k]++;
             SetStorageVariable(("rarity" + k), raritiesCollected[k], displayNerdStuff);
         }
     }
+    SetStorageVariable("materialOutput", materialOutput, displayNerdStuff);
+    SetStorageVariable("multiOutput", multiOutput, displayNerdStuff);
+    SetStorageVariable("miscOutput", miscOutput, displayNerdStuff);
     document.getElementById("materialDivText").innerHTML = materialOutput; //print output to the html of that div
     document.getElementById("multiDivText").innerHTML = multiOutput; //print output to the html of that div
     document.getElementById("miscDiv").innerHTML = miscOutput; //print output to the html of that div
@@ -646,6 +649,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     DisplayRarities();
     //output is now "done"
 }
+
 function MainLoop(timerVar, loopOnce){
     var mainInterval = setInterval(function(){
         var results = document.getElementsByClassName("roundResult areaName");
