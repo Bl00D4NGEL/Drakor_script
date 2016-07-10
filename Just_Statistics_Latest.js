@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Just statistics v1.7
-// @version      1.7
+// @name         Just statistics v1.71
+// @version      1.71
 // @downloadURL  https://github.com/Bl00D4NGEL/Drakor_script/blob/master/Just_Statistics_Latest.js
 // @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more...)
 // @author       Dominik "Bl00D4NGEL" Peters
@@ -11,7 +11,7 @@
 Variable declaration
 PS: Global vars are ugly
 */
-var version = "v1.7";
+var version = "v1.71";
 console.log("You're currently using version " + version);
 //Variable declaration; getting the data out of local storage
 var thenLength =  0;//This is to prevent the interval to loop over the drop more than once
@@ -22,6 +22,7 @@ var totalExp = Number(RetrieveVariable("totalExp", 0, displayNerdStuff));
 var maxMulti = Number(RetrieveVariable("maxMulti", 0, displayNerdStuff));
 var collected = Number(RetrieveVariable("collected", 0, displayNerdStuff));
 var totalAttempts = Number(RetrieveVariable("totalAttempts", 0, displayNerdStuff));
+var totalGold = Number(RetrieveVariable("totalGold", 0, displayNerdStuff));
 var materialOutput = RetrieveVariable("materialOutput","",displayNerdStuff);
 var multiOutput = RetrieveVariable("multiOutput","",displayNerdStuff);
 var miscOutput = RetrieveVariable("miscOutput","",displayNerdStuff);
@@ -507,6 +508,7 @@ function ResetStatistics(){
     totalAttempts = Number(SetStorageVariable("totalAttempts", 0, displayNerdStuff));
     maxMulti = Number(SetStorageVariable("maxMulti", 0, displayNerdStuff));
     collected = Number(SetStorageVariable("collected", 0, displayNerdStuff));
+    totalGold = Number(SetStorageVariable("totalGold", 0, displayNerdStuff));
     for(var rarity = 0; rarity<rarities.length; rarity++){
         raritiesCollected[rarity] = Number(SetStorageVariable(("rarity" +rarity), 0, displayNerdStuff));
     }
@@ -547,6 +549,7 @@ expAmount: Amount of exp that dropped
 dropLog: Should be like this: You found [White Pine] x3(+2 Mastery)
 timeOfDrop: When the drop happened (This is mainly for the log)
 numberOfAttempt: If you've collected resource twice on this node, the counter is 2, if collected three time it's 3 and so on
+droppedGold: Integer of the gold that dropped, if none has dropped parse anything that is NaN or parse 0
 example call:
 AddData("White Pine", 2, "Common", false, 20, [White Pine] x2(+1 Mastery), 11:34:46, 1)
 Result:
@@ -572,18 +575,21 @@ Legendary: 0/1 0.0%
 
 Nothing: 0/1 0.0%
 */
-function AddData(materialName, materialAmount, materialRarity, expAmount, droplog, timeOfDrop, numberOfAttempt){
-    if(isNaN(materialAmount) || isNaN(expAmount)){
+function AddData(materialName, materialAmount, materialRarity, expAmount, droplog, timeOfDrop, numberOfAttempt, droppedGold){
+    if(isNaN(materialAmount) || isNaN(expAmount) || isNaN(droppedGold)){
         materialAmount = -1;
         expAmount = 0;
+        droppedGold = 0;
     }
     if(materialName.indexOf(":") !== -1){
         materialName = "Invalid Drop/Creation";
     }
     totalAttempts = SetStorageVariable("totalAttempts", (totalAttempts+1), displayNerdStuff);
+    totalGold = Number(SetStorageVariable("totalGold", Number(totalGold+droppedGold), displayNerdStuff));
     totalExp += Number(expAmount);
     totalExp = SetStorageVariable("totalExp", totalExp, displayNerdStuff);
     avgExp = Math.round(totalExp / totalAttempts);
+    avgGold = Math.round(totalGold / totalAttempts);
     materialOutput = "<p>You have collected...</p>";
     numberOfAttempt = Number(numberOfAttempt);
     if(materialAmount === 0){
@@ -608,24 +614,23 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     for(var i=0; i<gainedMaterials.length; i++){ //This for-loop is to get the amount that was gathered/created and afterwards puts it into the output string.
         if(droplog.indexOf(gainedMaterials[i]) != -1){
             amountMaterials[i] += Number(materialAmount);
-            amountMaterials[i] = Number(SetStorageVariable(("amountMaterials" + i), amountMaterials[i], displayNerdStuff));
+            SetStorageVariable(("amountMaterials" + i), amountMaterials[i], displayNerdStuff);
             gainedMaterials[i] = SetStorageVariable(("gainedMaterials" + i), gainedMaterials[i], displayNerdStuff);
         }
         materialOutput += "<p>"+ gainedMaterials[i] + " x" + amountMaterials[i] + "</p>"; //General output of resource collected
     }
-    miscOutput = "You have gained " + totalExp + " total experience(" + avgExp + " average experience)</br>on this node/pattern.</br>";
     if(materialAmount === 0){ //If nothing dropped, execute this
         if( $("#selectLogMulti option[value='0']").length === 0){ // "nothing" as an option for multi if it is not present already
             AddOption(materialAmount, document.getElementById("selectLogMulti"));
             multiCollections[materialAmount] = 1;
-            multiCollections[materialAmount] = Number(SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff));
+            SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff);
             multiDic[materialAmount] = "<p>" + timeOfDrop +  " - You didn't find anything.</p>";
             SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
             SortMultisInSelect();
         }
         else{
             multiCollections[materialAmount]++;
-            multiCollections[materialAmount] = Number(SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff));
+            SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff);
             multiDic[materialAmount] += "<p>" + timeOfDrop +  " - You didn't find anything.</p>";
             SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
         }
@@ -633,7 +638,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     else if(multiCollections[materialAmount] === undefined || multiCollections[materialAmount] === 0){
         // console.log("multiCollections before: " + multiCollections[materialAmount]);
         multiCollections[materialAmount] = 1;
-        multiCollections[materialAmount] = Number(SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff));
+        SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff);
         AddOption(materialAmount, document.getElementById("selectLogMulti"));
         multiDic[materialAmount] = "<p>" + timeOfDrop +  " - " + droplog + "</p>";
         SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
@@ -641,7 +646,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     }
     else{
         multiCollections[materialAmount]++;
-        multiCollections[materialAmount] = Number(SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff));
+        SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff);
         multiDic[materialAmount] += "<p>" + timeOfDrop +  " - " + droplog + "</p>";
         SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
     }
@@ -658,8 +663,9 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
         }
     }
     avgMaterials = (avgMaterials / totalAttempts).toFixed(2);
-    miscOutput += "<p>Average materials collected/created: " + avgMaterials + "</p><p>Total collection attempts/creations on this node/pattern: " +
-        numberOfAttempt + "</p><p>Total collection attempts/creations in general: " + totalAttempts + "</p>";
+    miscOutput = "<p>You have gained " + totalExp + " total experience(" + avgExp + " average experience)</p><p>You have collected " +
+        totalGold + " total gold(" + avgGold  + " average gold)</p><p>Average materials collected/created: " + avgMaterials +
+        "</p><p>Total collection attempts/creations on this node/pattern: " + numberOfAttempt + "</p><p>Total collection attempts/creations in general: " + totalAttempts + "</p>";
     for(var  k=0;k<rarities.length;k++){ //for-loop iterates how many materials of each rarity have been collected.
         if(materialRarity === rarities[k]){
             raritiesCollected[k]++;
@@ -695,6 +701,7 @@ function MainLoop(timerVar, loopOnce){
                         console.log("Level up, yay!");
                     }
                     else{
+                        var goldDropped = 0; //This is to prevent bad things when calling AddData
                         //Following part is just a quick test if the timer-variable is okay, since if it is asynced by over 5 seconds it should calculated a new one.
                         //Otherwise this is just sitting here, doing nothing.
                         timerText = document.getElementById("skill-timer").innerText;
@@ -712,12 +719,12 @@ function MainLoop(timerVar, loopOnce){
                 it'll start slicing the result array for the exp dropped(and total experience) and the dropped amount
                 */
                         if(document.getElementsByClassName("hourMin xsmall").length >0){
-                            amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("hourMin xsmall")[0].innerText.length * (-1)-1);
+                            amount = resultsHTML.slice(resultsHTML.lastIndexOf("]")+10, resultsHTML.lastIndexOf('hourMin')-13);
                             expDropped = document.getElementsByClassName("hourMin xsmall")[0].innerText;
                             expDropped = Number(expDropped.slice(1,expDropped.indexOf("total")-1));
                         }
                         else if(document.getElementsByClassName("statValue").length >0){
-                            amount = resultsText.slice(resultsText.lastIndexOf("]")+3, document.getElementsByClassName("statValue")[0].innerText.length * (-1)-1);
+                            amount = resultsHTML.slice(resultsHTML.lastIndexOf("]")+10, resultsHTML.lastIndexOf('statValue')-13);
                             expDropped = document.getElementsByClassName("statValue")[0].innerHTML;
                             expDropped =  Number(expDropped.substring(0, expDropped.indexOf("E")-1));
                         }
@@ -726,17 +733,24 @@ function MainLoop(timerVar, loopOnce){
                             amount =0;
                             expDropped=0;
                         }
+                        if(resultsHTML.indexOf("perkValue playTitle") !== -1){
+                            amount = resultsHTML.slice(resultsHTML.lastIndexOf("]")+10, resultsHTML.indexOf("perkValue playTitle")-13);
+                            droppedGold = Number(resultsHTML.slice(resultsHTML.indexOf("perkValue playTitle") + 23, resultsHTML.indexOf("gold")-1));
+                        }
+                        else{
+                            droppedGold = 0;
+                        }
                         rawAmount = amount;
                         if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
                             lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
                         }
-                        else{
+                        else if(resultsText.indexOf("anything") !== -1){
                             amount = 0;
                             lastCollectedMaterial = "Nothing";
                             droppedRarity = "Nothing";
                         }
                         if(amount.length > 3){ //This should only execute when mastery, Create Rate/Drop Rate or whatever procs on the drop.
-                            amount = resultsText.slice(resultsText.lastIndexOf("]")+3,resultsText.lastIndexOf("]")+5);
+                            amount = resultsText.slice(resultsText.lastIndexOf("]")+3,resultsText.lastIndexOf("]")+6);
                             amount = createAmountString(amount);
                         }
                         timeStamp = resultsText.slice(1, resultsText.indexOf("]"));
@@ -761,7 +775,7 @@ function MainLoop(timerVar, loopOnce){
                             lastCollectedMaterial = resultsHTML.split('cLinkType">')[1].slice(0, resultsHTML.split('cLinkType">')[1].indexOf("</span>")) + " Level:" + resultsHTML.split('cLinkLvl">')[1][log.split('cLinkLvl">')[1].indexOf("</span>")-1];
                         }
                         UpdateHistory();
-                        AddData(lastCollectedMaterial, amount, droppedRarity, expDropped,  (lastCollectedMaterial + " x" + rawAmount), timeStamp, document.getElementsByClassName("roundResult areaName").length);
+                        AddData(lastCollectedMaterial, amount, droppedRarity, expDropped,  (lastCollectedMaterial + " x" + rawAmount), timeStamp, document.getElementsByClassName("roundResult areaName").length, droppedGold);
                     }
                 }
                 GetAttemptsToNextLevel(avgExp);
