@@ -220,11 +220,6 @@ function GetRightTiming(){
                 clearInterval(myTimer); //Clear the mess that got started
             }
         }
-        else
-        {
-            GetRightTiming();
-            clearInterval(myTimer);
-        }
     }, 500);
 }
 
@@ -704,7 +699,7 @@ function MainLoop(timerVar, loopOnce){
                         //Otherwise this is just sitting here, doing nothing.
                         timerText = document.getElementById("skill-timer").innerText;
                         var currentTime = timerText.slice(timerText.indexOf("(")+1, timerText.indexOf(")"));
-                        if((timerVar/1000) % currentTime > 5 && !loopOnce){
+                        if((timerVar/1000) - currentTime > 5 && (timerVar/1000) - currentTime < -5  && !loopOnce){
                             console.log("Refresh time is over 5 seconds off.");
                             setTimeout(function(){
                                 clearInterval(mainInterval);
@@ -777,7 +772,7 @@ function MainLoop(timerVar, loopOnce){
                 clearInterval(mainInterval);
             }
         }
-    }, timerVar, timerVar);
+    },timerVar);
 }
 
 /*
