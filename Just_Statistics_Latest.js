@@ -528,7 +528,8 @@ function ResetStatistics(){
     document.getElementById("multiDivSelect").innerHTML = "";
     document.getElementById("materialDivText").innerHTML = "";
     document.getElementById("multiDivText").innerHTML = "";
-    document.getElementById("miscDiv").innerHTML = "";
+    document.getElementById("miscDivText").innerHTML = "";
+    document.getElementById("expDiv").innerHTML = "";
     DisplayRarities();
     console.log("Everything has been re-set");
 }
