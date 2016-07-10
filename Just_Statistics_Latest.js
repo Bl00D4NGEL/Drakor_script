@@ -1,7 +1,6 @@
 // ==UserScript==
 // @name         Just statistics v1.71
 // @version      1.71
-// @downloadURL  https://github.com/Bl00D4NGEL/Drakor_script/blob/master/Just_Statistics_Latest.js
 // @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more...)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://www.drakor.com*
@@ -17,6 +16,7 @@ console.log("You're currently using version " + version);
 var thenLength =  0;//This is to prevent the interval to loop over the drop more than once
 var displayNerdStuff = RetrieveVariable("displayNerdStuff", false, false);
 var totalStatistics = RetrieveVariable("totalStatistics", false, displayNerdStuff);
+var popAlert = RetrieveVariable("popAlert", false, displayNerdStuff);
 var runLog = RetrieveVariable("runLog", "true", displayNerdStuff);
 var totalExp = Number(RetrieveVariable("totalExp", 0, displayNerdStuff));
 var maxMulti = Number(RetrieveVariable("maxMulti", 0, displayNerdStuff));
@@ -88,7 +88,9 @@ function ChangeTitle(){
         if(skillResultsText.indexOf("depleted") !== -1){
             document.getElementsByTagName("title")[0].innerText = foodBuffInfo +"Node depleted";
             console.log("Node depleted");
+            if(RetrieveVariable("popAlert", false, displayNerdStuff) === "true"){
             alert("Node depleted");
+            }
             GetRightTiming();
         }
         else{
@@ -287,14 +289,19 @@ function SetupLog(){
     var hrefShowLog = document.getElementById("hrefShowLog");
     var checkBoxTotalStatistics = document.createElement("input");
     var checkBoxNerdStuff = document.createElement("input");
+    var checkBoxAlert = document.createElement("input");
     checkBoxTotalStatistics.type = "checkbox";
     checkBoxTotalStatistics.id = "checkBoxTotalStatistics";
     checkBoxNerdStuff.type = "checkbox";
     checkBoxNerdStuff.id = "checkBoxNerdStuff";
+    checkBoxAlert.type = "checkbox";
+    checkBoxAlert.id = "checkBoxAlert";
     var checkBoxTotalStatisticsText = document.createElement("small");
     var checkBoxNerdStuffText = document.createElement("small");
+    var checkBoxAlertText = document.createElement("small");
     checkBoxTotalStatisticsText.innerHTML = "Track total statistics? </br>";
     checkBoxNerdStuffText.innerHTML = "Display the nerdy things in the console? </br>";
+    checkBoxAlertText.innerHTML = "Put you to the Drakor page when your node runs out/attempts are completed?</br>";
     var emptyLine = document.createElement("small");
     emptyLine.innerHTML = "</br>";
     var buttonPauseScript = document.createElement("button");
@@ -353,9 +360,9 @@ function SetupLog(){
     miscDivText.style.display= "inherit";
     miscDivText.style.textAlign = "left";
     var rarityDiv = document.createElement("label");
+    rarityDiv.style.textAlign = "center";
     rarityDiv.id = "rarityDiv";
     rarityDiv.style.fontSize = "14px";
-    rarityDiv.style.textAlign = "center";
     var optionDiv = document.createElement("div");
     optionDiv.id = "optionDiv";
     var maxLevelLabel = document.createElement("label");
@@ -391,6 +398,7 @@ function SetupLog(){
     var fragment = document.createDocumentFragment();
     var fragmentContent = [checkBoxTotalStatistics,checkBoxTotalStatisticsText,
                            checkBoxNerdStuff,checkBoxNerdStuffText,
+                           checkBoxAlert, checkBoxAlertText,
                            selectLogMulti, selectLogMaterial,
                            buttonResetStatistics,
                            logDiv];
@@ -410,6 +418,8 @@ function SetupLog(){
     optionDiv.appendChild(checkBoxTotalStatisticsText);
     optionDiv.appendChild(checkBoxNerdStuff);
     optionDiv.appendChild(checkBoxNerdStuffText);
+    optionDiv.appendChild(checkBoxAlert);
+    optionDiv.appendChild(checkBoxAlertText);
     optionDiv.appendChild(maxLevelLabel);
     optionDiv.appendChild(maxLevel);
     optionDiv.appendChild(emptyLine);
@@ -431,6 +441,9 @@ function SetupLog(){
     checkBoxNerdStuff.addEventListener("click", function(){
         WriteCheckboxStatus(checkBoxNerdStuff, "displayNerdStuff");
     }, checkBoxNerdStuff);
+    checkBoxAlert.addEventListener("click", function(){
+        WriteCheckboxStatus(checkBoxAlert, "popAlert");
+    }, checkBoxAlert);
     buttonResetStatistics.addEventListener("click", function(){
         ResetStatistics();
     });
@@ -465,6 +478,12 @@ function SetupLog(){
     }
     else{
         checkBoxNerdStuff.checked = false;
+    }
+    if(RetrieveVariable("popAlert", false, displayNerdStuff) === "true"){
+        checkBoxAlert.checked = true;
+    }
+    else{
+        checkBoxAlert.checked = false;
     }
     AddOption("Select a material",  document.getElementById("selectLogMaterial"));
     AddOption("Select a multi",  document.getElementById("selectLogMulti"));
@@ -695,7 +714,9 @@ function MainLoop(timerVar, loopOnce){
                     if(resultsText.indexOf("Your combines are complete.") === 0){
                         resultsHTML = document.getElementsByClassName("roundResult areaName")[1].innerHTML;
                         resultsText = document.getElementsByClassName("roundResult areaName")[1].innerText;
-                        alert("Combines complete!");
+                        if(RetrieveVariable("popAlert", false, displayNerdStuff) === "true"){
+                            alert("Combines complete!");
+                        }
                     }
                     if(resultsText.indexOf("skill is now level") !== -1){ //If you get a level-up, write into the console and then skip the rest of the cycle, else do the normal thing
                         console.log("Level up, yay!");
@@ -784,6 +805,11 @@ function MainLoop(timerVar, loopOnce){
             thenLength = results.length;
             if(loopOnce){
                 clearInterval(mainInterval);
+            }
+        }
+        else if(document.getElementsByClassName("roundResult areaName").length === 0){
+            if(RetrieveVariable("totalStatistics", true, displayNerdStuff) === "false"){
+                ResetStatistics();
             }
         }
     },timerVar);
