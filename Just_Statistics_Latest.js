@@ -561,7 +561,7 @@ function createAmountString(stringtoBeConverted){
 }
 /*
 Parameters:
-materialName: Name of the material that got dropped (White Pine)
+materialName: Name of the material that got dropped (White Pine) If nothing drops parse "Nothing"
 materialAmount: Amount of the material dropped (3) If nothing drops, parse a 0
 materialRarity: What rarity the dropped item has -> "Common", "Superior" and so on If nothing got dropped, parse "" and the function will auto-sort that out
 expAmount: Amount of exp that dropped
@@ -570,29 +570,7 @@ timeOfDrop: When the drop happened (This is mainly for the log)
 numberOfAttempt: If you've collected resource twice on this node, the counter is 2, if collected three time it's 3 and so on
 droppedGold: Integer of the gold that dropped, if none has dropped parse anything that is NaN or parse 0
 example call:
-AddData("White Pine", 2, "Common", false, 20, [White Pine] x2(+1 Mastery), 11:34:46, 1)
-Result:
-You have collected
-White Pine x2
-and 20 total experience(20 average experience)
-on this node/pattern.
-You found/created a material x2 1 time(s). (100.0%)
-Average materials collected/created: 2.00
-Total collection attempts/creations on this node/pattern: 1
-Total collection attempts/creations in general: 1
-[This will only display if "Display rarities below" is ticked]
-Rarities collected:
-Common: 1/1 100.0%
-
-Superior: 0/1 0.0%
-
-Rare: 0/1 0.0%
-
-Epic: 0/1 0.0%
-
-Legendary: 0/1 0.0%
-
-Nothing: 0/1 0.0%
+AddData("White Pine", 2, "Common", 20, [White Pine] x2(+1 Mastery), 11:34:46, 1, 55);
 */
 function AddData(materialName, materialAmount, materialRarity, expAmount, droplog, timeOfDrop, numberOfAttempt, droppedGold){
     if(isNaN(materialAmount) || isNaN(expAmount) || isNaN(droppedGold)){
@@ -612,6 +590,8 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     materialOutput = "<p>You have collected...</p>";
     numberOfAttempt = Number(numberOfAttempt);
     if(materialAmount === 0){
+        materialAmount = 1;
+        materialName = "Nothing";
         materialRarity = "Nothing";
     }
     if(gainedMaterials.indexOf(materialName) == -1){ //If the collected material is not in the gainedMaterials array, the indexOf returns -1, thus it adds this variable to the array and everything else
@@ -767,7 +747,7 @@ function MainLoop(timerVar, loopOnce){
                             droplog = lastCollectedMaterial + " x" + rawAmount;
                         }
                         else if(resultsText.indexOf("anything") !== -1){
-                            amount = 0;
+                            amount = 1;
                             droplog = "You didn't find anything";
                             lastCollectedMaterial = "Nothing";
                             droppedRarity = "Nothing";
