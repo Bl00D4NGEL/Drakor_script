@@ -91,7 +91,6 @@ function ChangeTitle(){
             if(RetrieveVariable("popAlert", false, displayNerdStuff) === "true"){
             alert("Node depleted");
             }
-            GetRightTiming();
         }
         else{
             console.log(document.getElementsByClassName("nodeRemaining")[0].innerText);
@@ -103,6 +102,7 @@ function ChangeTitle(){
     }
     else{
         console.log("Not creating or collecting something right now");
+        GetRightTiming();
         document.getElementsByTagName("title")[0].innerText = 'Drakor "Innovative & Unique Browser Based RPG." (PBBG, MPOG, MMORPG) [BETA]';
     }
 }
@@ -614,19 +614,18 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     if(materialAmount === 0){
         materialRarity = "Nothing";
     }
-    else{
-        if(gainedMaterials.indexOf(materialName) == -1){ //If the collected material is not in the gainedMaterials array, the indexOf returns -1, thus it adds this variable to the array and everything else
-            gainedMaterials.push(materialName);
-            amountMaterials.push(0);
-            AddOption(materialName,  document.getElementById("selectLogMaterial"));
-            materialDic[materialName] = "<p>" + timeOfDrop + " - " + droplog + "</p>";
-            SetStorageVariable(("materialDic_" + materialName), materialDic[materialName], displayNerdStuff);
-        }
-        else{
-            materialDic[materialName] += "<p>" + timeOfDrop + " - " + droplog + "</p>";
-            SetStorageVariable(("materialDic_" + materialName), materialDic[materialName], displayNerdStuff);
-        }
+    if(gainedMaterials.indexOf(materialName) == -1){ //If the collected material is not in the gainedMaterials array, the indexOf returns -1, thus it adds this variable to the array and everything else
+        gainedMaterials.push(materialName);
+        amountMaterials.push(0);
+        AddOption(materialName,  document.getElementById("selectLogMaterial"));
+        materialDic[materialName] = "<p>" + timeOfDrop + " - " + droplog + "</p>";
+        SetStorageVariable(("materialDic_" + materialName), materialDic[materialName], displayNerdStuff);
     }
+    else{
+        materialDic[materialName] += "<p>" + timeOfDrop + " - " + droplog + "</p>";
+        SetStorageVariable(("materialDic_" + materialName), materialDic[materialName], displayNerdStuff);
+    }
+
     if(collected < gainedMaterials.length){
         collected = Number(SetStorageVariable("collected", gainedMaterials.length, displayNerdStuff));
     }
@@ -762,11 +761,14 @@ function MainLoop(timerVar, loopOnce){
                             droppedGold = 0;
                         }
                         rawAmount = amount;
-                        if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
+                        var droplog = "";
+                        if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1 || resultsText.indexOf("caught") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
                             lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
+                            droplog = lastCollectedMaterial + " x" + rawAmount;
                         }
                         else if(resultsText.indexOf("anything") !== -1){
                             amount = 0;
+                            droplog = "You didn't find anything";
                             lastCollectedMaterial = "Nothing";
                             droppedRarity = "Nothing";
                         }
@@ -796,7 +798,7 @@ function MainLoop(timerVar, loopOnce){
                             lastCollectedMaterial = resultsHTML.split('cLinkType">')[1].slice(0, resultsHTML.split('cLinkType">')[1].indexOf("</span>")) + " Level:" + resultsHTML.split('cLinkLvl">')[1][log.split('cLinkLvl">')[1].indexOf("</span>")-1];
                         }
                         UpdateHistory();
-                        AddData(lastCollectedMaterial, amount, droppedRarity, expDropped,  (lastCollectedMaterial + " x" + rawAmount), timeStamp, document.getElementsByClassName("roundResult areaName").length, droppedGold);
+                        AddData(lastCollectedMaterial, amount, droppedRarity, expDropped,  droplog, timeStamp, document.getElementsByClassName("roundResult areaName").length, droppedGold);
                     }
                 }
                 GetAttemptsToNextLevel(avgExp);
