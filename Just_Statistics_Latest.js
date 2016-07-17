@@ -660,6 +660,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     if(droplog.indexOf("anything") !== -1){
         amountMaterials[gainedMaterials.indexOf("Nothing")] = multiCollections[0];
         SetStorageVariable(("amountMaterials" + gainedMaterials.indexOf("Nothing")), amountMaterials[gainedMaterials.indexOf("Nothing")], displayNerdStuff);
+        SetStorageVariable(("gainedMaterials" + gainedMaterials.indexOf("Nothing")), "Nothing", displayNerdStuff);
     }
     for(var i=0; i<gainedMaterials.length; i++){ //This for-loop is to get the amount that was gathered/created and afterwards puts it into the output string.
         if(droplog.indexOf(gainedMaterials[i]) != -1){
