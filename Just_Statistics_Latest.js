@@ -658,13 +658,14 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
         SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
     }
     if(droplog.indexOf("anything") !== -1){
-        amountMaterials[gainedMaterials.indexOf("Nothing")]++;
+        amountMaterials[gainedMaterials.indexOf("Nothing")] = multiCollections[0];
         SetStorageVariable(("amountMaterials" + gainedMaterials.indexOf("Nothing")), amountMaterials[gainedMaterials.indexOf("Nothing")], displayNerdStuff);
     }
     for(var i=0; i<gainedMaterials.length; i++){ //This for-loop is to get the amount that was gathered/created and afterwards puts it into the output string.
         if(droplog.indexOf(gainedMaterials[i]) != -1){
             amountMaterials[i] += Number(materialAmount);
             SetStorageVariable(("amountMaterials" + i), amountMaterials[i], displayNerdStuff);
+            SetStorageVariable(("gainedMaterials" + i), gainedMaterials[i], displayNerdStuff);
         }
         materialOutput += "<p>"+ gainedMaterials[i] + " x" + amountMaterials[i] + "</p>"; //General output of resource collected
     }
