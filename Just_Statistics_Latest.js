@@ -3,7 +3,7 @@
 // @version      1.71
 // @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more...)
 // @author       Dominik "Bl00D4NGEL" Peters
-// @match        http://www.drakor.com*
+// @match        http://*.drakor.com*
 // ==/UserScript==
 
 /*
@@ -60,8 +60,10 @@ $(document).ready(function(){
     var hrefShowLog = document.createElement("a");
     hrefShowLog.innerHTML = "Show Log";
     hrefShowLog.id = "hrefShowLog";
+    hrefShowLog.href = "#logDiv";
     hrefShowLog.className = "gs_topmenu_item";
     document.getElementById("gs_topmenu").appendChild(hrefShowLog);
+//    $(".fancybox").fancybox();
     SetupLog();
 });
 
@@ -89,20 +91,28 @@ function ChangeTitle(){
             document.getElementsByTagName("title")[0].innerText = foodBuffInfo +"Node depleted";
             console.log("Node depleted");
             if(RetrieveVariable("popAlert", false, displayNerdStuff) === "true"){
-            alert("Node depleted");
+                alert("Node depleted");
             }
+            MainLoop();
         }
-        else{
+        else {
             console.log(document.getElementsByClassName("nodeRemaining")[0].innerText);
             document.getElementsByTagName("title")[0].innerText = foodBuffInfo + nodePercentText + " left";
         }
     }
     else if(document.getElementsByClassName("titleHeader").length > 0){ //If you're not working on a node but on a pattern
-        document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("titleHeader")[0].innerText.slice(document.getElementsByClassName("titleHeader")[0].innerText.indexOf("]")+ 1);
+        if(document.getElementsByClassName("titleHeader")[0].innerText.indexOf("x0..") !== -1){
+            document.getElementsByTagName("title")[0].innerText = foodBuffInfo + "Creation complete";
+            if(RetrieveVariable("popAlert", false, displayNerdStuff) === "true"){
+                alert("Creation complete");
+            }
+        }
+        else{
+            document.getElementsByTagName("title")[0].innerText = foodBuffInfo + document.getElementsByClassName("titleHeader")[0].innerText.slice(document.getElementsByClassName("titleHeader")[0].innerText.indexOf("]")+ 1);
+        }
     }
     else{
         console.log("Not creating or collecting something right now");
-        GetRightTiming();
         document.getElementsByTagName("title")[0].innerText = 'Drakor "Innovative & Unique Browser Based RPG." (PBBG, MPOG, MMORPG) [BETA]';
     }
 }
@@ -195,38 +205,6 @@ function RetrieveVariable(varName, createValueIfNotExist, boolShow){
 }
 
 /*
-Function to get the right timer when to refresh data
-Gets triggered by SetupLog()
-*/
-function GetRightTiming(){
-    console.log("Starting to find correct refresh-rate");
-    var timerSet = false; //Using this variable to prevent multi-starting of mainLoops
-    var myTimer = setInterval(function(){ //Starting the timer in 500 ms interval to look for the 2 second left thing
-        if(document.getElementsByClassName("skillResults").length > 0){ //Preventing error-message spam because it would otherwise try to read the text of this
-            var skillResultsText = document.getElementsByClassName("skillResults")[0].innerText;
-            if(skillResultsText.indexOf("depleted") === -1){
-                timerText = document.getElementById("skill-timer").innerText;
-                if(timerText.indexOf("(2)") !== -1 && !timerSet){ //If the timer only has 2 seconds left, start a timeout for 3 seconds
-                    timerSet = true;
-                    setTimeout(function(){
-                        var newTime = timerText.slice(timerText.indexOf("(")+1, timerText.indexOf(")"));
-                        newTime = Number(newTime) + 1; //Add 1 because of the 3 seconds timeout, this can cause off-numbers but this gets handlded in the mainInterval
-                        console.log("Refreshing every " + newTime + " seconds");
-                        MainLoop(2000, true);
-                        MainLoop(newTime*1000+100);
-                        clearInterval(myTimer); //Clear the mess that got started
-                    }, 3000, myTimer);
-                }
-            }
-            else{
-                MainLoop(2000, true);
-                clearInterval(myTimer); //Clear the mess that got started
-            }
-        }
-    }, 500);
-}
-
-/*
 takes the variable name to look for as an argument, return the value of the variable, if there is one
 boolShow: If the function is called and boolShow is true, the console will log the localstorage-loading, if not(false, omitted), it won't
 */
@@ -270,7 +248,17 @@ function UpdateHistory(){
         document.getElementById("multiDivSelect").innerHTML = "";
     }
 }
+function SetStatusOfScript(button){
+    if(RetrieveVariable("runLog", false, displayNerdStuff) === "false"){
+        button.innerHTML = "Script running";
+        runLog = SetStorageVariable("runLog", "true", true);
+    }
+    else{
+        button.innerHTML = "Script paused";
+        runLog = SetStorageVariable("runLog", "false", true);
+    }
 
+}
 /*
 Simple and self-explaining function:
 Adds an option to the select, option = thing to add to the select, select = select to add to, gets called if the collected material/multi hasn't been added yet
@@ -316,6 +304,10 @@ function SetupLog(){
     var buttonShowLocalText = document.createTextNode("Show localStorage values in the console");
     buttonShowLocal.appendChild(buttonShowLocalText);
     buttonShowLocal.id = "buttonShowLocal";
+    var buttonShowVars = document.createElement("button");
+    var buttonShowVarsText = document.createTextNode("Show variable values in the console");
+    buttonShowVars.appendChild(buttonShowVarsText);
+    buttonShowVars.id = "buttonShowVars";
     var selectLogMaterial = document.createElement("select");
     var selectLogMulti = document.createElement("select");
     selectLogMaterial.style.fontSize = "14px";
@@ -327,6 +319,7 @@ function SetupLog(){
     var logDiv = document.createElement("div");
     logDiv.style.fontSize = "14px";
     logDiv.style.backgroundColor = "lightgrey";
+    logDiv.style.display = "none";
     logDiv.id = "logDiv";
     logDiv.title = "Drop Log";
     logDiv.innerHTML ='<ul><li><a href="#materialDiv">Drops/ Creations</a></li>'+
@@ -345,6 +338,7 @@ function SetupLog(){
     materialDivText.style.textAlign = "left";
     materialDivText.style.display= "inherit";
     materialDiv.id = "materialDiv";
+    materialDiv.className = "skillBox";
     var multiDiv = document.createElement("div");
     var multiDivText = document.createElement("label");
     var multiDivSelect = document.createElement("label");
@@ -404,7 +398,7 @@ function SetupLog(){
                            checkBoxNerdStuff,checkBoxNerdStuffText,
                            checkBoxAlert, checkBoxAlertText,
                            selectLogMulti, selectLogMaterial,
-                           buttonResetStatistics, buttonShowLocal,
+                           buttonResetStatistics, buttonShowLocal,buttonShowVars,
                            logDiv];
     for(var k=0;k<fragmentContent.length;k++){
         fragment.appendChild(fragmentContent[k]);
@@ -428,8 +422,12 @@ function SetupLog(){
     optionDiv.appendChild(maxLevel);
     optionDiv.appendChild(emptyLine);
     optionDiv.appendChild(buttonResetStatistics);
+    optionDiv.appendChild(emptyLine);
     optionDiv.appendChild(buttonPauseScript);
+    optionDiv.appendChild(emptyLine);
     optionDiv.appendChild(buttonShowLocal);
+    optionDiv.appendChild(emptyLine);
+    optionDiv.appendChild(buttonShowVars);
     $("#logDiv").tabs();
     $("#logDiv").dialog({
         autoOpen: false,
@@ -439,6 +437,9 @@ function SetupLog(){
         },
         width: 700,
         height: 400
+    });
+    hrefShowLog.addEventListener("click", function(){
+        $("#logDiv").dialog("open");
     });
     checkBoxTotalStatistics.addEventListener("click", function(){
         WriteCheckboxStatus(checkBoxTotalStatistics, "totalStatistics");
@@ -459,24 +460,24 @@ function SetupLog(){
             console.log(key + " => " + value);
         }
     });
+    buttonShowVars.addEventListener("click", function(){
+        console.log("gainedMaterials: " + gainedMaterials + "\namountMaterials: " + amountMaterials + "\nmultiCollections: " + multiCollections + "\nMaterialDictionary:\n");
+        for(var i=0; i<collected;i++){
+            console.log("Key: " + gainedMaterials[i] + " => Value: " + materialDic[gainedMaterials[i]] + "\n");
+        }
+        console.log("multiDictionary:\n");
+        for(var j=0; j<multiCollection;j++){
+            console.log("Key: " + multiCollections[i] + " => Value: " + multiDic[multiCollections[i]]);
+        }
+    });
     selectLogMaterial.addEventListener("change",function(){
         UpdateHistory();
     });
     selectLogMulti.addEventListener("change",function(){
         UpdateHistory();
     });
-    hrefShowLog.addEventListener("click", function(){
-        $("#logDiv").dialog("open");
-    });
     buttonPauseScript.addEventListener("click", function(){
-        if(RetrieveVariable("runLog", false, displayNerdStuff) === "false"){
-            buttonPauseScript.innerHTML = "Script running";
-            runLog = SetStorageVariable("runLog", "true", true);
-        }
-        else{
-            buttonPauseScript.innerHTML = "Script paused";
-            runLog = SetStorageVariable("runLog", "false", true);
-        }
+        SetStatusOfScript(buttonPauseScript);
     });
     if(RetrieveVariable("totalStatistics", false, displayNerdStuff) === "true"){
         checkBoxTotalStatistics.checked = true;
@@ -497,6 +498,8 @@ function SetupLog(){
     else{
         checkBoxAlert.checked = false;
     }
+    selectLogMaterial.innerHTML = "";
+    selectLogMulti.innerHTML = "";
     AddOption("Select a material",  document.getElementById("selectLogMaterial"));
     AddOption("Select a multi",  document.getElementById("selectLogMulti"));
     /*
@@ -512,9 +515,7 @@ function SetupLog(){
     miscDivText.innerHTML =  RetrieveVariable("miscOutput", "", displayNerdStuff); //print output to the html of that div
     expDiv.innerHTML =  RetrieveVariable("expOutput", "", displayNerdStuff); //print output to the html of that div
     SortMultisInSelect();
-    newStart = new Date();
-    startTimeInMS = newStart.getTime();
-    GetRightTiming();
+    MainLoop();
     DisplayRarities();
 }
 
@@ -603,7 +604,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     materialOutput = "<p>You have collected...</p>";
     numberOfAttempt = Number(numberOfAttempt);
     if(materialAmount === 0){
-        materialName = "Nothing";
+        materialName = "anything";
         materialRarity = "Nothing";
     }
     if(gainedMaterials.indexOf(materialName) == -1){ //If the collected material is not in the gainedMaterials array, the indexOf returns -1, thus it adds this variable to the array and everything else
@@ -625,7 +626,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
         if( $("#selectLogMulti option[value='0']").length === 0){ // "nothing" as an option for multi if it is not present already
             AddOption(materialAmount, document.getElementById("selectLogMulti"));
             multiCollections[materialAmount] = 1;
-            amountMaterials[gainedMaterials.indexOf("Nothing")] = SetStorageVariable(("amountMaterials" + gainedMaterials.indexOf("Nothing")), 1, displayNerdStuff);
+            amountMaterials[gainedMaterials.indexOf("Nothing")] = SetStorageVariable(("amountMaterials" + gainedMaterials.indexOf("Nothing")), 06, displayNerdStuff);
             SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff);
             multiDic[materialAmount] = "<p>" + timeOfDrop +  " - You didn't find anything.</p>";
             SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
@@ -657,6 +658,9 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     }
     for(var i=0; i<gainedMaterials.length; i++){ //This for-loop is to get the amount that was gathered/created and afterwards puts it into the output string.
         if(droplog.indexOf(gainedMaterials[i]) != -1){
+            if(gainedMaterials[i] === "anything"){
+                materialAmount += 1;
+            }
             amountMaterials[i] += Number(materialAmount);
             SetStorageVariable(("amountMaterials" + i), amountMaterials[i], displayNerdStuff);
             gainedMaterials[i] = SetStorageVariable(("gainedMaterials" + i), gainedMaterials[i], displayNerdStuff);
@@ -695,8 +699,9 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     DisplayRarities();
     //output is now "done"
 }
-
-function MainLoop(timerVar, loopOnce){
+//This whole section is only necessary as long as this isn't in the official game
+function MainLoop(){
+    var looped = false;
     var mainInterval = setInterval(function(){
         if(document.getElementsByClassName("roundResult areaName").length > 0){
             var results = document.getElementsByClassName("roundResult areaName");
@@ -717,29 +722,18 @@ function MainLoop(timerVar, loopOnce){
                     }
                     else{
                         var goldDropped = 0; //This is to prevent bad things when calling AddData
-                        //Following part is just a quick test if the timer-variable is okay, since if it is asynced by over 5 seconds it should calculated a new one.
-                        //Otherwise this is just sitting here, doing nothing.
-                        timerText = document.getElementById("skill-timer").innerText;
-                        var currentTime = timerText.slice(timerText.indexOf("(")+1, timerText.indexOf(")"));
-                        if(((timerVar/1000) - currentTime) > 5 && ((timerVar/1000) - currentTime) < -5  && !loopOnce){
-                            console.log("Refresh time is over 5 seconds off.");
-                            setTimeout(function(){
-                                clearInterval(mainInterval);
-                            }, 5000, mainInterval);
-                            GetRightTiming();
-                        }
                         /*
-                This two if clauses are necessary because Goz made two different exp-display ways.
-                Because of this the code checks for both types of classes and if either of them has a length greater than 1,
-                it'll start slicing the result array for the exp dropped(and total experience) and the dropped amount
-                */
+                        This two if clauses are necessary because Goz made two different exp-display ways.
+                        Because of this the code checks for both types of classes and if either of them has a length greater than 1,
+                        it'll start slicing the result array for the exp dropped(and total experience) and the dropped amount
+                        */
                         if(document.getElementsByClassName("hourMin xsmall").length >0){
-                            amount = resultsHTML.slice(resultsHTML.lastIndexOf("]")+10, resultsHTML.lastIndexOf('hourMin')-13);
+                            amount = resultsHTML.slice(resultsHTML.lastIndexOf("]")+10, resultsHTML.lastIndexOf('hourMin')-14);
                             expDropped = document.getElementsByClassName("hourMin xsmall")[0].innerText;
                             expDropped = Number(expDropped.slice(1,expDropped.indexOf("total")-1));
                         }
                         else if(document.getElementsByClassName("statValue").length >0){
-                            amount = resultsHTML.slice(resultsHTML.lastIndexOf("]")+10, resultsHTML.lastIndexOf('statValue')-13);
+                            amount = resultsHTML.slice(resultsHTML.lastIndexOf("]")+10, resultsHTML.lastIndexOf('statValue')-14);
                             expDropped = document.getElementsByClassName("statValue")[0].innerHTML;
                             expDropped =  Number(expDropped.substring(0, expDropped.indexOf("E")-1));
                         }
@@ -764,7 +758,7 @@ function MainLoop(timerVar, loopOnce){
                         else if(resultsText.indexOf("anything") !== -1){
                             amount = 0;
                             droplog = "You didn't find anything";
-                            lastCollectedMaterial = "Nothing";
+                            lastCollectedMaterial = "anything";
                             droppedRarity = "Nothing";
                         }
                         if(amount.length > 3){ //This should only execute when mastery, Create Rate/Drop Rate or whatever procs on the drop.
@@ -794,22 +788,23 @@ function MainLoop(timerVar, loopOnce){
                         }
                         UpdateHistory();
                         AddData(lastCollectedMaterial, amount, droppedRarity, expDropped,  droplog, timeStamp, document.getElementsByClassName("roundResult areaName").length, droppedGold);
+                        ChangeTitle();
                     }
                 }
                 GetAttemptsToNextLevel(avgExp);
             }
-            ChangeTitle();
             thenLength = results.length;
-            if(loopOnce){
-                clearInterval(mainInterval);
+        }
+        else{
+            if(!looped){
+                if(RetrieveVariable("totalStatistics", true, displayNerdStuff) === "false"){
+                    ResetStatistics();
+                }
+                ChangeTitle();
+                looped = true;
             }
         }
-        else if(document.getElementsByClassName("roundResult areaName").length === 0){
-            if(RetrieveVariable("totalStatistics", true, displayNerdStuff) === "false"){
-                ResetStatistics();
-            }
-        }
-    },timerVar);
+    },5000);
 }
 
 /*
