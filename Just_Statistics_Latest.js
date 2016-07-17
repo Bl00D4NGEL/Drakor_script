@@ -338,7 +338,6 @@ function SetupLog(){
     materialDivText.style.textAlign = "left";
     materialDivText.style.display= "inherit";
     materialDiv.id = "materialDiv";
-    materialDiv.className = "skillBox";
     var multiDiv = document.createElement("div");
     var multiDivText = document.createElement("label");
     var multiDivSelect = document.createElement("label");
@@ -595,6 +594,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     if(materialName.indexOf(":") !== -1){
         materialName = "Invalid Drop/Creation";
     }
+    var filterMaterial = materialName;
     totalAttempts = SetStorageVariable("totalAttempts", (totalAttempts+1), displayNerdStuff);
     totalGold = Number(SetStorageVariable("totalGold", Number(totalGold+droppedGold), displayNerdStuff));
     totalExp += Number(expAmount);
@@ -603,8 +603,9 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     avgGold = Math.round(totalGold / totalAttempts);
     materialOutput = "<p>You have collected...</p>";
     numberOfAttempt = Number(numberOfAttempt);
-    if(materialAmount === 0){
-        materialName = "anything";
+    if(materialAmount === 0 || materialName === "Nothing" || materialRarity === "Nothing"){
+        materialAmount = 0;
+        materialName = "Nothing";
         materialRarity = "Nothing";
     }
     if(gainedMaterials.indexOf(materialName) == -1){ //If the collected material is not in the gainedMaterials array, the indexOf returns -1, thus it adds this variable to the array and everything else
@@ -626,7 +627,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
         if( $("#selectLogMulti option[value='0']").length === 0){ // "nothing" as an option for multi if it is not present already
             AddOption(materialAmount, document.getElementById("selectLogMulti"));
             multiCollections[materialAmount] = 1;
-            amountMaterials[gainedMaterials.indexOf("Nothing")] = SetStorageVariable(("amountMaterials" + gainedMaterials.indexOf("Nothing")), 06, displayNerdStuff);
+            amountMaterials[gainedMaterials.indexOf("Nothing")] = SetStorageVariable(("amountMaterials" + gainedMaterials.indexOf("Nothing")), 0, displayNerdStuff);
             SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff);
             multiDic[materialAmount] = "<p>" + timeOfDrop +  " - You didn't find anything.</p>";
             SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
@@ -656,14 +657,14 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
         multiDic[materialAmount] += "<p>" + timeOfDrop +  " - " + droplog + "</p>";
         SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
     }
+    if(droplog.indexOf("anything") !== -1){
+        amountMaterials[gainedMaterials.indexOf("Nothing")]++;
+        SetStorageVariable(("amountMaterials" + gainedMaterials.indexOf("Nothing")), amountMaterials[gainedMaterials.indexOf("Nothing")], displayNerdStuff);
+    }
     for(var i=0; i<gainedMaterials.length; i++){ //This for-loop is to get the amount that was gathered/created and afterwards puts it into the output string.
         if(droplog.indexOf(gainedMaterials[i]) != -1){
-            if(gainedMaterials[i] === "anything"){
-                materialAmount += 1;
-            }
             amountMaterials[i] += Number(materialAmount);
             SetStorageVariable(("amountMaterials" + i), amountMaterials[i], displayNerdStuff);
-            gainedMaterials[i] = SetStorageVariable(("gainedMaterials" + i), gainedMaterials[i], displayNerdStuff);
         }
         materialOutput += "<p>"+ gainedMaterials[i] + " x" + amountMaterials[i] + "</p>"; //General output of resource collected
     }
@@ -749,7 +750,7 @@ function MainLoop(){
                         else{
                             droppedGold = 0;
                         }
-                        rawAmount = amount;
+                        var rawAmount = amount;
                         var droplog = "";
                         if(resultsText.indexOf("found") !== -1 || resultsText.indexOf("created") !== -1 || resultsText.indexOf("caught") !== -1){ //If the result string contains "found" it automatically recognizeses this as a drop, otherwise it's a "nothing-drop"
                             lastCollectedMaterial = resultsText.substring(resultsText.lastIndexOf("[")+1,resultsText.lastIndexOf("]"));
@@ -758,14 +759,14 @@ function MainLoop(){
                         else if(resultsText.indexOf("anything") !== -1){
                             amount = 0;
                             droplog = "You didn't find anything";
-                            lastCollectedMaterial = "anything";
+                            lastCollectedMaterial = "Nothing";
                             droppedRarity = "Nothing";
                         }
                         if(amount.length > 3){ //This should only execute when mastery, Create Rate/Drop Rate or whatever procs on the drop.
                             amount = resultsText.slice(resultsText.lastIndexOf("]")+3,resultsText.lastIndexOf("]")+6);
                             amount = createAmountString(amount);
                         }
-                        timeStamp = resultsText.slice(1, resultsText.indexOf("]"));
+                        var timeStamp = resultsText.slice(1, resultsText.indexOf("]"));
                         for(var  k=0;k<rarities.length;k++){ //for-loop iterates how many materials of each rarity have been collected.
                             if(resultsHTML.indexOf(rarities[k]) !== -1){
                                 droppedRarity = rarities[k];
