@@ -67,6 +67,15 @@ $(document).ready(function(){
     SetupLog();
 });
 
+function GetDate(){
+    var dateObj = new Date();
+    var month = dateObj.getUTCMonth() + 1; //months from 1-12
+    var day = dateObj.getUTCDate();
+    var year = dateObj.getUTCFullYear();
+
+    var newdate = year + "/" + month + "/" + day;
+    return newdate;
+}
 function SortMultisInSelect(){
     document.getElementById("selectLogMulti").options.length = 1;
     for(var j=0;j<multiCollections.length;j++){
@@ -594,6 +603,8 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     if(materialName.indexOf(":") !== -1){
         materialName = "Invalid Drop/Creation";
     }
+    var myDate = GetDate();
+    var displayNerdStuff = GetStorageVariable("displayNerdStuff",false);
     var filterMaterial = materialName;
     totalAttempts = SetStorageVariable("totalAttempts", (totalAttempts+1), displayNerdStuff);
     totalGold = Number(SetStorageVariable("totalGold", Number(totalGold+droppedGold), displayNerdStuff));
@@ -612,11 +623,11 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
         gainedMaterials.push(materialName);
         amountMaterials.push(0);
         AddOption(materialName,  document.getElementById("selectLogMaterial"));
-        materialDic[materialName] = "<p>" + timeOfDrop + " - " + droplog + "</p>";
+        materialDic[materialName] = "<p>" + myDate + " " + timeOfDrop + " - " + droplog + "</p>";
         SetStorageVariable(("materialDic_" + materialName), materialDic[materialName], displayNerdStuff);
     }
     else{
-        materialDic[materialName] += "<p>" + timeOfDrop + " - " + droplog + "</p>";
+        materialDic[materialName] += "<p>" + myDate + " " + timeOfDrop + " - " + droplog + "</p>";
         SetStorageVariable(("materialDic_" + materialName), materialDic[materialName], displayNerdStuff);
     }
 
@@ -629,7 +640,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
             multiCollections[materialAmount] = 1;
             amountMaterials[gainedMaterials.indexOf("Nothing")] = SetStorageVariable(("amountMaterials" + gainedMaterials.indexOf("Nothing")), 0, displayNerdStuff);
             SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff);
-            multiDic[materialAmount] = "<p>" + timeOfDrop +  " - You didn't find anything.</p>";
+            multiDic[materialAmount] = "<p>" + myDate + " " + timeOfDrop +  " - You didn't find anything.</p>";
             SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
             SortMultisInSelect();
         }
@@ -638,7 +649,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
             amountMaterials[gainedMaterials.indexOf("Nothing")] += 1;
             SetStorageVariable(("amountMaterials" + gainedMaterials.indexOf("Nothing")), amountMaterials[gainedMaterials.indexOf("Nothing")], displayNerdStuff);
             SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff);
-            multiDic[materialAmount] += "<p>" + timeOfDrop +  " - You didn't find anything.</p>";
+            multiDic[materialAmount] += "<p>" + myDate + " " + timeOfDrop +  " - You didn't find anything.</p>";
             SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
         }
     }
@@ -647,14 +658,14 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
         multiCollections[materialAmount] = 1;
         SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff);
         AddOption(materialAmount, document.getElementById("selectLogMulti"));
-        multiDic[materialAmount] = "<p>" + timeOfDrop +  " - " + droplog + "</p>";
+        multiDic[materialAmount] = "<p>" + myDate + " " + timeOfDrop +  " - " + droplog + "</p>";
         SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
         SortMultisInSelect();
     }
     else{
         multiCollections[materialAmount]++;
         SetStorageVariable(("multiCollection" + materialAmount), multiCollections[materialAmount], displayNerdStuff);
-        multiDic[materialAmount] += "<p>" + timeOfDrop +  " - " + droplog + "</p>";
+        multiDic[materialAmount] += "<p>" + myDate + " " + timeOfDrop +  " - " + droplog + "</p>";
         SetStorageVariable(("multiDic_" + materialAmount), multiDic[materialAmount], displayNerdStuff);
     }
     if(droplog.indexOf("anything") !== -1){
@@ -708,7 +719,7 @@ function MainLoop(){
     var mainInterval = setInterval(function(){
         if(document.getElementsByClassName("roundResult areaName").length > 0){
             var results = document.getElementsByClassName("roundResult areaName");
-            if(RetrieveVariable("runLog", true, displayNerdStuff) === "true"){
+            if(RetrieveVariable("runLog", true, false) === "true"){
                 //This if-clause is to prevent looping over the same thing too often in case the timer-variable thing goes wrong or there is lag or anything else that would cause multi-logging
                 if(results.length > thenLength){
                     var resultsHTML = document.getElementsByClassName("roundResult areaName")[0].innerHTML;
