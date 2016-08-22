@@ -50,7 +50,7 @@ var materialDic = {};
 var multiDic = {};
 for(var materialDiCEntry = 0; materialDiCEntry < collected; materialDiCEntry++){
     var materialDicName = ("materialDic_"+ GetStorageVariable(("gainedMaterials"+materialDiCEntry))); //String built to reduce length of following line
-    materialName = GetStorageVariable(("gainedMaterials"+materialDiCEntry)); //String built to reduce length of following line
+    var materialName = GetStorageVariable(("gainedMaterials"+materialDiCEntry)); //String built to reduce length of following line
     materialDic[materialName] = RetrieveVariable(materialDicName, "", displayNerdStuff);
 }
 for(var multiDiCEntry = 0; multiDiCEntry < maxMulti; multiDiCEntry++){
@@ -606,12 +606,12 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
     var myDate = GetDate();
     var displayNerdStuff = GetStorageVariable("displayNerdStuff",false);
     var filterMaterial = materialName;
-    totalAttempts = SetStorageVariable("totalAttempts", (totalAttempts+1), displayNerdStuff);
-    totalGold = Number(SetStorageVariable("totalGold", Number(totalGold+droppedGold), displayNerdStuff));
+    var totalAttempts = SetStorageVariable("totalAttempts", (totalAttempts+1), displayNerdStuff);
+    var totalGold = Number(SetStorageVariable("totalGold", Number(totalGold+droppedGold), displayNerdStuff));
     totalExp += Number(expAmount);
     totalExp = SetStorageVariable("totalExp", totalExp, displayNerdStuff);
-    avgExp = Math.round(totalExp / totalAttempts);
-    avgGold = Math.round(totalGold / totalAttempts);
+    var avgExp = Math.round(totalExp / totalAttempts);
+    var avgGold = Math.round(totalGold / totalAttempts);
     materialOutput = "<p>You have collected...</p>";
     numberOfAttempt = Number(numberOfAttempt);
     if(materialAmount === 0 || materialName === "Nothing" || materialRarity === "Nothing"){
@@ -703,6 +703,7 @@ function AddData(materialName, materialAmount, materialRarity, expAmount, droplo
             SetStorageVariable(("rarity" + k), raritiesCollected[k], displayNerdStuff);
         }
     }
+    SetStorageVariable("avgExp", avgExp, displayNerdStuff);
     SetStorageVariable("materialOutput", materialOutput, displayNerdStuff);
     SetStorageVariable("multiOutput", multiOutput, displayNerdStuff);
     SetStorageVariable("miscOutput", miscOutput, displayNerdStuff);
@@ -736,6 +737,7 @@ function MainLoop(){
                     }
                     else{
                         var goldDropped = 0; //This is to prevent bad things when calling AddData
+                        var amount, expDropped, droppedGold, lastCollectedMaterial, droppedRarity;
                         /*
                         This two if clauses are necessary because Goz made two different exp-display ways.
                         Because of this the code checks for both types of classes and if either of them has a length greater than 1,
@@ -805,7 +807,7 @@ function MainLoop(){
                         ChangeTitle();
                     }
                 }
-                GetAttemptsToNextLevel(avgExp);
+                GetAttemptsToNextLevel(localStorage.getItem("avgExp"));
             }
             thenLength = results.length;
         }
