@@ -84,12 +84,12 @@ $(document).ready(function(){
             var checkboxId = e.currentTarget.id;
             if(e.currentTarget.checked){ //Checkboxstatus
                 console.log("Activating script " + scriptList[checkboxId][1]);
-                scriptList[checkboxId][1] = true;
+                scriptList[checkboxId][2] = true;
                 AddScript(checkboxId);
             }
             else{
                 console.log("Deactivating script " + scriptList[checkboxId][1]);
-                scriptList[checkboxId][1] = false;
+                scriptList[checkboxId][2] = false;
             }
         });
     }
@@ -100,6 +100,6 @@ function AddScript(checkboxId){
     console.log("Adding..\"" + scriptList[checkboxId][0] + "\"");
     console.log("Link: \"" + scriptLink + "\"");
     $('head').append("<script src='" + scriptLink + "'><\/script>");
-    scriptList[checkboxId][1] = true;
+    scriptList[checkboxId][2] = true;
     localStorage.setItem("script_settings", JSON.stringify(scriptList));
 }
