@@ -9,9 +9,9 @@
 // ==/UserScript==
 var scripts = 8; // CURRENT amount of scripts Bl00D4NGEL currently has. Do not modify.
 var scriptList;
-$(document).ready(function () {
+$(document).ready(function(){
     //If there's an entry for "script_settings" check if the amount of scripts is the same as the "right" amount
-    if (!localStorage.getItem("script_settings") || Object.keys(JSON.parse(localStorage.getItem("script_settings"))).length !== scripts) {
+    if(!localStorage.getItem("script_settings") || Object.keys(JSON.parse(localStorage.getItem("script_settings"))).length !== scripts){
         console.log("Scripts settings not set yet or incorrect.. loading default config");
         scriptList = {
             "Battle_Statistics": ["Battle Statistics", "https://cdn.rawgit.com/Bl00D4NGEL/Drakor_script/master/Battle_Statistics.js", false],
@@ -23,39 +23,24 @@ $(document).ready(function () {
             "Mastery_Scanner": ["Mastery Scanner", "https://cdn.rawgit.com/Bl00D4NGEL/Drakor_script/master/Mastery_Scanner.js", false],
             "Estate_Guild_Bank": ["Add Estate Checkers to Guild Bank", "https://cdn.rawgit.com/Bl00D4NGEL/Drakor_script/master/Estate_checking_in_guild_bank.js", false]
         };
-        localStorage.setItem("script_settings", JSON.stringify(scriptList));
+        localStorage.setItem("script_settings",JSON.stringify(scriptList));
     }
-    else {
+    else{
         console.log("Script config found.. loading it up now");
         scriptList = JSON.parse(localStorage.getItem("script_settings"));
-        for (var i in scriptList) {
+        for (var i in scriptList){
             if (typeof scriptList[i] !== 'function') {
-                if (scriptList[i][2]) {
+                if(scriptList[i][2]){
                     AddScript(i);
                 }
             }
         }
     }
-    if (document.getElementById("gs_topmenu")) {
+    if(document.getElementById("gs_topmenu")){
         //jQuery dialog to select scripts
         var scriptDialog = document.createElement("div");
         scriptDialog.id = "scriptDialog";
         scriptDialog.style.textAlign = "left";
-        for (var k in scriptList) {
-            if (typeof scriptList[k] !== 'function') {
-                var checkbox = document.createElement("input");
-                checkbox.type = "checkbox";
-                checkbox.id = k;
-                checkbox.className = "amazingCheckbox";
-                if (scriptList[k][2]) {
-                    checkbox.checked = true;
-                }
-                var span = document.createElement("span");
-                span.innerHTML = scriptList[k][0] + "<br/>";
-                scriptDialog.appendChild(checkbox);
-                scriptDialog.appendChild(span);
-            }
-        }
         scriptDialog.innerHTML += "<br/><p>For more information about what each script does please visit the forum =)<br/>" +
             "If you encounter any bug with any script make sure to message me in Drakor. (Bl00D4NGEL)" +
             "<br/>Hope you're enjoying my work!</p>";
@@ -67,6 +52,21 @@ $(document).ready(function () {
         hrefShowScripts.className = "gs_topmenu_item";
         document.getElementById("gs_topmenu").appendChild(hrefShowScripts);
         document.getElementById("gs_topmenu").appendChild(fragment);
+        for (var k in scriptList){
+            if (typeof scriptList[k] !== 'function') {
+                var checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.id = k;
+                checkbox.className = "amazingCheckbox";
+                if(scriptList[k][2]){
+                    checkbox.checked = true;
+                }
+                var span = document.createElement("span");
+                span.innerHTML = scriptList[k][0] + "<br/>";
+                scriptDialog.appendChild(checkbox);
+                scriptDialog.appendChild(span);
+            }
+        }
         $("#scriptDialog").dialog({
             autoOpen: false,
             title: "Blood's Script Collection",
@@ -77,27 +77,29 @@ $(document).ready(function () {
             width: 500,
             height: 400
         });
-        hrefShowScripts.addEventListener("click", function () {
+        hrefShowScripts.addEventListener("click", function(){
             $("#scriptDialog").dialog("open");
         });
-        $(".amazingCheckbox").on("click", function (e) {
+        $(".amazingCheckbox").on("click", function(e){
             var checkboxId = e.currentTarget.id;
-            if (e.currentTarget.checked) { //Checkboxstatus
-                scriptList[checkboxId][2] = true;
+            if(e.currentTarget.checked){ //Checkboxstatus
+                console.log("Activating script " + scriptList[checkboxId][1]);
+                scriptList[checkboxId][1] = true;
                 AddScript(checkboxId);
             }
-            else {
-                scriptList[checkboxId][2] = false;
+            else{
+                console.log("Deactivating script " + scriptList[checkboxId][1]);
+                scriptList[checkboxId][1] = false;
             }
         });
     }
 });
 
-function AddScript(checkboxId) {
+function AddScript(checkboxId){
     var scriptLink = scriptList[checkboxId][1];
     console.log("Adding..\"" + scriptList[checkboxId][0] + "\"");
     console.log("Link: \"" + scriptLink + "\"");
     $('head').append("<script src='" + scriptLink + "'><\/script>");
-    scriptList[checkboxId][2] = true;
+    scriptList[checkboxId][1] = true;
     localStorage.setItem("script_settings", JSON.stringify(scriptList));
 }
