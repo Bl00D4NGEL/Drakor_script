@@ -91,6 +91,7 @@ $(document).ready(function(){
                 console.log("Deactivating script " + scriptList[checkboxId][1]);
                 scriptList[checkboxId][2] = false;
             }
+            localStorage.setItem("script_settings", JSON.stringify(scriptList));
         });
     }
 });
