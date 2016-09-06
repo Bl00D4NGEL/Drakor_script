@@ -32,8 +32,10 @@ function Main() {
     headingTeleport.innerHTML = "<h2>Teleports</h2>";
     var headingBattle = document.createElement("span");
     headingBattle.innerHTML = "<h2>Spells</h2>";
+    console.log("gblength: " + gblength);
     for (var i = gblength - 1; i > -1; i--) {
         var imageText = document.getElementsByClassName("world_bank")[i].childNodes[3].childNodes[1].src;
+        console.log("imageText: " + imageText + "\t i: " + i);
         var regRing = /\/ring/gi;
         var regTool = /tool/gi;
         var regEnchant = /enchant/gi;
@@ -72,9 +74,9 @@ function Main() {
             headingBattle.appendChild(items[i]);
         }
     }
-    headingRing = Sort_By_Tradeskill(headingRing, "<h2>Rings</h2>");
-    headingTool = Sort_By_Tradeskill(headingTool, "<h2>Tools</h2>");
-    headingFood = Sort_By_Food_Type(headingFood);
+    // headingRing = Sort_By_Tradeskill(headingRing, "<h2>Rings</h2>");
+    // headingTool = Sort_By_Tradeskill(headingTool, "<h2>Tools</h2>");
+    // headingFood = Sort_By_Food_Type(headingFood);
     fragment.appendChild(headingRing);
     fragment.appendChild(headingTool);
     fragment.appendChild(headingEnchant);
@@ -88,7 +90,6 @@ function Main() {
 }
 function Sort_By_Tradeskill(spanObjects, title) {
     var tradeskillsDict = {};
-    
     var tradeskills = ["Fis", //Fishing
                        "Min", //Mining
                        "Gat", //Gathering
