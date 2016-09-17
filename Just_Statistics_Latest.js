@@ -57,12 +57,7 @@ for(var multiDiCEntry = 0; multiDiCEntry < maxMulti; multiDiCEntry++){
     multiDic[multiDiCEntry] = RetrieveVariable(("multiDic_" + multiDiCEntry), "", displayNerdStuff);
 }
 $(document).ready(function(){
-    var hrefShowLog = document.createElement("a");
-    hrefShowLog.innerHTML = "Show Log";
-    hrefShowLog.id = "hrefShowLog";
-    hrefShowLog.href = "#logDiv";
-    hrefShowLog.className = "gs_topmenu_item";
-    document.getElementById("gs_topmenu").appendChild(hrefShowLog);
+    var hrefShowLog = $(document.createElement("a")).attr({id: "hrefShowLog", innerHTML: "Show Log", href: "#logDiv", className: "gs_topment_item"}).appendTo("#gs_topmenu");
 //    $(".fancybox").fancybox();
     SetupLog();
 });
