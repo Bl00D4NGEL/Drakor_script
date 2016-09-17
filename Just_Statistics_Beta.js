@@ -26,6 +26,7 @@ else {
 }
 function Create_Log_Object() {
     log.Misc = {};
+    log.Misc.Attempts = {};
     log.Misc.Attempts.Node = 0;
     log.Misc.Attempts.Total = 0;
     log.Misc.TotalExp = 0;
