@@ -28,20 +28,22 @@ function Create_Log_Object() {
     log.Misc.Attempts = {};
     log.Misc.Attempts.Node = 0;
     log.Misc.Attempts.Total = 0;
+    log.Misc.Log = [];
     log.Misc.TotalExp = 0;
     log.Misc.Gold = 0;
     log.Misc.Alert = false;
+    log.Misc.Index = 0;
     localStorage.setItem("localLog", JSON.stringify(log));
 }
 
 $(document).ready(function () {
     //Add the "button" to the menu bar
-    // $(document.createElement("a")).attr({id: "hrefShowLog", class: "gs_topmenu_item"}).text("Show Log").appendTo("#gs_topmenu");
+    var showLog = $(document.createElement("a")).attr({ id: "hrefShowLog", class: "gs_topmenu_item" }).text("Show Log").on("click", function () { $(logDiv).dialog("open"); }).appendTo("#gs_topmenu");
     $(document).ajaxComplete(function (event, xhr, settings) {
         if (xhr.status === 200) { //Check if ajax is OK
             if (settings.url.match(/\/world\/action_/)) { //Look if the ajax is a tradeskill action
                 var amount, exp, gold, item, history, buffData, titleData;
-                var tradeskill = settings.url.match(/action_(.*?)\//)[1];
+                var tradeskill = settings.url.match(/action_([a-zA-Z]+).*?\//)[1];
                 tradeskill = (tradeskill[0].toUpperCase() + tradeskill.substring(1)); //Convert first char to uppercase (Just for beauty reasons)
                 var copy = tradeskill.tradeskills;
                 if (!log[tradeskill]) {
@@ -49,19 +51,21 @@ $(document).ready(function () {
                     log[tradeskill].Rarity = {};
                     log[tradeskill].Items = {};
                     log[tradeskill].Multi = {};
+                    log[tradeskill].Attempts = 0;
+                    log[tradeskill].Indexes = "";
+                    $(document.createElement("option")).attr({ name: tradeskill, value: tradeskill }).text(tradeskill).appendTo($("#tradeSelect")); //If a new tradeskill is there, add it to the select
                 } //If tradeskill is not present in log create it
                 console.log(xhr.responseText);
-                /*
-                depleted:
-<div class="roundResult damage areaDepleted">This <b>Logging</b> area has been depleted... </div>
-*/
                 if (!xhr.responseText.match(/depleted/i)) {
-
-
-                    var regex = /<div class="roundResult areaName">(.*?)(<script>.*<\/script>)(.*?)<\/div>/gi;
+                    log[tradeskill].Attempts++;
+                    var regex = /<div class="roundResult areaName">(.*?exp\)?<\/span><\/div>)/gi;
                     var result = regex.exec(xhr.responseText); //Basic regex to get only the necessary data.
-                    if (!result) { //Nothing-drop
+                    result = result[1].replace(/<script>(.*?)<\/script>/, "");
+                    log.Misc.Log[log.Misc.Index] = result; //Add the log to the Object via index
+                    log[tradeskill].Indexes += log.Misc.Index + "|";
+                    if (result.match(/anything/i)) { //Nothing-drop
                         if (!log[tradeskill].Rarity.Nothing) {
+                            log[tradeskill].Rarity.Nothing = {};
                             log[tradeskill].Rarity.Nothing = 1;
                         }
                         else {
@@ -77,9 +81,11 @@ $(document).ready(function () {
                         exp = xhr.responseText.match(/>(\d+)\s*exp</mi)[1];
                     }
                     else {
-                        history = result[1] + result[3]; //The string the user sees in the end.
+                        history = result; //The string the user sees in the end.
+                        console.log("History: ", history, "\nResult1: ", result[1]);
                         var rarity = history.match(/class=\"(\w+)\s?viewmat\">/mi)[1];
                         if (!log[tradeskill].Rarity[rarity]) {
+                            log[tradeskill].Rarity[rarity] = {};
                             log[tradeskill].Rarity[rarity] = 1;
                         }
                         else {
@@ -98,19 +104,24 @@ $(document).ready(function () {
                             log[tradeskill].Items[item] = {};
                             log[tradeskill].Items[item].Drop = 1;
                             log[tradeskill].Items[item].Amount = Number(amount);
-                            console.log("Item: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
+                            log[tradeskill].Items[item].Indexes = log.Misc.Index + "|";
+                            console.log("First time!!\nItem: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
                         }
                         else {
                             log[tradeskill].Items[item].Drop++;
                             log[tradeskill].Items[item].Amount += Number(amount);
+                            log[tradeskill].Items[item].Indexes += log.Misc.Index + "|";
                             console.log("Item: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
                         }
-                        exp = result[3].match(/(\d+)/gi);
+                        console.log("Item Indexes: " + log[tradeskill].Items[item].Indexes + "\nCurrent index: " + log.Misc.Index);
+                        exp = history.match(/>(\d+)\s*exp/mi)[1];
+                        console.log("Exp: " + exp);
                     }
+                    log.Misc.Index++; //Add 1 to the index for the next attempt.
                     log.Misc.TotalExp += Number(exp);
-                    gold = xhr.responseText.match(/playtitle.*?\+(\d*,*\d+).*?<\/span>/gi);
+                    gold = xhr.responseText.match(/\(\+(.*?)gold/i);
                     if (!gold) { gold = 0; }
-                    else { gold = gold[1].replace(",", ""); }
+                    else { console.log("Gold before: " + gold); gold = gold[1].replace(",", ""); }
                     console.log("Gold: " + gold);
                     log.Misc.Gold += Number(gold);
                     log.Misc.Attempts.Total++;
@@ -149,7 +160,7 @@ $(document).ready(function () {
             }
             else if (!settings.url.match(/chat/i)) {
                 var buffStatus;
-                if (xhr.responseText.match(/cardNone/gi)) { buffStatus = ""; }
+                if (xhr.responseText.match(/no\s?buff/gi)) { buffStatus = ""; }
                 else { buffStatus = "yes"; }
                 ChangeTitle('Drakor "Innovative & Unique Browser Based RPG." (PBBG, MPOG, MMORPG)', buffStatus);
             }
@@ -215,7 +226,7 @@ function DisplayData(log) {
             rarityText += tradeskillTitle;
             for (var rarity in colorDict) {
                 if (log[tradeskill].Rarity[rarity]) {
-                    rarityText += "<p style='color:" + colorDict[rarity] + ";'>" + rarity + ": " + log[tradeskill].Rarity[rarity] + " (" + (log[tradeskill].Rarity[rarity] / totalAttempts * 100).toFixed(2) + "%)</p>";
+                    rarityText += "<p style='color:" + colorDict[rarity] + ";'>" + rarity + ": " + log[tradeskill].Rarity[rarity] + " (" + (log[tradeskill].Rarity[rarity] / log[tradeskill].Attempts * 100).toFixed(2) + "%)</p>";
                 }
             }
             materialText += tradeskillTitle;
@@ -225,7 +236,7 @@ function DisplayData(log) {
             }
             multiText += tradeskillTitle;
             for (var multi in log[tradeskill].Multi) { //Iterate over multis
-                multiText += "<p>Multi: " + multi + " Gotten: " + log[tradeskill].Multi[multi].Amount + " time(s). (" + (log[tradeskill].Multi[multi].Amount / totalAttempts * 100).toFixed(2) + "%)</p>";
+                multiText += "<p>Multi: " + multi + " Gotten: " + log[tradeskill].Multi[multi].Amount + " time(s). (" + (log[tradeskill].Multi[multi].Amount / log[tradeskill].Attempts * 100).toFixed(2) + "%)</p>";
             }
         }
     }
@@ -279,22 +290,14 @@ function ConvertIntoSmallerTimeFormat(timeInMs) {
 }
 
 function SetupLog() {
-    /* Temporary disabled
-    var selectLogMaterial = document.createElement("select");
-    var selectLogMulti = document.createElement("select");
-    selectLogMaterial.style.fontSize = "14px";
-    selectLogMulti.style.fontSize = "14px";
-    selectLogMaterial.style.padding = "4px";
-    selectLogMulti.style.padding = "4px";
-    selectLogMaterial.id = "selectLogMaterial";
-    selectLogMulti.id = "selectLogMulti";
-    */var fragment = document.createDocumentFragment();
+    var fragment = document.createDocumentFragment();
     var logDiv = $(document.createElement("div")).attr({ id: "logDiv", title: "Drop Log" }).css({ "font-size": "14px", "background-color": "lightgrey", "display": "none" }).html('<ul><li><a href="#materialDiv">Drops/ Creations</a></li>' +
         '<li><a href ="#multiDiv">Multis</a></li>' +
         '<li><a href ="#miscDiv">Miscellaneous</a></li>' +
         '<li><a href ="#rarityDiv">Rarites</a></li>' +
         '<li><a href ="#optionDiv">Options</a></li>' +
-        '<li><a href ="#helpDiv">Help(WIP)</a></li></ul>').appendTo(fragment);
+        '<li><a href ="#helpDiv">Help(WIP)</a></li>' +
+        '<li><a href ="#historyDiv">History</a></li></ul>').appendTo(fragment);
     var materialDiv = $(document.createElement("div")).attr({ "id": "materialDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("materialDivText")).appendTo(logDiv);
     // $(document.createElement("div")).attr({"id": "materialDivText"}).css({"text-align":"left", "display": "inherit"}).appendTo(materialDiv);
     var multiDiv = $(document.createElement("div")).attr({ "id": "multiDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("multiDivText")).appendTo(logDiv);
@@ -310,6 +313,8 @@ function SetupLog() {
                                                                                                                                  "<p>Sure! If you got any suggestion feel free to message Bl00D4NGEL with it. </br>" +
                                                                                                                                  "Can I help with this help file? </br>" +
                                                                                                                                  "Sure thing. Just message Bl00D4NGEL once again with any idea of what could be added to this.</p>").appendTo(logDiv);
+    var historyDiv = $(document.createElement("div")).attr({ id: "historyDiv" }).css({ "text-align": "left", "display": "inherit" }).appendTo(logDiv);
+    var tradeLog = $(document.createElement("div")).attr({ id: "log" }).appendTo(historyDiv);
     var alertCheckbox = $(document.createElement("input")).attr({ id: "alert", type: "checkbox" }).on("click", function (event) { log.Misc.Alert = $(this).prop('checked'); }).appendTo(optionsDiv);
     $(document.createElement("span")).html("Put you to the Drakor page when the node depletes/ the pattern completes?<br/>").appendTo(optionsDiv);
     var resetButton = $(document.createElement("button")).attr({ id: "resetButton" }).html("Reset Statistics").css({ "width": "auto", "height": "auto" }).on("click", function () { ResetStatistics(); }).appendTo(optionsDiv);
@@ -321,8 +326,49 @@ function SetupLog() {
             console.log(key + " => " + value);
         }
     }).appendTo(optionsDiv);
-    var showLog = $(document.createElement("a")).attr({ id: "hrefShowLog", class: "gs_topmenu_item" }).text("Show Log").on("click", function () { $(logDiv).dialog("open"); }).appendTo("#gs_topmenu");
-    if (localStorage.getItem("popAlert")) {
+    var tradeSelect = $(document.createElement("select")).attr({ id: "tradeSelect" }).on("change", function () {
+        if ($(this).val()) {
+            var keys = Object.keys(log[$(this).val()].Items).sort();
+            for (var i = 0; i < keys.length; i++) {
+                if (keys[i] !== "Attempts") {
+                    $(document.createElement("option")).attr({ name: keys[i], value: keys[i] }).text(keys[i]).appendTo($("#materialSelect"));
+                }
+            }
+            var text = "<br/>";
+            var indexes = log[$(this).val()].Indexes.split("|");
+            for (var j = 0; j < indexes.length - 1; j++) {
+                console.log(indexes[j]);
+                text += log.Misc.Log[indexes[j]] + "<br/>";
+            }
+            $(tradeLog).html(text);
+        }
+        else {
+            $(tradeLog).html("");
+            $("#materialSelect").find("option").remove().end().append("<option name='' value=''>Select a material</option>");
+        }
+    }).insertBefore(tradeLog);
+    var materialSelect = $(document.createElement("select")).attr({ id: "materialSelect" }).on("change", function () {
+        if ($(this).val()) {
+            var text = "<br/>";
+            var indexes = log[$(tradeSelect).val()].Items[$(this).val()].Indexes.split("|");
+            for (var i = 0; i < indexes.length - 1; i++) {
+                console.log(indexes[i]);
+                text += log.Misc.Log[indexes[i]] + "<br/>";
+            }
+            $(tradeLog).html(text);
+        }
+        else {
+            $(tradeLog).html("");
+        }
+    }).insertBefore(tradeLog);
+    $(document.createElement("option")).attr({ name: "", value: "" }).text("Select a tradeskill").appendTo(tradeSelect);
+    $(document.createElement("option")).attr({ name: "", value: "" }).text("Select a material").appendTo(materialSelect);
+    for (var tradeskill in log) {
+        if (tradeskill !== "Misc") {
+            $(document.createElement("option")).attr({ name: tradeskill, value: tradeskill }).text(tradeskill).appendTo(tradeSelect);
+        }
+    }
+    if (log.Misc.Alert) {
         $(alertCheckbox).prop('checked', true);
     }
     else {
@@ -335,18 +381,22 @@ function SetupLog() {
             effect: "blind",
             duration: 500
         },
-        width: 700,
+        width: 800,
         height: 400
     });
     $(fragment).appendTo("#gs_topmenu");
 }
 
 function ResetStatistics() {
-    $("#materialDivText", "#multiDivText", "#miscDivText", "#expDiv", "#rarityDiv").each(function () {
-        $(this).html("");
-    });
+    var localStorageElements = ["materialDivText", "multiDivText", "rarityDivText", "miscDivText"];
+    for (var i = 0 ; i < localStorageElements.length; i++) {
+        console.log("Resetting " + localStorageElements[i]);
+        localStorage.setItem(localStorageElements[i], "");
+    }
     console.log("Everything has been re-set");
     Create_Log_Object();
+    $("#materialSelect").find("option").remove().end().append("<option name='' value=''>Select a material</option>");
+    $("#tradeSelect").find("option").remove().end().append("<option name='' value=''>Select a tradeskill</option>");
 }
 /*
 Patch notes 1.42
