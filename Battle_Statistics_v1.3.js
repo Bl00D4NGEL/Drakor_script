@@ -440,6 +440,7 @@ function GetBattleResults() {
     //console.log("Tracking Battle Results..");
     var battleDone = false;
     var tempLoot;
+    var lootbagText = $("#open-lootbag").html();
     if(!lootbagText.match(/\d+/)){ //Lootbag is empty
                 tempLoot = SetStorageVariable("tempLoot", 0);
                 tempLoot = 0; //Better safe than sorry
@@ -468,8 +469,6 @@ function GetBattleResults() {
             }
             var lootText = document.getElementsByClassName("victoryBox")[0].innerText;
             var amountItems = Number(lootText.slice(lootText.indexOf("Loot bag") + 14, lootText.indexOf("Item")));
-            var lootbagText = $("#open-lootbag").html();
-
             if (lootText.indexOf("Loot bag") === -1) {
                 amountItems = 0;
                 wonBattleWithoutLoot++;
