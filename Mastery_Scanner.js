@@ -4,6 +4,7 @@
 // @description  Click on all items in the mastery page and finally print out the result in the console
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com/masteries
+// @match        https://*.drakor.com/masteries
 // ==/UserScript==
 $(document).ready(function(){
     $(".tradeMat").click();
