@@ -40,12 +40,13 @@ $(document).ready(function () {
                 var tradeskill = settings.url.match(/action_([a-zA-Z]+).*?\//)[1];
                 //Switch to check if skill is Disenchanting since it needs special treating
                 tradeskill = (tradeskill[0].toUpperCase() + tradeskill.substring(1)); //Convert first char to uppercase (Just for beauty reasons)
-                if(tradeskill === "Teleport"){console.log("You teleported.. that's no tradeskill!");return;}
+                if (tradeskill === "Teleport") { console.log("You teleported.. that's no tradeskill!"); return; }
                 if (!log[tradeskill]) {
+                    console.log("Tradeskill '" + tradeskill + "' unknown in the log");
                     log[tradeskill] = {};
                     log[tradeskill].Rarity = {};
                     var rarities = ["Common", "Superior", "Rare", "Epic", "Legendary", "Nothing"];
-                    for(var rar=0;rar<rarities.length;rar++){
+                    for (var rar = 0; rar < rarities.length; rar++) {
                         log[tradeskill].Rarity[rarities[rar]] = 0;
                     }
                     log[tradeskill].Items = {};
@@ -58,117 +59,23 @@ $(document).ready(function () {
                 } //If tradeskill is not present in log create it
                 console.log(xhr.responseText);
                 if (!xhr.responseText.match(/depleted/i)) {
-                    var regex = /<div class="roundResult areaName">(.*?exp\)?<\/span><\/div>)/gi;
-                    var result = regex.exec(xhr.responseText); //Basic regex to get only the necessary data.
+                    // var regex = /<div class="roundResult areaName">(.*?exp\)?<\/span><\/div>)/gi;
+                    // var result = regex.exec(xhr.responseText); //Basic regex to get only the necessary data.
+                    var result = xhr.responseText.match(/<div class="roundResult areaName">.*?exp\)?<\/span><\/div>/gi);
                     if (result) { //This will always say true UNLESS you worked in another window thus the result will be empty -> no log entry will be made
-                        result = result[1].replace(/<script>(.*?)<\/script>/, "");
-                        var today = new Date();
-                        var localoffset = -(today.getTimezoneOffset() / 60);
-                        var destoffset = -3;
-                        var offset = destoffset - localoffset;
-                        var d = new Date().getTime() + offset * 3600 * 1000;
-                        var year = new Date().getFullYear(d);
-                        var month = new Date().getMonth(d) + 1;
-                        if (month < 10) { month = "0" + month; }
-                        var day = new Date().getDate(d);
-                        if (day < 10) { day = "0" + day; }
-                        var hour = new Date().getHours(d) + offset;
-                        if (hour < 0) { hour = 24 + hour; day--; }
-                        if (hour < 10) { hour = "0" + hour; }
-                        var logDate = year + "/" + month + "/" + day + ": ";
-                        var key = year + "" + month + "" + day + "" + hour; //Generate a key for the dictionary for stuff per hour mapping
-                        if (!log[tradeskill][key]) {
-                            console.log("New Key '" + key + "' created");
-                            log[tradeskill][key] = {};
-                            log[tradeskill][key].Amount = 0;
-                            log[tradeskill][key].Experience = 0;
-                            log[tradeskill][key].Attempts = 0;
-                        }
-                        log[tradeskill].Attempts++;
-                        log[tradeskill][key].Attempts++;
-                        log.Misc.Log[log.Misc.Index] = logDate + result; //Add the log to the Object via index
-                        log[tradeskill].Indexes += log.Misc.Index + "|";
-                        if (result.match(/anything/i)) { //Nothing-drop
-                            log[tradeskill].Rarity.Nothing++;
-                            if (!log[tradeskill].Multi['0 (Nothing)']) {//Multicounter
-                                log[tradeskill].Multi['0 (Nothing)'] = {};
-                                log[tradeskill].Multi['0 (Nothing)'].Amount = 1;
-                            }
-                            else {
-                                log[tradeskill].Multi['0 (Nothing)'].Amount++;
-                            }
-                            exp = xhr.responseText.match(/>(\d+)\s*exp</mi)[1];
-                            log[tradeskill][key].Experience += Number(exp);
+                        if (result.length === 1) {
+                            result = result[0].match(/^<div.*?>(.*?<\/span>)<\/div>/)[1];
+                            console.log("Processing..\n" + result);
+                            log = ProcessData(log, xhr.responseText, result, tradeskill);
                         }
                         else {
-                            history = result; //The string the user sees in the end.
-                            if(history.match(/clink/mi)){ //Creation of clickable items with variating rarities!
-                                //Let's first check how many items were created
-                                var response = xhr.responseText;
-                                var createdItem = response.match(/\[(.*?)\]/)[1]; //To get the PATTERN name, not the created items name
-                                var createdRarities = history.match(/card(\w+)\sclink/ig);
-                                var createdAmount = Number(createdRarities.length);
-                                for(var i=0;i<createdRarities.length;i++){ //Write the data into the log object and you should be done
-                                    var dummy_rarity = createdRarities[i].match(/card(\w+)\s/)[1];
-                                    log[tradeskill][dummy_rarity]++;
-                                }
-                                if(!log[tradeskill][createdItem]){
-                                    log[tradeskill][createdItem] = {};
-                                    log[tradeskill][createdItem].Drop = 1;
-                                    log[tradeskill][createdItem].Amount = createdAmount; //Better safe than sorry, number casting most likely not necessary
-                                    log[tradeskill][createdItem].Index = log.Misc.Index + "|";
-                                }
-                                else{
-                                    log[tradeskill][createdItem].Drop++;
-                                    log[tradeskill][createdItem].Amount += createdAmount; //Better safe than sorry, number casting most likely not necessary
-                                    log[tradeskill][createdItem].Index += log.Misc.Index + "|";
-                                }
-                                if(!log[tradeskill].Multi[createdAmount]){
-                                    log[tradeskill].Multi[createdAmount] = {};
-                                    log[tradeskill].Multi[createdAmount].Amount = 1;
-                                }
-                                else{
-                                    log[tradeskill].Multi[createdAmount].Amount++;
-                                }
+                            for (var i = 0; i < result.length; i++) {
+                                console.log(result[i]);
+                                result = result[i].match(/^<div.*?>(.*?<\/span>)<\/div>/)[1];
+                                console.log("Processing..\n" + result);
+                                log = ProcessData(log, xhr.responseText, result[i], tradeskill);
                             }
-                            else{
-                                var rarity = history.match(/class=\"(\w+)\s?viewmat\">/mi)[1];
-                                log[tradeskill].Rarity[rarity]++;
-                                item = history.match(/\[.*?\].*\[(.*?)\]/)[1];
-                                amount = history.match(/<\/span>\s*x(\d+)/)[1];
-                                if (!log[tradeskill].Multi[amount]) {//Multicounter
-                                    log[tradeskill].Multi[amount] = {};
-                                    log[tradeskill].Multi[amount].Amount = 1;
-                                }
-                                else {
-                                    log[tradeskill].Multi[amount].Amount++;
-                                }
-                                if (!log[tradeskill].Items[item]) { //Itemcounter
-                                    log[tradeskill].Items[item] = {};
-                                    log[tradeskill].Items[item].Drop = 1;
-                                    log[tradeskill].Items[item].Amount = Number(amount);
-                                    log[tradeskill].Items[item].Indexes = log.Misc.Index + "|";
-                                    console.log("First time!!\nItem: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
-                                }
-                                else {
-                                    log[tradeskill].Items[item].Drop++;
-                                    log[tradeskill].Items[item].Amount += Number(amount);
-                                    log[tradeskill].Items[item].Indexes += log.Misc.Index + "|";
-                                    console.log("Item: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
-                                }
-                            }
-                            exp = history.match(/>(\d+)\s*exp/mi)[1];
-                            log[tradeskill][key].Amount += Number(amount);
-                            log[tradeskill][key].Experience += Number(exp);
                         }
-                        gold = xhr.responseText.match(/\(\+([0-9,]+)\s*gold/i);
-                        if (!gold) { gold = 0; }
-                        else { gold = gold[1].replace(",", ""); log.Misc.GoldIndexes += log.Misc.Index + "|"; }
-                        console.log("Gold: " + gold);
-                        log.Misc.Index++; //Add 1 to the index for the next attempt.
-                        log.Misc.TotalExp += Number(exp);
-                        log[tradeskill].Experience += Number(exp);
-                        log.Misc.Gold += Number(gold);
                         log.Misc.Attempts.Total++;
                         log.Misc.Attempts.Node = $(".roundResult").length;
                         //Drop analysis done, let's start with the rest
@@ -176,8 +83,14 @@ $(document).ready(function () {
                         var miscData = scripts[scripts.length - 1];
                         var currentExp = miscData.match(/exp\:\s*(.*?)\s\//mi)[1].replace(",", "");
                         var neededExp = miscData.match(/exp\:\s*.*?\/\s*(.*?)\s\(/mi)[1].replace(",", "");
-                        var attemptTime = miscData.match(/startTimer\((\d+),*/mi)[1];
-                        if (attemptTime < 5000) { attemptTime = 60000; } //Node depleted
+                        var attemptTime;
+                        if (!settings.url.match(/Disenchanting/i)) {
+                            attemptTime = miscData.match(/startTimer\((\d+),*/mi)[1];
+                            if (attemptTime < 5000) { attemptTime = 60000; } //Node depleted
+                        }
+                        else {
+                            attemptTime = 0;
+                        }
                         //Calculate the needed attempts to next level and update div text in the dialog
                         GetAttemptsToNextLevel(currentExp, neededExp, attemptTime, log[tradeskill].Experience, log[tradeskill].Attempts);
                         //Titlechanging data
@@ -214,6 +127,117 @@ $(document).ready(function () {
     SetupLog();
 });
 
+function ProcessData(log, responseText, history, tradeskill) {
+    history = history.replace(/<script>(.*?)<\/script>/, "");
+    var item, amount, exp, gold;
+    var today = new Date();
+    var localoffset = -(today.getTimezoneOffset() / 60);
+    var destoffset = -3;
+    var offset = destoffset - localoffset;
+    var d = new Date().getTime() + offset * 3600 * 1000;
+    var year = new Date().getFullYear(d);
+    var month = new Date().getMonth(d) + 1;
+    if (month < 10) { month = "0" + month; }
+    var day = new Date().getDate(d);
+    var hour = new Date().getHours(d) + offset;
+    if (hour < 0) { hour = 24 + hour; day--; }
+    if (day < 10) { day = "0" + day; }
+    if (hour < 10) { hour = "0" + hour; }
+    var logDate = year + "/" + month + "/" + day + ": ";
+    var key = year + "" + month + "" + day + "" + hour; //Generate a key for the dictionary for stuff per hour mapping
+    if (!log[tradeskill][key]) {
+        console.log("New Key '" + key + "' created");
+        log[tradeskill][key] = {};
+        log[tradeskill][key].Amount = 0;
+        log[tradeskill][key].Experience = 0;
+        log[tradeskill][key].Attempts = 0;
+    }
+    log[tradeskill].Attempts++;
+    log[tradeskill][key].Attempts++;
+    log.Misc.Log[log.Misc.Index] = logDate + history; //Add the log to the Object via index
+    log[tradeskill].Indexes += log.Misc.Index + "|";
+    if (history.match(/anything/i)) { //Nothing-drop
+        log[tradeskill].Rarity.Nothing++;
+        if (!log[tradeskill].Multi['0 (Nothing)']) {//Multicounter
+            log[tradeskill].Multi['0 (Nothing)'] = {};
+            log[tradeskill].Multi['0 (Nothing)'].Amount = 1;
+        }
+        else {
+            log[tradeskill].Multi['0 (Nothing)'].Amount++;
+        }
+        exp = history.match(/>(\d+)\s*exp</mi)[1];
+        log[tradeskill][key].Experience += Number(exp);
+    }
+    else {
+        if (history.match(/clink/mi)) { //Creation of clickable items with variating rarities!
+            //Let's first check how many items were created
+            var createdItem = responseText.match(/\[(.*?)\]/)[1]; //To get the PATTERN name, not the created items name
+            var createdRarities = history.match(/card(\w+)\sclink/ig);
+            var createdAmount = Number(createdRarities.length);
+            for (var i = 0; i < createdRarities.length; i++) { //Write the data into the log object and you should be done
+                var dummy_rarity = createdRarities[i].match(/card(\w+)\s/)[1];
+                log[tradeskill][dummy_rarity]++;
+            }
+            if (!log[tradeskill][createdItem]) {
+                log[tradeskill][createdItem] = {};
+                log[tradeskill][createdItem].Drop = 1;
+                log[tradeskill][createdItem].Amount = createdAmount; //Better safe than sorry, number casting most likely not necessary
+                log[tradeskill][createdItem].Index = log.Misc.Index + "|";
+            }
+            else {
+                log[tradeskill][createdItem].Drop++;
+                log[tradeskill][createdItem].Amount += createdAmount; //Better safe than sorry, number casting most likely not necessary
+                log[tradeskill][createdItem].Index += log.Misc.Index + "|";
+            }
+            if (!log[tradeskill].Multi[createdAmount]) {
+                log[tradeskill].Multi[createdAmount] = {};
+                log[tradeskill].Multi[createdAmount].Amount = 1;
+            }
+            else {
+                log[tradeskill].Multi[createdAmount].Amount++;
+            }
+        }
+        else {
+            var rarity = history.match(/class=\"(\w+)\s?viewmat\">/mi)[1];
+            log[tradeskill].Rarity[rarity]++;
+            item = history.match(/\[.*?\].*\[(.*?)\]/)[1];
+            amount = history.match(/<\/span>\s*x(\d+)/)[1];
+            if (!log[tradeskill].Multi[amount]) {//Multicounter
+                log[tradeskill].Multi[amount] = {};
+                log[tradeskill].Multi[amount].Amount = 1;
+            }
+            else {
+                log[tradeskill].Multi[amount].Amount++;
+            }
+            if (!log[tradeskill].Items[item]) { //Itemcounter
+                log[tradeskill].Items[item] = {};
+                log[tradeskill].Items[item].Drop = 1;
+                log[tradeskill].Items[item].Amount = Number(amount);
+                log[tradeskill].Items[item].Indexes = log.Misc.Index + "|";
+                console.log("First time!!\nItem: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
+            }
+            else {
+                log[tradeskill].Items[item].Drop++;
+                log[tradeskill].Items[item].Amount += Number(amount);
+                log[tradeskill].Items[item].Indexes += log.Misc.Index + "|";
+                console.log("Item: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
+            }
+        }
+        exp = history.match(/>(\d+)\s*exp/mi)[1];
+        log[tradeskill][key].Amount += Number(amount);
+        log[tradeskill][key].Experience += Number(exp);
+    }
+    gold = history.match(/\(\+([0-9,]+)\s*gold/i);
+    if (!gold) { gold = 0; }
+    else { gold = gold[1].replace(",", ""); log.Misc.GoldIndexes += log.Misc.Index + "|"; }
+    console.log("Gold: " + gold);
+    log.Misc.Index++; //Add 1 to the index for the next attempt.
+    log.Misc.TotalExp += Number(exp);
+    log[tradeskill].Experience += Number(exp);
+    log.Misc.Gold += Number(gold);
+    return log;
+}
+
 function Create_Log_Object() {
     var log = {};
     log.Misc = {};
@@ -247,23 +271,28 @@ function ChangeTitle(activity, buffState) {
 }
 //Chart/Graph building
 function DrawChart(json_string, title_text, chart_type) {
-    var chart1 = new cfx.Chart();
-    if (chart_type.match(/pie/i)) {
-        chart1.setGallery(cfx.Gallery.Pie);
+    try { //Sometimes this fails if jchartfx could not be loaded..
+        var chart1 = new cfx.Chart();
+        if (chart_type.match(/pie/i)) {
+            chart1.setGallery(cfx.Gallery.Pie);
+        }
+        else if (chart_type.match(/bar/i)) {
+            chart1.setGallery(cfx.Gallery.Bar);
+        }
+        else if (chart_type.match(/(lines|graph)/i)) {
+            chart1.setGallery(cfx.Gallery.Lines);
+        }
+        $("#graph_div").html("");
+        chart1.create('graph_div');
+        chart1.setDataSource(json_string);
+        var titles = chart1.getTitles();
+        var title = new cfx.TitleDockable();
+        title.setText(title_text);
+        titles.add(title);
     }
-    else if (chart_type.match(/bar/i)) {
-        chart1.setGallery(cfx.Gallery.Bar);
+    catch (e) {
+        $("#graph_div").html("Something went wrong when creating the Graph..<br/>Error Message: '" + e.message + "'");
     }
-    else if (chart_type.match(/(lines|graph)/i)) {
-        chart1.setGallery(cfx.Gallery.Lines);
-    }
-    $("#graph_div").html("");
-    chart1.create('graph_div');
-    chart1.setDataSource(json_string);
-    var titles = chart1.getTitles();
-    var title = new cfx.TitleDockable();
-    title.setText(title_text);
-    titles.add(title);
 }
 function GetDate() {
     var dateObj = new Date();
@@ -437,23 +466,23 @@ function SetupLog() {
                 var yesterdayHour = Number(yesterdayKey.match(/(\d{2}$)/)[1]); //Last two digits are the hour
                 var yesterdayWithoutHour = Number(yesterdayKey.match(/(^\d{8})/)[1]); //First 6 digits = year-month-day
                 var z = 0;
-                while(z < 24){
+                while (z < 24) {
                     yesterdayHour++;
-                    if(yesterdayHour > 23){
+                    if (yesterdayHour > 23) {
                         var date = new Date();
-                        var month = date.getMonth()+1;
-                        var day = date.getDate()-1;
-                        yesterdayWithoutHour = date.getFullYear()  + ''+ (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day;
+                        var month = date.getMonth() + 1;
+                        var day = date.getDate() - 1;
+                        yesterdayWithoutHour = date.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day;
                     } //Add 1 to the Day
                     yesterdayHour = yesterdayHour % 24; //If a value is > 24 it will autoconvert to the "new day"
-                    if(yesterdayHour < 10){yesterdayHour = "0" + yesterdayHour;}
+                    if (yesterdayHour < 10) { yesterdayHour = "0" + yesterdayHour; }
                     var dummy = {};
                     dummy.Date = "" + yesterdayHour; //So it's a string
-                    if(log[$(tradeSelectRarityChart).val()][(yesterdayWithoutHour + "" + yesterdayHour)]){
+                    if (log[$(tradeSelectRarityChart).val()][(yesterdayWithoutHour + "" + yesterdayHour)]) {
                         dummy.Amount = log[$(tradeSelectRarityChart).val()][(yesterdayWithoutHour + "" + yesterdayHour)].Amount;
                         dummy.Attempts = log[$(tradeSelectRarityChart).val()][(yesterdayWithoutHour + "" + yesterdayHour)].Attempts;
                     }
-                    else{
+                    else {
                         dummy.Amount = 0;
                         dummy.Attempts = 0;
                     }
@@ -477,23 +506,23 @@ function SetupLog() {
                 var yesterdayHour = Number(yesterdayKey.match(/(\d{2}$)/)[1]); //Last two digits are the hour
                 var yesterdayWithoutHour = Number(yesterdayKey.match(/(^\d{8})/)[1]); //First 6 digits = year-month-day
                 var z = 0;
-                while(z < 24){
+                while (z < 24) {
                     yesterdayHour++;
-                    if(yesterdayHour > 23){
+                    if (yesterdayHour > 23) {
                         var date = new Date();
-                        var month = date.getMonth()+1;
+                        var month = date.getMonth() + 1;
                         var day = date.getDate();
-                        yesterdayWithoutHour = date.getFullYear()  + ''+ (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day;
+                        yesterdayWithoutHour = date.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day;
                     } //Add 1 to the Day
                     yesterdayHour = yesterdayHour % 24; //If a value is > 24 it will autoconvert to the "new day"
-                    if(yesterdayHour < 10){yesterdayHour = "0" + yesterdayHour;}
+                    if (yesterdayHour < 10) { yesterdayHour = "0" + yesterdayHour; }
                     var dummy = {};
                     dummy.Date = "" + yesterdayHour; //So it's a string
                     console.log((yesterdayWithoutHour + "" + yesterdayHour));
-                    if(log[$(tradeSelectRarityChart).val()][(yesterdayWithoutHour + "" + yesterdayHour)]){
+                    if (log[$(tradeSelectRarityChart).val()][(yesterdayWithoutHour + "" + yesterdayHour)]) {
                         dummy.Experience = log[$(tradeSelectRarityChart).val()][(yesterdayWithoutHour + "" + yesterdayHour)].Experience;
                     }
-                    else{
+                    else {
                         dummy.Experience = 0;
                     }
                     jsonExperience.push(dummy);
@@ -536,6 +565,7 @@ function SetupLog() {
     }).insertBefore(displayArea);
     var tradeSelect = $(document.createElement("select")).attr({ id: "tradeSelect" }).on("change", function () {
         if ($(this).val()) {
+            var log = JSON.parse(localStorage.getItem("localLog"));
             $("#materialSelect").find("option").remove().end().append("<option name='' value=''>Select a material</option>");
             var keys = Object.keys(log[$(this).val()].Items).sort();
             for (var i = 0; i < keys.length; i++) {
@@ -545,7 +575,11 @@ function SetupLog() {
             }
             var text = "<br/>";
             var indexes = log[$(this).val()].Indexes.split("|");
-            for (var j = 0; j < indexes.length - 1; j++) {
+            var start = 0;
+            if (indexes.length > 1000) {
+                start = indexes.length - 1000;
+            }
+            for (var j = start; j < indexes.length; j++) {
                 text += log.Misc.Log[indexes[j]] + "<br/>";
             }
             $(tradeLog).html(text);
@@ -557,9 +591,14 @@ function SetupLog() {
     }).insertBefore(tradeLog);
     var materialSelect = $(document.createElement("select")).attr({ id: "materialSelect" }).on("change", function () {
         if ($(this).val()) {
+            var log = JSON.parse(localStorage.getItem("localLog"));
             var text = "<br/>";
             var indexes = log[$(tradeSelect).val()].Items[$(this).val()].Indexes.split("|");
-            for (var i = 0; i < indexes.length - 1; i++) {
+            var start = 0;
+            if (indexes.length > 1000) {
+                start = indexes.length - 1000;
+            }
+            for (var i = start; i < indexes.length - 1; i++) {
                 text += log.Misc.Log[indexes[i]] + "<br/>";
             }
             $(tradeLog).html(text);
@@ -569,11 +608,16 @@ function SetupLog() {
         }
     }).insertBefore(tradeLog);
     var goldButton = $(document.createElement("button")).attr({ id: "goldButton" }).text("Display gold history").css({ "width": "auto", "height": "auto" }).on("click", function () {
+        var log = JSON.parse(localStorage.getItem("localLog"));
         var text = "<br/>";
         var indexes = log.Misc.GoldIndexes.split("|");
+        var start = 0;
+        if (indexes.length > 1000) {
+            start = indexes.length - 1000;
+        }
         if (indexes.length === 1) { alert("No gold found yet"); }
         else {
-            for (var i = 0; i < indexes.length - 1; i++) {
+            for (var i = start; i < indexes.length - 1; i++) {
                 text += log.Misc.Log[indexes[i]] + "<br/>";
             }
             $(tradeLog).html(text);
@@ -611,13 +655,13 @@ function getYesterdaysDate() {
     var localoffset = -(date.getTimezoneOffset() / 60);
     var destoffset = -3;
     var offset = destoffset - localoffset;
-    date.setDate(date.getDate()-1);
+    date.setDate(date.getDate() - 1);
     date.setHours(date.getHours() + offset);
     //return date.getDate() + '/' + (date.getMonth()+1) + '/' + date.getFullYear();
-    var month = date.getMonth()+1;
+    var month = date.getMonth() + 1;
     var day = date.getDate();
     var hour = date.getHours();
-    return date.getFullYear()  + ''+ (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day + '' + (hour < 10 ? '0' : '') + hour;
+    return date.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day + '' + (hour < 10 ? '0' : '') + hour;
 }
 function ResetStatistics() {
     var localStorageElements = ["materialDivText", "multiDivText", "rarityDivText", "miscDivText"];
