@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Just statistics v1.8
-// @version      1.8
+// @name         Just statistics v1.81
+// @version      1.81
 // @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more...)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com*
@@ -8,7 +8,7 @@
 // ==/UserScript==
 
 $(document).ready(function () {
-    var version = "v1.8";
+    var version = "v1.81";
     console.log("You're currently using version " + version);
     //Variable declaration; getting the data out of local storage
     var log;
@@ -40,11 +40,17 @@ $(document).ready(function () {
                 var amount, exp, gold, item, history, buffData, titleData;
                 var tradeskill = settings.url.match(/action_([a-zA-Z]+).*?\//)[1];
                 //Switch to check if skill is Disenchanting since it needs special treating
+                tradeskill = tradeskill.toLowerCase();
                 $.ajax("/armory_action/" + tradeskill + "?show=noheader").done(function (data) {
-                    var currentRank = data.match(/leadResult active.*?#(\d+)<\/span>/i)[1];
-                    if (!$("#skillLevel").html().match(/#(\d+)/) || $("#skillLevel").html().match(/#(\d+)/)[1] !== currentRank) {
-                        console.log("Current Rank not written down or changed.. updating to '" + currentRank + "'");
-                        $("#skillLevel").html($("#skillLevel").html() + " (#" + currentRank + ")");
+                    try {
+                        var currentRank = data.match(/leadResult active.*?#(\d+)<\/span>/i)[1];
+                        if (!$("#skillLevel").html().match(/#(\d+)/) || $("#skillLevel").html().match(/#(\d+)/)[1] !== currentRank) {
+                            console.log("Current Rank not written down or changed.. updating to '" + currentRank + "'");
+                            $("#skillLevel").html($("#skillLevel").html() + " (#" + currentRank + ")");
+                        }
+                    }
+                    catch (e) {
+                        console.log("Cannot find rank data in data text.. \nAjax url: " + "/armory_action/" + tradeskill + "?show=noheader" + "\nError message: " + e.message + "\nData: " + data);
                     }
                 });
                 tradeskill = (tradeskill[0].toUpperCase() + tradeskill.substring(1)); //Convert first char to uppercase (Just for beauty reasons)
@@ -69,17 +75,21 @@ $(document).ready(function () {
                     // var regex = /<div class="roundResult areaName">(.*?exp\)?<\/span><\/div>)/gi;
                     // var result = regex.exec(xhr.responseText); //Basic regex to get only the necessary data.
                     var result = xhr.responseText.match(/<div class="roundResult areaName">.*?exp\)?<\/span><\/div>/gi);
+                    //Attention, creating skills will confuse this because not every creation gives exp, but rather a full attempt will.
+                    //Will need to add a different kind of splitting here so the pattern-processing works correctly (ProcessData)
                     if (result) { //This will always say true UNLESS you worked in another window thus the result will be empty -> no log entry will be made
                         if (result.length === 1) {
                             console.log("Processing..\n" + result[0]);
-                            // result = result.match(/^<div.*?>(.*?exp\)?<\/span>)<\/div>/)[1];
-                            // console.log("Processed..\n" + result);
-                            log = ProcessData(log, xhr.responseText, result[0], tradeskill);
+                            result = result[0].match(/^<div.*?>(.*?exp\)?<\/span>)<\/div>/i)[1];
+                            result = result.replace(/<script>.*?<\/script>/, "");
+                            console.log("Processed..\n" + result);
+                            log = ProcessData(log, xhr.responseText, result, tradeskill);
                         }
                         else {
                             for (var i = 0; i < result.length; i++) {
                                 console.log("Processing..\n" + result[i]);
-                                result = result[i].match(/^<div.*?>(.*?<\/span>)<\/div>/)[1];
+                                result = result[i].match(/^<div.*?>(.*?<\/span>)<\/div>/i)[1];
+                                result = result.replace(/<script>.*?<\/script>/, "");
                                 console.log("Processed..\n" + result);
                                 log = ProcessData(log, xhr.responseText, result[i], tradeskill);
                             }
@@ -179,40 +189,45 @@ function ProcessData(log, responseText, history, tradeskill) {
     }
     else {
         if (history.match(/clink/mi)) { //Creation of clickable items with variating rarities!
-            //Let's first check how many items were created
-            console.log("HANDS WERE I CAN SEE THEM!");
-            var createdItem = responseText.match(/\[(.*?)\]/)[1]; //To get the PATTERN name, not the created items name
-            console.log("You created the following item: '" + createdItem + "'\nIs that correct?");
-            var createdRarities = history.match(/card(\w+)\sclink/ig);
-            var createdAmount = Number(createdRarities.length);
-            console.log("You created " + createdAmount + " items with this attempt, am I onto something?");
-            console.log("The items that were created had the following rarities:");
-            for (var i = 0; i < createdRarities.length; i++) { //Write the data into the log object and you should be done
-                var dummy_rarity = createdRarities[i].match(/card(\w+)\s/)[1];
-                log[tradeskill][dummy_rarity]++;
-                console.log(dummy_rarity);
+            try {
+                //Let's first check how many items were created
+                console.log("HANDS WHERE I CAN SEE THEM!");
+                var createdItem = responseText.match(/\[(.*?)\]/)[1]; //To get the PATTERN name, not the created items name
+                console.log("You created the following item: '" + createdItem + "'\nIs that correct?");
+                var createdRarities = history.match(/card(\w+)\sclink/ig);
+                var createdAmount = Number(createdRarities.length);
+                console.log("You created " + createdAmount + " items with this attempt, am I onto something?");
+                console.log("The items that were created had the following rarities:");
+                for (var i = 0; i < createdRarities.length; i++) { //Write the data into the log object and you should be done
+                    var dummy_rarity = createdRarities[i].match(/card(\w+)\s/)[1];
+                    log[tradeskill][dummy_rarity]++;
+                    console.log(dummy_rarity);
+                }
+                console.log("Is that correct?");
+                if (!log[tradeskill][createdItem]) {
+                    console.log("You created something(" + createdItem + ") not known to human kind (Or rather this log)");
+                    log[tradeskill][createdItem] = {};
+                    log[tradeskill][createdItem].Drop = 1;
+                    log[tradeskill][createdItem].Amount = createdAmount;
+                    log[tradeskill][createdItem].Index = log.Misc.Index + "|";
+                }
+                else {
+                    log[tradeskill][createdItem].Drop++;
+                    log[tradeskill][createdItem].Amount += createdAmount;
+                    log[tradeskill][createdItem].Index += log.Misc.Index + "|";
+                }
+                console.log("And finally, here take that object and show it to someone or something");
+                console.log(log[tradeskill][createdItem]);
+                if (!log[tradeskill].Multi[createdAmount]) {
+                    log[tradeskill].Multi[createdAmount] = {};
+                    log[tradeskill].Multi[createdAmount].Amount = 1;
+                }
+                else {
+                    log[tradeskill].Multi[createdAmount].Amount++;
+                }
             }
-            console.log("Is that correct?");
-            if (!log[tradeskill][createdItem]) {
-                console.log("You created something(" + createdItem + ") not known to human kind (Or rather this log)");
-                log[tradeskill][createdItem] = {};
-                log[tradeskill][createdItem].Drop = 1;
-                log[tradeskill][createdItem].Amount = createdAmount;
-                log[tradeskill][createdItem].Index = log.Misc.Index + "|";
-            }
-            else {
-                log[tradeskill][createdItem].Drop++;
-                log[tradeskill][createdItem].Amount += createdAmount;
-                log[tradeskill][createdItem].Index += log.Misc.Index + "|";
-            }
-            console.log("And finally, here take that object and show it to someone or something");
-            console.log(log[tradeskill][createdItem]);
-            if (!log[tradeskill].Multi[createdAmount]) {
-                log[tradeskill].Multi[createdAmount] = {};
-                log[tradeskill].Multi[createdAmount].Amount = 1;
-            }
-            else {
-                log[tradeskill].Multi[createdAmount].Amount++;
+            catch (e) {
+                console.log("Something went wrong... " + e.message);
             }
         }
         else {
@@ -395,22 +410,22 @@ function ConvertIntoSmallerTimeFormat(timeInMs) {
     var output = "";
     var seconds = timeInMs / 1000;
     var interval = Math.floor(seconds / 31536000);
-    if (interval > 1) {
+    if (interval > 0) {
         output += interval + " years ";
         seconds -= interval * 31536000;
     }
     interval = Math.floor(seconds / 2592000);
-    if (interval > 1) {
+    if (interval > 0) {
         output += interval + " months ";
         seconds -= interval * 2592000;
     }
     interval = Math.floor(seconds / 86400);
-    if (interval > 1) {
+    if (interval > 0) {
         output += interval + " days ";
         seconds -= interval * 86400;
     }
     interval = Math.floor(seconds / 3600);
-    if (interval > 1) {
+    if (interval > 0) {
         output += interval + " hours ";
         seconds -= interval * 3600;
     }
