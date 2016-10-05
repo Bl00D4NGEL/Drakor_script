@@ -99,8 +99,8 @@ $(document).ready(function () {
                         //Drop analysis done, let's start with the rest
                         var scripts = xhr.responseText.match(/<script>(.*?)<\/script>/g);
                         var miscData = scripts[scripts.length - 1];
-                        var currentExp = miscData.match(/exp\:\s*(.*?)\s\//mi)[1].replace(",", "");
-                        var neededExp = miscData.match(/exp\:\s*.*?\/\s*(.*?)\s\(/mi)[1].replace(",", "");
+                        var currentExp = miscData.match(/\(\'exp\:\s*(.*?)\s\//mi)[1].replace(",", "");
+                        var neededExp = miscData.match(/\(\'exp\:\s*.*?\/\s*(.*?)\s\(/mi)[1].replace(",", "");
                         var attemptTime;
                         if (!settings.url.match(/Disenchanting/i)) {
                             attemptTime = miscData.match(/startTimer\((\d+),*/mi)[1];
@@ -112,7 +112,8 @@ $(document).ready(function () {
                         //Calculate the needed attempts to next level and update div text in the dialog
                         GetAttemptsToNextLevel(currentExp, neededExp, attemptTime, log[tradeskill].Experience, log[tradeskill].Attempts);
                         //Titlechanging data
-                        if (xhr.responseText.match(/cardNone/gi)) { buffData = false; }
+                        var buffrarity = xhr.responseText.match(/dricon\scard(\w+)\sslot_default/i);
+                        if (buffrarity[1] === 'None') { buffData = false; }
                         else { buffData = "yes"; }
                         if (miscData.match(/\d+%\sof/gi)) {
                             titleData = miscData.match(/(\d+)%\sof/i)[1] + "% of Node left";
@@ -133,12 +134,6 @@ $(document).ready(function () {
                     }
                     ChangeTitle(titleData, buffData);   //Change the title according to current status
                 }
-            }
-            else if (!settings.url.match(/chat/i)) {
-                var buffStatus;
-                if (xhr.responseText.match(/no\s?buff/gi)) { buffStatus = ""; }
-                else { buffStatus = "yes"; }
-                ChangeTitle('Drakor "Innovative & Unique Browser Based RPG." (PBBG, MPOG, MMORPG)', buffStatus);
             }
         }
     });
@@ -206,15 +201,15 @@ function ProcessData(log, responseText, history, tradeskill) {
                 console.log("Is that correct?");
                 if (!log[tradeskill][createdItem]) {
                     console.log("You created something(" + createdItem + ") not known to human kind (Or rather this log)");
-                    log[tradeskill][createdItem] = {};
-                    log[tradeskill][createdItem].Drop = 1;
-                    log[tradeskill][createdItem].Amount = createdAmount;
-                    log[tradeskill][createdItem].Index = log.Misc.Index + "|";
+                    log[tradeskill].Items[createdItem] = {};
+                    log[tradeskill].Items[createdItem].Drop = 1;
+                    log[tradeskill].Items[createdItem].Amount = createdAmount;
+                    log[tradeskill].Items[createdItem].Index = log.Misc.Index + "|";
                 }
                 else {
-                    log[tradeskill][createdItem].Drop++;
-                    log[tradeskill][createdItem].Amount += createdAmount;
-                    log[tradeskill][createdItem].Index += log.Misc.Index + "|";
+                    log[tradeskill].Items[createdItem].Drop++;
+                    log[tradeskill].Items[createdItem].Amount += createdAmount;
+                    log[tradeskill].Items[createdItem].Index += log.Misc.Index + "|";
                 }
                 console.log("And finally, here take that object and show it to someone or something");
                 console.log(log[tradeskill][createdItem]);
