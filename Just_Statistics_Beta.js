@@ -35,12 +35,19 @@ $(document).ready(function () {
     $(document).ajaxComplete(function (event, xhr, settings) {
         if (xhr.status === 200) { //Check if ajax is OK
             if (settings.url.match(/\/world\/action_/)) { //Look if the ajax is a tradeskill action
+                if (tradeskill === "teleport") { console.log("You teleported.. that's no tradeskill!"); return; }
                 log = JSON.parse(localStorage.getItem("localLog")); //Load this up every attempt (Because of import reasons, might be able to load it a little prettier, though)
                 var amount, exp, gold, item, history, buffData, titleData;
                 var tradeskill = settings.url.match(/action_([a-zA-Z]+).*?\//)[1];
                 //Switch to check if skill is Disenchanting since it needs special treating
+                $.ajax("/armory_action/" + tradeskill + "?show=noheader").done(function (data) {
+                    var currentRank = data.match(/leadResult active.*?#(\d+)<\/span>/i)[1];
+                    if (!$("#skillLevel").html().match(/#(\d+)/) || $("#skillLevel").html().match(/#(\d+)/)[1] !== currentRank) {
+                        console.log("Current Rank not written down or changed.. updating to '" + currentRank + "'");
+                        $("#skillLevel").html($("#skillLevel").html() + " (#" + currentRank + ")");
+                    }
+                });
                 tradeskill = (tradeskill[0].toUpperCase() + tradeskill.substring(1)); //Convert first char to uppercase (Just for beauty reasons)
-                if (tradeskill === "Teleport") { console.log("You teleported.. that's no tradeskill!"); return; }
                 if (!log[tradeskill]) {
                     console.log("Tradeskill '" + tradeskill + "' unknown in the log");
                     log[tradeskill] = {};
@@ -64,15 +71,16 @@ $(document).ready(function () {
                     var result = xhr.responseText.match(/<div class="roundResult areaName">.*?exp\)?<\/span><\/div>/gi);
                     if (result) { //This will always say true UNLESS you worked in another window thus the result will be empty -> no log entry will be made
                         if (result.length === 1) {
-                            result = result[0].match(/^<div.*?>(.*?<\/span>)<\/div>/)[1];
-                            console.log("Processing..\n" + result);
-                            log = ProcessData(log, xhr.responseText, result, tradeskill);
+                            console.log("Processing..\n" + result[0]);
+                            // result = result.match(/^<div.*?>(.*?exp\)?<\/span>)<\/div>/)[1];
+                            // console.log("Processed..\n" + result);
+                            log = ProcessData(log, xhr.responseText, result[0], tradeskill);
                         }
                         else {
                             for (var i = 0; i < result.length; i++) {
-                                console.log(result[i]);
+                                console.log("Processing..\n" + result[i]);
                                 result = result[i].match(/^<div.*?>(.*?<\/span>)<\/div>/)[1];
-                                console.log("Processing..\n" + result);
+                                console.log("Processed..\n" + result);
                                 log = ProcessData(log, xhr.responseText, result[i], tradeskill);
                             }
                         }
@@ -157,6 +165,7 @@ function ProcessData(log, responseText, history, tradeskill) {
     log.Misc.Log[log.Misc.Index] = logDate + history; //Add the log to the Object via index
     log[tradeskill].Indexes += log.Misc.Index + "|";
     if (history.match(/anything/i)) { //Nothing-drop
+        console.log("You did not find anything.. to bad");
         log[tradeskill].Rarity.Nothing++;
         if (!log[tradeskill].Multi['0 (Nothing)']) {//Multicounter
             log[tradeskill].Multi['0 (Nothing)'] = {};
@@ -171,24 +180,33 @@ function ProcessData(log, responseText, history, tradeskill) {
     else {
         if (history.match(/clink/mi)) { //Creation of clickable items with variating rarities!
             //Let's first check how many items were created
+            console.log("HANDS WERE I CAN SEE THEM!");
             var createdItem = responseText.match(/\[(.*?)\]/)[1]; //To get the PATTERN name, not the created items name
+            console.log("You created the following item: '" + createdItem + "'\nIs that correct?");
             var createdRarities = history.match(/card(\w+)\sclink/ig);
             var createdAmount = Number(createdRarities.length);
+            console.log("You created " + createdAmount + " items with this attempt, am I onto something?");
+            console.log("The items that were created had the following rarities:");
             for (var i = 0; i < createdRarities.length; i++) { //Write the data into the log object and you should be done
                 var dummy_rarity = createdRarities[i].match(/card(\w+)\s/)[1];
                 log[tradeskill][dummy_rarity]++;
+                console.log(dummy_rarity);
             }
+            console.log("Is that correct?");
             if (!log[tradeskill][createdItem]) {
+                console.log("You created something(" + createdItem + ") not known to human kind (Or rather this log)");
                 log[tradeskill][createdItem] = {};
                 log[tradeskill][createdItem].Drop = 1;
-                log[tradeskill][createdItem].Amount = createdAmount; //Better safe than sorry, number casting most likely not necessary
+                log[tradeskill][createdItem].Amount = createdAmount;
                 log[tradeskill][createdItem].Index = log.Misc.Index + "|";
             }
             else {
                 log[tradeskill][createdItem].Drop++;
-                log[tradeskill][createdItem].Amount += createdAmount; //Better safe than sorry, number casting most likely not necessary
+                log[tradeskill][createdItem].Amount += createdAmount;
                 log[tradeskill][createdItem].Index += log.Misc.Index + "|";
             }
+            console.log("And finally, here take that object and show it to someone or something");
+            console.log(log[tradeskill][createdItem]);
             if (!log[tradeskill].Multi[createdAmount]) {
                 log[tradeskill].Multi[createdAmount] = {};
                 log[tradeskill].Multi[createdAmount].Amount = 1;
@@ -674,5 +692,6 @@ function ResetStatistics() {
     Create_Log_Object();
     $("#materialSelect").find("option").remove().end().append("<option name='' value=''>Select a material</option>");
     $("#tradeSelect").find("option").remove().end().append("<option name='' value=''>Select a tradeskill</option>");
+    $("#log").html("");
     console.log("Everything has been re-set");
 }
