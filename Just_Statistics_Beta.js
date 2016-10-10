@@ -499,7 +499,7 @@ function SetupLog() {
                     if (yesterdayHour > 23) {
                         var date = new Date();
                         var month = date.getMonth() + 1;
-                        var day = date.getDate() - 1;
+                        var day = date.getDate();
                         yesterdayWithoutHour = date.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day;
                     } //Add 1 to the Day
                     yesterdayHour = yesterdayHour % 24; //If a value is > 24 it will autoconvert to the "new day"
