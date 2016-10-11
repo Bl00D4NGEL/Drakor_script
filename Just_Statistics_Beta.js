@@ -35,16 +35,16 @@ $(document).ready(function () {
     $(document).ajaxComplete(function (event, xhr, settings) {
         if (xhr.status === 200) { //Check if ajax is OK
             if (settings.url.match(/\/world\/action_/)) { //Look if the ajax is a tradeskill action
-                if (tradeskill === "teleport") { console.log("You teleported.. that's no tradeskill!"); return; }
                 log = JSON.parse(localStorage.getItem("localLog")); //Load this up every attempt (Because of import reasons, might be able to load it a little prettier, though)
                 var amount, exp, gold, item, history, buffData, titleData;
                 var tradeskill = settings.url.match(/action_([a-zA-Z]+).*?\//)[1];
+                if (tradeskill === "teleport") { console.log("You teleported.. that's no tradeskill!"); return; }
                 //Switch to check if skill is Disenchanting since it needs special treating
                 tradeskill = tradeskill.toLowerCase();
                 $.ajax("/armory_action/" + tradeskill + "?show=noheader").done(function (data) {
                     try {
                         var currentRank = data.match(/leadResult active.*?#(\d+)<\/span>/i)[1];
-                        if (!$("#skillLevel").html().match(/#(\d+)/) || $("#skillLevel").html().match(/#(\d+)/)[1] !== currentRank) {
+                        if (!$("#skillLevel").html().match(/#(\d+)/) || $("#skillLevel").html().match(/#(\d+)\)$/)[1] !== currentRank) {
                             console.log("Current Rank not written down or changed.. updating to '" + currentRank + "'");
                             $("#skillLevel").html($("#skillLevel").html() + " (#" + currentRank + ")");
                         }
@@ -601,14 +601,21 @@ function SetupLog() {
                     $(document.createElement("option")).attr({ name: keys[i], value: keys[i] }).text(keys[i]).appendTo($("#materialSelect"));
                 }
             }
-            var text = "<br/>";
+            var text = "";
             var indexes = log[$(this).val()].Indexes.split("|");
             var start = 0;
             if (indexes.length > 1000) {
                 start = indexes.length - 1000;
             }
-            for (var j = start; j < indexes.length; j++) {
-                text += log.Misc.Log[indexes[j]] + "<br/>";
+            if (!$("#reverseCheckbox").prop('checked')) {
+                for (var k = start; k < indexes.length - 1; k++) {
+                    text += log.Misc.Log[indexes[k]] + '<br/>';
+                }
+            }
+            else {
+                for (var j = indexes.length - 2; j > start; j--) {
+                    text += log.Misc.Log[indexes[j]] + '<br/>';
+                }
             }
             $(tradeLog).html(text);
         }
@@ -620,14 +627,21 @@ function SetupLog() {
     var materialSelect = $(document.createElement("select")).attr({ id: "materialSelect" }).on("change", function () {
         if ($(this).val()) {
             var log = JSON.parse(localStorage.getItem("localLog"));
-            var text = "<br/>";
+            var text = "";
             var indexes = log[$(tradeSelect).val()].Items[$(this).val()].Indexes.split("|");
             var start = 0;
             if (indexes.length > 1000) {
                 start = indexes.length - 1000;
             }
-            for (var i = start; i < indexes.length - 1; i++) {
-                text += log.Misc.Log[indexes[i]] + "<br/>";
+            if (!$("#reverseCheckbox").prop('checked')) {
+                for (var i = start; i < indexes.length - 1; i++) {
+                    text += log.Misc.Log[indexes[i]] + '<br/>';
+                }
+            }
+            else {
+                for (var j = indexes.length - 2; j > start; j--) {
+                    text += log.Misc.Log[indexes[j]] + '<br/>';
+                }
             }
             $(tradeLog).html(text);
         }
@@ -637,7 +651,7 @@ function SetupLog() {
     }).insertBefore(tradeLog);
     var goldButton = $(document.createElement("button")).attr({ id: "goldButton" }).text("Display gold history").css({ "width": "auto", "height": "auto" }).on("click", function () {
         var log = JSON.parse(localStorage.getItem("localLog"));
-        var text = "<br/>";
+        var text = "";
         var indexes = log.Misc.GoldIndexes.split("|");
         var start = 0;
         if (indexes.length > 1000) {
@@ -645,12 +659,30 @@ function SetupLog() {
         }
         if (indexes.length === 1) { alert("No gold found yet"); }
         else {
-            for (var i = start; i < indexes.length - 1; i++) {
-                text += log.Misc.Log[indexes[i]] + "<br/>";
+            if (!$("#reverseCheckbox").prop('checked')) {
+                for (var i = start; i < indexes.length - 1; i++) {
+                    text += log.Misc.Log[indexes[i]] + '<br/>';
+                }
+            }
+            else {
+                for (var j = indexes.length - 2; j > start; j--) {
+                    text += log.Misc.Log[indexes[j]] + '<br/>';
+                }
             }
             $(tradeLog).html(text);
         }
     }).insertBefore(tradeLog);
+    var reverseCheckbox = $(document.createElement("input")).attr({ id: "reverseCheckbox", type: "checkbox" }).on("change", function () {
+        var output = "";
+        var currentHTML = $(tradeLog).html();
+        var rows = currentHTML.match(/(.*?<br>)/g);
+        for (var i = rows.length - 1; i >= 0; i--) {
+            output += rows[i];
+        }
+        output.replace(/<\/br>$/);
+        $(tradeLog).html(output);
+    }).insertBefore(tradeLog);
+    $(document.createElement("span")).html("Reverse log?").insertBefore(tradeLog);
     $(document.createElement("option")).attr({ name: "", value: "" }).text("Select a tradeskill").appendTo(tradeSelect);
     $(document.createElement("option")).attr({ name: "", value: "" }).text("Select a tradeskill").appendTo(tradeSelectRarityChart);
     $(document.createElement("option")).attr({ name: "", value: "" }).text("Select a material").appendTo(materialSelect);
