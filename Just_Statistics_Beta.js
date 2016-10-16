@@ -17,16 +17,22 @@ $(document).ready(function () {
         log = Create_Log_Object();
     }
     else {
-        log = JSON.parse(localStorage.getItem("localLog"));
-        console.log(log);
-        console.log("Log succesfully loaded");
-    }
-    if (document.baseURI.match(/https/)) {
-        log.Misc.Https = true;
+        try {
+            log = JSON.parse(localStorage.getItem("localLog"));
+            console.log(log);
+            console.log("Log succesfully loaded");
+        }
+        catch (e) {
+            console.log("Dude.. whatever you did with the localStorage variable \"localLog\".. it wasn't a great idea and now everything is gone :(");
+            log = Create_Log_Object();
+        }
     }
     //Load the Graph script IF the site is not https.
     //Can not load the chart stuff because it is not https.. too bad
-    if (!document.baseURI.match(/https/)) {
+    if (document.baseURI.match(/https/)) {
+        log.Misc.Https = true;
+    }
+    else {
         $("head").append("<script src='http://www.jchartfx.com/libs/v7/current/js/jchartfx.system.js'><\/script>");
         $("head").append("<script src='http://www.jchartfx.com/libs/v7/current/js/jchartfx.coreVector.js'><\/script>");
     }
@@ -36,16 +42,16 @@ $(document).ready(function () {
         if (xhr.status === 200) { //Check if ajax is OK
             if (settings.url.match(/\/world\/action_/)) { //Look if the ajax is a tradeskill action
                 log = JSON.parse(localStorage.getItem("localLog")); //Load this up every attempt (Because of import reasons, might be able to load it a little prettier, though)
-                var amount, exp, gold, item, history, buffData, titleData;
+                var amount, exp, gold, item, history, buffActive = false, titleData, actionStatus;
                 var tradeskill = settings.url.match(/action_([a-zA-Z]+).*?\//)[1];
                 if (tradeskill === "teleport") { console.log("You teleported.. that's no tradeskill!"); return; }
-                //Switch to check if skill is Disenchanting since it needs special treating
                 tradeskill = tradeskill.toLowerCase();
                 $.ajax("/armory_action/" + tradeskill + "?show=noheader").done(function (data) {
                     try {
                         var currentRank = data.match(/leadResult active.*?#(\d+)<\/span>/i)[1];
                         if (!$("#skillLevel").html().match(/#(\d+)/) || $("#skillLevel").html().match(/#(\d+)\)$/)[1] !== currentRank) {
                             console.log("Current Rank not written down or changed.. updating to '" + currentRank + "'");
+                            $("#skillLevel").html($("#skillLevel").html().replace(/\s\(.*$/, ""));
                             $("#skillLevel").html($("#skillLevel").html() + " (#" + currentRank + ")");
                         }
                     }
@@ -70,7 +76,7 @@ $(document).ready(function () {
                     $(document.createElement("option")).attr({ name: tradeskill, value: tradeskill }).text(tradeskill).appendTo($("#tradeSelect"));
                     $(document.createElement("option")).attr({ name: tradeskill, value: tradeskill }).text(tradeskill).appendTo($("#tradeSelectRarityChart")); //If a new tradeskill is there, add it to the select
                 } //If tradeskill is not present in log create it
-                console.log(xhr.responseText);
+                console.log("XHR-Responsetext:\n" + xhr.responseText);
                 if (!xhr.responseText.match(/depleted/i)) {
                     // var regex = /<div class="roundResult areaName">(.*?exp\)?<\/span><\/div>)/gi;
                     // var result = regex.exec(xhr.responseText); //Basic regex to get only the necessary data.
@@ -113,27 +119,26 @@ $(document).ready(function () {
                         GetAttemptsToNextLevel(currentExp, neededExp, attemptTime, log[tradeskill].Experience, log[tradeskill].Attempts);
                         //Titlechanging data
                         var buffrarity = xhr.responseText.match(/dricon\scard(\w+)\sslot_default/i);
-                        if (buffrarity[1] === 'None') { buffData = false; }
-                        else { buffData = "yes"; }
-                        if (miscData.match(/\d+%\sof/gi)) {
-                            titleData = miscData.match(/(\d+)%\sof/i)[1] + "% of Node left";
+                        if (buffrarity[1] !== 'None') { buffActive = true; }
+                        if (xhr.responseText.match(/\d+%\sof/gi)) {
+                            titleData = xhr.responseText.match(/(\d+)%\sof/i)[1] + "% of Node left";
                         }
-                        else if (miscData.match(/x\d+\.\.\./)) {
-                            titleData = miscData.match(/x(\d+)\.\.\./)[1] + " attempts left";
+                        else if (xhr.responseText.match(/x\d+\.\.\./)) {
+                            titleData = xhr.responseText.match(/x(\d+)\.\.\./)[1] + " attempts left";
                         }
-                        else if (miscData.match(/complete/i)) {
-                            titleData = "Creation completed";
-                            buffData = "pattern_done";
+                        else {
+                            titleData = "Creation done!";
+                            actionStatus = "alert";
                         }
                         DisplayData(log);                   //Rarity-, Multi- and Materialoverview
                         localStorage.setItem("localLog", JSON.stringify(log));
                     }
-                    else {
-                        titleData = "Node depleted!";
-                        buffData = "node_depleted";
-                    }
-                    ChangeTitle(titleData, buffData);   //Change the title according to current status
                 }
+                else {
+                    titleData = "Node depleted!";
+                    actionStatus = "alert";
+                }
+                ChangeTitle(titleData, buffActive, actionStatus);   //Change the title according to current status
             }
         }
     });
@@ -142,22 +147,17 @@ $(document).ready(function () {
 
 function ProcessData(log, responseText, history, tradeskill) {
     history = history.replace(/<script>(.*?)<\/script>/, "");
+    var log_history = history;
+    log_history = log_history.replace(/<\/?.*?>/g, "");
     var item, amount, exp, gold;
-    var today = new Date();
-    var localoffset = -(today.getTimezoneOffset() / 60);
-    var destoffset = -3;
-    var offset = destoffset - localoffset;
-    var d = new Date().getTime() + offset * 3600 * 1000;
-    var year = new Date().getFullYear(d);
-    var month = new Date().getMonth(d) + 1;
-    if (month < 10) { month = "0" + month; }
-    var day = new Date().getDate(d);
-    var hour = new Date().getHours(d) + offset;
-    if (hour < 0) { hour = 24 + hour; day--; }
-    if (day < 10) { day = "0" + day; }
-    if (hour < 10) { hour = "0" + hour; }
-    var logDate = year + "/" + month + "/" + day + ": ";
-    var key = year + "" + month + "" + day + "" + hour; //Generate a key for the dictionary for stuff per hour mapping
+    var date = new Date();
+    date.setTime(date.getTime() + (-3 + date.getTimezoneOffset() / 60) * 60 * 60 * 1000);//So the date is synced with Drakor timers
+    var year = date.getFullYear();
+    var month = date.getMonth() + 1;
+    var day = date.getDate();
+    var hour = date.getHours();
+    var logDate = date.getFullYear() + '-' + (month < 10 ? '0' : '') + month + '-' + (day < 10 ? '0' : '') + day;
+    var key = (logDate + (hour < 10 ? '0' : '') + hour).replace(/\D/g, ""); //Generate a key for the dictionary for stuff per hour mapping
     if (!log[tradeskill][key]) {
         console.log("New Key '" + key + "' created");
         log[tradeskill][key] = {};
@@ -167,8 +167,11 @@ function ProcessData(log, responseText, history, tradeskill) {
     }
     log[tradeskill].Attempts++;
     log[tradeskill][key].Attempts++;
-    log.Misc.Log[log.Misc.Index] = logDate + history; //Add the log to the Object via index
-    log[tradeskill].Indexes += log.Misc.Index + "|";
+    if ($("#history").prop('checked')) {
+        console.log($("#history").prop('checked') + " is not false");
+        log.Misc.Log[log.Misc.Index] = logDate + log_history; //Add the log to the Object via index
+        log[tradeskill].Indexes += log.Misc.Index + "|";
+    }
     if (history.match(/anything/i)) { //Nothing-drop
         console.log("You did not find anything.. to bad");
         log[tradeskill].Rarity.Nothing++;
@@ -186,33 +189,39 @@ function ProcessData(log, responseText, history, tradeskill) {
         if (history.match(/clink/mi)) { //Creation of clickable items with variating rarities!
             try {
                 //Let's first check how many items were created
-                console.log("HANDS WHERE I CAN SEE THEM!");
+                // console.log("HANDS WHERE I CAN SEE THEM!");
                 var createdItem = responseText.match(/\[(.*?)\]/)[1]; //To get the PATTERN name, not the created items name
-                console.log("You created the following item: '" + createdItem + "'\nIs that correct?");
+                // console.log("You created the following item: '" + createdItem + "'\nIs that correct?");
                 var createdRarities = history.match(/card(\w+)\sclink/ig);
                 var createdAmount = Number(createdRarities.length);
-                console.log("You created " + createdAmount + " items with this attempt, am I onto something?");
-                console.log("The items that were created had the following rarities:");
+                // console.log("You created " + createdAmount + " items with this attempt, am I onto something?");
+                // console.log("The items that were created had the following rarities:");
                 for (var i = 0; i < createdRarities.length; i++) { //Write the data into the log object and you should be done
                     var dummy_rarity = createdRarities[i].match(/card(\w+)\s/)[1];
                     log[tradeskill][dummy_rarity]++;
                     console.log(dummy_rarity);
                 }
-                console.log("Is that correct?");
+                // console.log("Is that correct?");
                 if (!log[tradeskill][createdItem]) {
-                    console.log("You created something(" + createdItem + ") not known to human kind (Or rather this log)");
+                    // console.log("You created something(" + createdItem + ") not known to human kind (Or rather this log)");
                     log[tradeskill].Items[createdItem] = {};
                     log[tradeskill].Items[createdItem].Drop = 1;
                     log[tradeskill].Items[createdItem].Amount = createdAmount;
-                    log[tradeskill].Items[createdItem].Index = log.Misc.Index + "|";
+
+                    if ($("#history").prop('checked')) {
+                        log[tradeskill].Items[createdItem].Index = log.Misc.Index + "|";
+                    }
                 }
                 else {
                     log[tradeskill].Items[createdItem].Drop++;
                     log[tradeskill].Items[createdItem].Amount += createdAmount;
-                    log[tradeskill].Items[createdItem].Index += log.Misc.Index + "|";
+
+                    if ($("#history").prop('checked')) {
+                        log[tradeskill].Items[createdItem].Index += log.Misc.Index + "|";
+                    }
                 }
-                console.log("And finally, here take that object and show it to someone or something");
-                console.log(log[tradeskill][createdItem]);
+                // console.log("And finally, here take that object and show it to someone or something");
+                // console.log(log[tradeskill][createdItem]);
                 if (!log[tradeskill].Multi[createdAmount]) {
                     log[tradeskill].Multi[createdAmount] = {};
                     log[tradeskill].Multi[createdAmount].Amount = 1;
@@ -222,7 +231,7 @@ function ProcessData(log, responseText, history, tradeskill) {
                 }
             }
             catch (e) {
-                console.log("Something went wrong... " + e.message);
+                console.log("Something went wrong when trying to process a linkable item... " + e.message);
             }
         }
         else {
@@ -241,13 +250,19 @@ function ProcessData(log, responseText, history, tradeskill) {
                 log[tradeskill].Items[item] = {};
                 log[tradeskill].Items[item].Drop = 1;
                 log[tradeskill].Items[item].Amount = Number(amount);
-                log[tradeskill].Items[item].Indexes = log.Misc.Index + "|";
+
+                if ($("#history").prop('checked')) {
+                    log[tradeskill].Items[item].Indexes = log.Misc.Index + "|";
+                }
                 console.log("First time!!\nItem: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
             }
             else {
                 log[tradeskill].Items[item].Drop++;
                 log[tradeskill].Items[item].Amount += Number(amount);
-                log[tradeskill].Items[item].Indexes += log.Misc.Index + "|";
+
+                if ($("#history").prop('checked')) {
+                    log[tradeskill].Items[item].Indexes += log.Misc.Index + "|";
+                }
                 console.log("Item: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
             }
         }
@@ -258,8 +273,9 @@ function ProcessData(log, responseText, history, tradeskill) {
     gold = history.match(/\(\+([0-9,]+)\s*gold/i);
     if (!gold) { gold = 0; }
     else { gold = gold[1].replace(",", ""); log.Misc.GoldIndexes += log.Misc.Index + "|"; }
-    console.log("Gold: " + gold);
-    log.Misc.Index++; //Add 1 to the index for the next attempt.
+    if ($("#history").prop('checked')) {
+        log.Misc.Index++; //Add 1 to the index for the next attempt.
+    }
     log.Misc.TotalExp += Number(exp);
     log[tradeskill].Experience += Number(exp);
     log.Misc.Gold += Number(gold);
@@ -278,22 +294,18 @@ function Create_Log_Object() {
     log.Misc.Gold = 0;
     log.Misc.GoldIndexes = ""; //For showing the log of gold drops
     log.Misc.Alert = false;
+    log.Misc.History = true;
     log.Misc.Index = 0;
     localStorage.setItem("localLog", JSON.stringify(log));
     return log;
 }
 
-function ChangeTitle(activity, buffState) {
+function ChangeTitle(titleText, buffActive, actionStatus) {
     var foodBuffInfo = "[NBA] ";
-    if (buffState === "yes") { foodBuffInfo = "[BA] "; }
-    else if (buffState === "node_depleted" || buffState === "pattern_done") {
-        foodBuffInfo = "";
-        if (log.Misc.Alert && buffState === "node_depleted") {
-            alert("Node depleted!");
-        }
-        else if (log.Misc.Alert && buffState === "pattern_done") {
-            alert("Creation completed");
-        }
+    var log = JSON.parse(localStorage.getItem("localLog"));
+    if (buffActive) { foodBuffInfo = "[BA] "; }
+    if (actionStatus === "alert" && log.Misc.Alert) {
+        alert("Creation completed/Node depleted!");
     }
     $("title").text((foodBuffInfo + activity));
 }
@@ -342,6 +354,23 @@ function GetAttemptsToNextLevel(currentExp, neededExp, attemptTime, totalExp, to
     $("#miscDiv").html("<p>Experience left to level-up: <b>" + diffExp + "</b><br/>Average attempts to level-up: " + attemptsToLevel +
                        "<br/>This takes about <b>" + stringTimeToLevel + "</b> on this node</p>");
     localStorage.setItem("miscDivText", $("#miscDiv").html());
+}
+
+function ExportDataWithoutHistory() {
+    var log = JSON.parse(localStorage.getItem("localLog"));
+    log.Misc.Log = [];
+    log.Misc.GoldIndexes = "";
+    for (var tradeskill in log) {
+        if (tradeskill !== "Misc") {
+            log[tradeskill].Indexes = "";
+            for (var item in log[tradeskill].Items) {
+                log[tradeskill].Items[item].Indexes = "";
+            }
+        }
+    }
+    log.Misc.Index = 0;
+    console.log(log);
+    return log;
 }
 
 function DisplayData(log) {
@@ -406,31 +435,125 @@ function ConvertIntoSmallerTimeFormat(timeInMs) {
     var seconds = timeInMs / 1000;
     var interval = Math.floor(seconds / 31536000);
     if (interval > 0) {
-        output += interval + " years ";
+        output += interval + " year(s) ";
         seconds -= interval * 31536000;
     }
     interval = Math.floor(seconds / 2592000);
     if (interval > 0) {
-        output += interval + " months ";
+        output += interval + " month(s) ";
         seconds -= interval * 2592000;
     }
     interval = Math.floor(seconds / 86400);
     if (interval > 0) {
-        output += interval + " days ";
+        output += interval + " day(s) ";
         seconds -= interval * 86400;
     }
     interval = Math.floor(seconds / 3600);
     if (interval > 0) {
-        output += interval + " hours ";
+        output += interval + " hour(s) ";
         seconds -= interval * 3600;
     }
     interval = Math.floor(seconds / 60);
     if (interval > 1) {
-        output += interval + " minutes ";
+        output += interval + " minute(s) ";
         seconds -= interval * 60;
     }
     output += Math.floor(seconds) + " seconds";
     return output;
+}
+
+/*
+logObject is the log object with the tradeskill you want the data for
+thingsToLookFor is an Array of the keys (Amount, Attempts, Experience)
+timeFrom will be the date to start at
+timeTo will be the date to stop at (will stop at the current date)
+*/
+function CollectDataForChart(logObject, thingsToLookFor, timeFrom, timeTo) {
+    var returnArray = [];
+    var date = new Date();
+    date.setTime(date.getTime() + (-3 + date.getTimezoneOffset() / 60) * 60 * 60 * 1000);
+    var month = date.getMonth();
+    var day = date.getDate();
+    var hour = date.getHours();
+    var currentDate = date.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day + (hour < 10 ? '0' : '') + hour;
+    if (Number(timeTo) > Number(currentDate)) {
+        console.log("Eww, the user entered a date in the future..");
+        timeTo = currentDate;
+    }
+    var fromDate = new Date();
+    var fromYear = timeFrom.substring(0, 4);
+    var fromMonth = timeFrom[4] + timeFrom[5];
+    var fromDay = timeFrom[6] + timeFrom[7];
+    var fromHour = timeFrom[8] + timeFrom[9];
+    fromDate.setFullYear(fromYear);
+    fromDate.setMonth(fromMonth);
+    fromDate.setDate(fromDay);
+    fromDate.setHours(fromHour);
+    var diffHours = Math.round((date - fromDate) / 3600000);
+    console.log("Diffhours: " + diffHours);
+    for (var i = 0; i < diffHours; i++) {
+        fromDate.setHours(fromDate.getHours() + 1);
+        month = fromDate.getMonth() + 1;
+        day = fromDate.getDate();
+        hour = fromDate.getHours();
+        var key = fromDate.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day + (hour < 10 ? '0' : '') + hour;
+        // console.log(key);
+        var dummy = {};
+        for (var j = 0; j < thingsToLookFor.length; j++) {
+            dummy.Date = key;
+            if (logObject[key]) {
+                dummy[thingsToLookFor[j]] = logObject[key][thingsToLookFor[j]];
+            }
+            else if (returnArray.length > 1) {
+                dummy[thingsToLookFor[j]] = 0;
+            }
+        }
+        // console.log(dummy);
+        if (!logObject[key] && returnArray.length === 0) { continue; }
+        returnArray.push(dummy);
+        // console.log(fromDate);
+    }
+    // console.log(returnArray);
+    return returnArray;
+}
+
+function DisplayHistory(logObject) {
+    var indexes = [];
+    try {
+        indexes = logObject.Indexes.split("|");
+    }
+    catch (e) {
+        if (logObject) { //Maybe it's the goldindexes that we are looking for
+            try {
+                indexes = logObject.split("|");
+            }
+            catch (e) {
+                $("#log").html("Something went wrong when processing your data..<br/>" + e.message);
+                return;
+            }
+        }
+        else { //Well.. if not.. just throw an error message
+            $("#log").html("Something went wrong when processing your data..<br/>" + e.message);
+            return;
+        }
+    }
+    var log = JSON.parse(localStorage.getItem("localLog"));
+    var text = "";
+    var start = 0;
+    if (indexes.length > 1000) {
+        start = indexes.length - 1000;
+    }
+    if (!$("#reverseCheckbox").prop('checked')) {
+        for (var i = start; i < indexes.length - 1; i++) {
+            text += log.Misc.Log[indexes[i]] + '<br/>';
+        }
+    }
+    else {
+        for (var j = indexes.length - 2; j > start; j--) {
+            text += log.Misc.Log[indexes[j]] + '<br/>';
+        }
+    }
+    $("#log").html(text);
 }
 
 function SetupLog() {
@@ -452,7 +575,7 @@ function SetupLog() {
     var miscDiv = $(document.createElement("div")).attr({ "id": "miscDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("miscDivText")).appendTo(logDiv);
     var rarityDiv = $(document.createElement("div")).attr({ "id": "rarityDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("rarityDivText")).appendTo(logDiv);
     var optionsDiv = $(document.createElement("div")).attr({ "id": "optionDiv" }).css({ "text-align": "left", "display": "inherit" }).appendTo(logDiv);
-    var displayArea = $(document.createElement("textarea")).attr({ autocomplete: "off", spellcheck: "false" }).css({ "width": "750px", "height": "200px", "display": "none" }).appendTo(optionsDiv);
+    var displayArea = $(document.createElement("textarea")).attr({ id: "displayArea", autocomplete: "off", spellcheck: "false" }).css({ "width": "750px", "height": "200px", "display": "none" }).appendTo(optionsDiv);
     var helpDiv = $(document.createElement("div")).attr({ "id": "helpDiv" }).css({ "text-align": "left", "display": "inherit" }).html("<h5>What does that [NBA] and [BA] mean in front of my title?</h5>" +
                                                                                                                                       "<p>Basic explanation of the tags are: </br>" +
                                                                                                                                       "[NBA] = No Buff Active - [BA] = Buff Active </br>" +
@@ -465,103 +588,92 @@ function SetupLog() {
     var graphDiv = $(document.createElement("div")).attr({ id: "graphDiv" }).css({ "text-align": "left", "display": "inherit" }).appendTo(logDiv);
     var graph_div = $(document.createElement("div")).attr({ id: "graph_div" }).css({ "width": "auto", "height": "400px", "text-align": "left", "display": "inherit" }).appendTo(graphDiv);
     if (!log.Misc.Https) { //It should only add the Graph stuff if it can even be loaded which can not be done if the connection is https.
-        tradeSelectRarityChart = $(document.createElement("select")).attr({ id: 'tradeSelectRarityChart' }).insertBefore(graph_div);
-        var rarityPercentButton = $(document.createElement("button")).text("Rarities").on("click", function () {
-            var json_array = [];
-            log = JSON.parse(localStorage.getItem("localLog"));
-            var tradeskill = $(tradeSelectRarityChart).val();
-            if (tradeskill) {
-                for (var rarity in log[tradeskill].Rarity) {
-                    var json = {};
-                    json.Amount = log[tradeskill].Rarity[rarity];
-                    json.Rarity = rarity;
-                    json_array.push(json);
+        var formDiv = $(document.createElement("div")).css("display", "none").insertBefore(graph_div);
+        $(document.createElement("span")).text("Select a tradeskill").insertBefore(formDiv);
+        var graphForm = $(document.createElement("form")).on("submit", function (e) { e.preventDefault(); }).appendTo(formDiv);
+        var tradeskillSelect = $(document.createElement("select")).on("change", function () {
+            if ($(this).val()) {
+                $(formDiv).css("display", "block");
+                $("#rarityButton").css("display", "initial");
+            }
+            else {
+                $(formDiv).css("display", "none");
+                $("#rarityButton").css("display", "none");
+            }
+        }).insertBefore(formDiv);
+        var rarityButton = $(document.createElement("button")).attr({ id: "rarityButton" }).css("display", "none").html("Rarities").on("click", function () {
+            var jsonArray = [];
+            for (var rarity in log[$(tradeskillSelect).val()].Rarity) {
+                var json = {};
+                json.Amount = log[$(tradeskillSelect).val()].Rarity[rarity];
+                json.Rarity = rarity;
+                jsonArray.push(json);
+            }
+            DrawChart(jsonArray, "Rarities", "Pie");
+        }).insertBefore(formDiv);
+        for (var tradeskill in log) {
+            if (tradeskill === "Misc") { tradeskill = ""; }
+            $(document.createElement("option")).attr({ value: tradeskill }).text(tradeskill).appendTo(tradeskillSelect);
+        }
+        $(document.createElement("span")).html("Select the details you want to display<br/>").appendTo(graphForm);
+        var details = ["Amount", "Attempts", "Experience"];
+        for (var i = 0; i < details.length; i++) {
+            $(document.createElement("input")).attr({ type: "checkbox", class: "checkbox-graph", id: "graph-" + details[i] }).appendTo(graphForm);
+            $(document.createElement("span")).text(details[i]).on("click", function () { $("#graph-" + $(this).text()).click(); }).appendTo(graphForm);
+        }
+        var fromToArray = ["from", "to"]; //For id-mapping
+        var selectArray = ["Year", "Month", "Day", "Hour"]; //For select-id-
+        for (var j = 0; j < fromToArray.length; j++) {
+            $(document.createElement("span")).html("<br/>Select data " + fromToArray[j] + " (Format: Year/Month/Day/Hour)<br/>").appendTo(graphForm);
+            for (var element = 0; element < selectArray.length; element++) {
+                var isCurrent = false;
+                var d = new Date();
+                d.setTime(d.getTime() + (-3 + d.getTimezoneOffset() / 60) * 60 * 60 * 1000);
+                var select = $(document.createElement("select")).attr({ id: fromToArray[j] + "-" + selectArray[element] }).appendTo(graphForm);
+                if (selectArray[element] === "Year") {
+                    for (var year = 2016; year <= d.getFullYear() ; year++) {
+                        $(document.createElement("option")).attr({ value: year }).text(year).appendTo(select);
+                    }
                 }
+                else if (selectArray[element] === "Month") {
+                    var monthArray = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                    for (var month = 0; month < monthArray.length; month++) {
+                        if (d.getMonth() === month) { isCurrent = true; } else { isCurrent = false; }
+                        $(document.createElement("option")).attr({ value: (month < 10 ? '0' : '') + month, selected: isCurrent }).text(monthArray[month]).appendTo(select);
+                    }
+                }
+                else if (selectArray[element] === "Day") {
+                    for (var day = 1; day < 32; day++) {
+                        if (Number(d.getDate()) - 1 === day && fromToArray[j] === "from") { isCurrent = true; }
+                        else if (Number(d.getDate()) === day && fromToArray[j] === "to") { isCurrent = true; }
+                        else { isCurrent = false; }
+                        $(document.createElement("option")).attr({ value: (day < 10 ? '0' : '') + day, selected: isCurrent }).text(day).appendTo(select);
+                    }
+                }
+                else {
+                    for (var hour = 0; hour < 24; hour++) {
+                        if (d.getHours() === hour) { isCurrent = true; } else { isCurrent = false; }
+                        $(document.createElement("option")).attr({ value: (hour < 10 ? '0' : '') + hour, selected: isCurrent }).text(hour).appendTo(select);
+                    }
+                }
+            }
 
-                console.log(json_array);
-                $("#graph_div").html("");
-                DrawChart(json_array, "Rarities", "pie");
-            }
-            else {
-                $("#graph_div").html("You didn't select a tradeskill, shame on you!");
-            }
-        }).insertBefore(graph_div);
-        var attemptsAndAmountButton = $(document.createElement("button")).html("Attempts and Amounts<br/>of last 24 hours").on("click", function () {
-            if ($(tradeSelectRarityChart).val()) {
-                log = JSON.parse(localStorage.getItem("localLog"));
-                var jsonAmountAndAttempts = [];
-                var yesterdayKey = getYesterdaysDate();
-                var yesterdayHour = Number(yesterdayKey.match(/(\d{2}$)/)[1]); //Last two digits are the hour
-                var yesterdayWithoutHour = Number(yesterdayKey.match(/(^\d{8})/)[1]); //First 6 digits = year-month-day
-                var z = 0;
-                while (z < 24) {
-                    yesterdayHour++;
-                    if (yesterdayHour > 23) {
-                        var date = new Date();
-                        var month = date.getMonth() + 1;
-                        var day = date.getDate();
-                        yesterdayWithoutHour = date.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day;
-                    } //Add 1 to the Day
-                    yesterdayHour = yesterdayHour % 24; //If a value is > 24 it will autoconvert to the "new day"
-                    if (yesterdayHour < 10) { yesterdayHour = "0" + yesterdayHour; }
-                    var dummy = {};
-                    dummy.Date = "" + yesterdayHour; //So it's a string
-                    if (log[$(tradeSelectRarityChart).val()][(yesterdayWithoutHour + "" + yesterdayHour)]) {
-                        dummy.Amount = log[$(tradeSelectRarityChart).val()][(yesterdayWithoutHour + "" + yesterdayHour)].Amount;
-                        dummy.Attempts = log[$(tradeSelectRarityChart).val()][(yesterdayWithoutHour + "" + yesterdayHour)].Attempts;
-                    }
-                    else {
-                        dummy.Amount = 0;
-                        dummy.Attempts = 0;
-                    }
-                    jsonAmountAndAttempts.push(dummy);
-                    z++;
+        }
+        $(document.createElement("button")).attr({ type: "submit" }).text("Show graph").on("click", function () {
+            var graphArray = [];
+            var checkboxes = $(".checkbox-graph");
+            for (var i = 0; i < checkboxes.length; i++) {
+                if ($(checkboxes[i]).prop('checked')) {
+                    graphArray.push($(checkboxes[i]).attr('id').substring(6));
                 }
-                DrawChart(jsonAmountAndAttempts, "Attempts and Amounts of last 24 hours", "lines");
             }
-            else {
-                $("#graph_div").html("You didn't select a tradeskill, shame on you!");
-            }
-            // Here you would call the graph-drawer and fill the data it (Would create three different diagrams most likely)
-        }).insertBefore(graph_div);
-        var experienceButton = $(document.createElement("button")).html("Experience of last 24 hours").on("click", function () {
-            if ($(tradeSelectRarityChart).val()) {
-                console.log("Creating graph for Experience of the last 24 hours for the Tradeskill '" + $(tradeSelectRarityChart).val() + "'");
-                log = JSON.parse(localStorage.getItem("localLog"));
-                var jsonExperience = [];
-                var yesterdayKey = getYesterdaysDate();
-                console.log("Yesterday was: " + yesterdayKey);
-                var yesterdayHour = Number(yesterdayKey.match(/(\d{2}$)/)[1]); //Last two digits are the hour
-                var yesterdayWithoutHour = Number(yesterdayKey.match(/(^\d{8})/)[1]); //First 6 digits = year-month-day
-                var z = 0;
-                while (z < 24) {
-                    yesterdayHour++;
-                    if (yesterdayHour > 23) {
-                        var date = new Date();
-                        var month = date.getMonth() + 1;
-                        var day = date.getDate();
-                        yesterdayWithoutHour = date.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day;
-                    } //Add 1 to the Day
-                    yesterdayHour = yesterdayHour % 24; //If a value is > 24 it will autoconvert to the "new day"
-                    if (yesterdayHour < 10) { yesterdayHour = "0" + yesterdayHour; }
-                    var dummy = {};
-                    dummy.Date = "" + yesterdayHour; //So it's a string
-                    console.log((yesterdayWithoutHour + "" + yesterdayHour));
-                    if (log[$(tradeSelectRarityChart).val()][(yesterdayWithoutHour + "" + yesterdayHour)]) {
-                        dummy.Experience = log[$(tradeSelectRarityChart).val()][(yesterdayWithoutHour + "" + yesterdayHour)].Experience;
-                    }
-                    else {
-                        dummy.Experience = 0;
-                    }
-                    jsonExperience.push(dummy);
-                    z++;
-                }
-                DrawChart(jsonExperience, "Experience of last 24 hours", "lines");
-            }
-            else {
-                $("#graph_div").html("You didn't select a tradeskill, shame on you!");
-            }
-        }).insertBefore(graph_div);
+            if (graphArray.length === 0) { alert("You need to at least select one of the three details to display.."); return; }
+            var timeFrom = $("#from-Year").val() + $("#from-Month").val() + $("#from-Day").val() + $("#from-Hour").val();
+            var timeTo = $("#to-Year").val() + $("#to-Month").val() + $("#to-Day").val() + $("#to-Hour").val();
+            if (Number(timeFrom) > Number(timeTo)) { alert("Your date range is not correct, check again!"); return; }
+            var jsonArray = CollectDataForChart(log[$(tradeskillSelect).val()], graphArray, timeFrom, timeTo);
+            DrawChart(jsonArray, "", "graph");
+        }).appendTo(graphForm);
     }
     else {
         $(graph_div).html("Sorry, but the graphs cannot be loaded in the HTTPS version of Drakor.");
@@ -569,28 +681,46 @@ function SetupLog() {
     //Rarity in bar chart
     //drawChart([log[tradeskill].Rarity],"Stats", "graph_div");
     var tradeLog = $(document.createElement("div")).attr({ id: "log" }).appendTo(historyDiv);
-    var alertCheckbox = $(document.createElement("input")).attr({ id: "alert", type: "checkbox" }).on("click", function (event) { log.Misc.Alert = $(this).prop('checked'); }).insertBefore(displayArea);
-    $(document.createElement("span")).html("Put you to the Drakor page when the node depletes/ the pattern completes?<br/>").insertBefore(displayArea);
+    var alertCheckbox = $(document.createElement("input")).attr({ id: "alert", type: "checkbox" }).on("click", function (event) { log.Misc.Alert = $(this).prop('checked'); }).prop('checked', log.Misc.Alert).insertBefore(displayArea);
+    var alertSpan = $(document.createElement("span")).html("Put you to the Drakor page when the node depletes/ the pattern completes?<br/>").insertBefore(displayArea);
+    var historyCheckbox = $(document.createElement("input")).attr({ id: "history", type: "checkbox" }).on("click", function (event) {
+        var log = JSON.parse(localStorage.getItem("localLog"));
+        log.Misc.History = $(this).prop('checked');
+        localStorage.setItem("localLog", JSON.stringify(log));
+    }).prop('checked', log.Misc.History).appendTo(alertSpan);
+    $(document.createElement("span")).html("Keep the history of your drops/creations?<br/>").insertBefore(displayArea);
     var resetButton = $(document.createElement("button")).attr({ id: "resetButton" }).html("Reset Statistics").css({ "width": "auto", "height": "auto" }).on("click", function () { ResetStatistics(); }).insertBefore(displayArea);
     $(document.createElement("p")).insertBefore(displayArea); //To make a linebreak
     var importButton = $(document.createElement("button")).attr({ value: "import_1" }).html("Import data").css({ "width": "auto", "height": "auto" }).on("click", function () {
         if ($(this).val() === "import_1") {
-            $(displayArea).css("display", "block").text("");
+            $(displayArea).css("display", "block").val("");
             $(this).val("import_2").text("Confirm import");
         }
         else if ($(this).val() === "import_2") {
-            localStorage.setItem("localLog", $(displayArea).text());
-            alert("Import succesful!");
-            $(this).text("Import data");
-            $(displayArea).text("").css("display", "none");
+            try {
+                if (!$("#displayArea").val()) { return; }
+                localStorage.setItem("localLog", $("#displayArea").val());
+                alert("Import succesful!");
+                $(this).text("Import data");
+                $(displayArea).val("").css("display", "none");
+            }
+            catch (e) {
+                alert("Something went wrong.. " + e.message);
+            }
         }
     }).insertBefore(displayArea);
     var exportButton = $(document.createElement("button")).attr({ id: "localButton" }).html("Export data").css({ "width": "auto", "height": "auto" }).on("click", function () {
-        $(displayArea).text(localStorage.getItem("localLog"));
-        $(displayArea).css("display", "block");
-        $(importButton).text("Import data");
-        $(importButton).val("import_1");
+        $(displayArea).val(localStorage.getItem("localLog")).css("display", "block");
+        $(importButton).text("Import data").val("import_1");
     }).insertBefore(displayArea);
+    var exportWithoutHistoryButton = $(document.createElement("button")).attr({ id: "exportWithoutHistory" }).html("Export data without history").css({ "width": "auto", "height": "auto" }).on("click", function () {
+        $(displayArea).val(JSON.stringify(ExportDataWithoutHistory())).css("display", "block");
+        $(importButton).text("Import data").val("import_1");
+        // console.log(ExportDataWithoutHistory());
+    }).insertBefore(displayArea);
+    var resetLocal = $(document.createElement("button")).attr({ id: "resetLocal" }).html("Reset Localstorage").css({ "width": "auto", "height": "auto" }).on("click", function () {
+        localStorage.clear();
+    }).insertAfter(resetButton);
     var tradeSelect = $(document.createElement("select")).attr({ id: "tradeSelect" }).on("change", function () {
         if ($(this).val()) {
             var log = JSON.parse(localStorage.getItem("localLog"));
@@ -601,23 +731,7 @@ function SetupLog() {
                     $(document.createElement("option")).attr({ name: keys[i], value: keys[i] }).text(keys[i]).appendTo($("#materialSelect"));
                 }
             }
-            var text = "";
-            var indexes = log[$(this).val()].Indexes.split("|");
-            var start = 0;
-            if (indexes.length > 1000) {
-                start = indexes.length - 1000;
-            }
-            if (!$("#reverseCheckbox").prop('checked')) {
-                for (var k = start; k < indexes.length - 1; k++) {
-                    text += log.Misc.Log[indexes[k]] + '<br/>';
-                }
-            }
-            else {
-                for (var j = indexes.length - 2; j > start; j--) {
-                    text += log.Misc.Log[indexes[j]] + '<br/>';
-                }
-            }
-            $(tradeLog).html(text);
+            DisplayHistory(log[$(this).val()]);
         }
         else {
             $(tradeLog).html("");
@@ -626,61 +740,29 @@ function SetupLog() {
     }).insertBefore(tradeLog);
     var materialSelect = $(document.createElement("select")).attr({ id: "materialSelect" }).on("change", function () {
         if ($(this).val()) {
-            var log = JSON.parse(localStorage.getItem("localLog"));
-            var text = "";
-            var indexes = log[$(tradeSelect).val()].Items[$(this).val()].Indexes.split("|");
-            var start = 0;
-            if (indexes.length > 1000) {
-                start = indexes.length - 1000;
-            }
-            if (!$("#reverseCheckbox").prop('checked')) {
-                for (var i = start; i < indexes.length - 1; i++) {
-                    text += log.Misc.Log[indexes[i]] + '<br/>';
-                }
-            }
-            else {
-                for (var j = indexes.length - 2; j > start; j--) {
-                    text += log.Misc.Log[indexes[j]] + '<br/>';
-                }
-            }
-            $(tradeLog).html(text);
+            DisplayHistory(log[$(tradeSelect).val()].Items[$(this).val()]);
         }
         else {
             $(tradeLog).html("");
         }
     }).insertBefore(tradeLog);
     var goldButton = $(document.createElement("button")).attr({ id: "goldButton" }).text("Display gold history").css({ "width": "auto", "height": "auto" }).on("click", function () {
-        var log = JSON.parse(localStorage.getItem("localLog"));
-        var text = "";
-        var indexes = log.Misc.GoldIndexes.split("|");
-        var start = 0;
-        if (indexes.length > 1000) {
-            start = indexes.length - 1000;
-        }
-        if (indexes.length === 1) { alert("No gold found yet"); }
-        else {
-            if (!$("#reverseCheckbox").prop('checked')) {
-                for (var i = start; i < indexes.length - 1; i++) {
-                    text += log.Misc.Log[indexes[i]] + '<br/>';
-                }
-            }
-            else {
-                for (var j = indexes.length - 2; j > start; j--) {
-                    text += log.Misc.Log[indexes[j]] + '<br/>';
-                }
-            }
-            $(tradeLog).html(text);
-        }
+        DisplayHistory(log.Misc.GoldIndexes);
     }).insertBefore(tradeLog);
     var reverseCheckbox = $(document.createElement("input")).attr({ id: "reverseCheckbox", type: "checkbox" }).on("change", function () {
-        var output = "";
-        var currentHTML = $(tradeLog).html();
-        var rows = currentHTML.match(/(.*?<br>)/g);
-        for (var i = rows.length - 1; i >= 0; i--) {
-            output += rows[i];
+        try {
+            var output = "";
+            var currentHTML = $(tradeLog).html();
+            var rows = currentHTML.match(/(.*?<br>)/g);
+            for (var i = rows.length - 1; i >= 0; i--) {
+                output += rows[i];
+            }
+            output.replace(/<\/br>$/);
+            $(tradeLog).html(output);
         }
-        output.replace(/<\/br>$/);
-        $(tradeLog).html(output);
+        catch (e) {
+            $(tradeLog).html("Something went wrong when trying to invert the current text..<br/>" + e.message);
+        }
     }).insertBefore(tradeLog);
     $(document.createElement("span")).html("Reverse log?").insertBefore(tradeLog);
     $(document.createElement("option")).attr({ name: "", value: "" }).text("Select a tradeskill").appendTo(tradeSelect);
@@ -691,12 +773,6 @@ function SetupLog() {
             $(document.createElement("option")).attr({ name: tradeskill, value: tradeskill }).text(tradeskill).appendTo(tradeSelect);
             $(document.createElement("option")).attr({ name: tradeskill, value: tradeskill }).text(tradeskill).appendTo(tradeSelectRarityChart);
         }
-    }
-    if (log.Misc.Alert) {
-        $(alertCheckbox).prop('checked', true);
-    }
-    else {
-        $(alertCheckbox).prop('checked', false);
     }
     logDiv.tabs();
     logDiv.dialog({
@@ -710,19 +786,7 @@ function SetupLog() {
     });
     $(fragment).appendTo("#gs_topmenu");
 }
-function getYesterdaysDate() {
-    var date = new Date();
-    var localoffset = -(date.getTimezoneOffset() / 60);
-    var destoffset = -3;
-    var offset = destoffset - localoffset;
-    date.setDate(date.getDate() - 1);
-    date.setHours(date.getHours() + offset);
-    //return date.getDate() + '/' + (date.getMonth()+1) + '/' + date.getFullYear();
-    var month = date.getMonth() + 1;
-    var day = date.getDate();
-    var hour = date.getHours();
-    return date.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day + '' + (hour < 10 ? '0' : '') + hour;
-}
+
 function ResetStatistics() {
     var localStorageElements = ["materialDivText", "multiDivText", "rarityDivText", "miscDivText"];
     for (var i = 0 ; i < localStorageElements.length; i++) {
