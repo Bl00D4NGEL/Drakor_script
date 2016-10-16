@@ -307,7 +307,7 @@ function ChangeTitle(titleText, buffActive, actionStatus) {
     if (actionStatus === "alert" && log.Misc.Alert) {
         alert("Creation completed/Node depleted!");
     }
-    $("title").text((foodBuffInfo + activity));
+    $("title").text((foodBuffInfo + titleText));
 }
 //Chart/Graph building
 function DrawChart(json_string, title_text, chart_type) {
