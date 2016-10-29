@@ -9,7 +9,7 @@
 
 $(document).ready(function () {
     var version = "v1.81";
-    console.log("You're currently using version " + version);
+    console.log("You're currently using Just Statistics version " + version);
     //Variable declaration; getting the data out of local storage
     var log;
     if (!localStorage.getItem("localLog")) {
@@ -131,7 +131,15 @@ $(document).ready(function () {
                             actionStatus = "alert";
                         }
                         DisplayData(log);                   //Rarity-, Multi- and Materialoverview
-                        localStorage.setItem("localLog", JSON.stringify(log));
+                        try { //If the localstorage space is used up, this won't work
+                            localStorage.setItem("localLog", JSON.stringify(log));
+                            $(showLog).text("Show Log");
+                        }
+                        catch (e) {
+                            if (!$(showLog).text().match(/!/)) {//Add an exclamation mark to the show log button to notify the user the saving went bad
+                                $(showLog).text($(showLog.text() + " (!!!)"));
+                            }
+                        }
                     }
                 }
                 else {
@@ -266,7 +274,25 @@ function ProcessData(log, responseText, history, tradeskill) {
                 console.log("Item: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
             }
         }
-        exp = history.match(/>(\d+)\s*exp/mi)[1];
+        try {
+            exp = history.match(/>(\d+)\s*exp/mi)[1];
+        }
+        catch (e) { //If you're max level it will display + x total exp
+            exp = history.match(/>\D+(\d+).*?exp.*?</mi);
+            if (!exp) { //If this still fails for whatever reason, just default to 0 exp
+                exp = 0;
+                //Log the error in the history.
+                if (!log.Misc.Log[log.Misc.Index]) {
+                    log.Misc.Log[log.Misc.Index] = "Something went wrong when trying to get the exp..<br/>Message: " + e.message;
+                }
+                else {
+                    log.Misc.Log[log.Misc.Index] += "Something went wrong when trying to get the exp..<br/>Message: " + e.message;
+                }
+            }
+            else {
+                exp = exp[1];
+            }
+        }
         log[tradeskill][key].Amount += Number(amount);
         log[tradeskill][key].Experience += Number(exp);
     }
@@ -480,6 +506,14 @@ function CollectDataForChart(logObject, thingsToLookFor, timeFrom, timeTo) {
         console.log("Eww, the user entered a date in the future..");
         timeTo = currentDate;
     }
+    var toYear = timeTo.substring(0, 4);
+    var toMonth = timeTo[4] + timeTo[5];
+    var toDay = timeTo[6] + timeTo[7];
+    var toHour = timeTo[8] + timeTo[9];
+    date.setFullYear(toYear);
+    date.setMonth(toMonth);
+    date.setDate(toDay);
+    date.setHours(toHour);
     var fromDate = new Date();
     var fromYear = timeFrom.substring(0, 4);
     var fromMonth = timeFrom[4] + timeFrom[5];
@@ -545,12 +579,16 @@ function DisplayHistory(logObject) {
     }
     if (!$("#reverseCheckbox").prop('checked')) {
         for (var i = start; i < indexes.length - 1; i++) {
-            text += log.Misc.Log[indexes[i]] + '<br/>';
+            if (log.Misc.Log[indexes[i]]) {
+                text += log.Misc.Log[indexes[i]] + '<br/>';
+            }
         }
     }
     else {
         for (var j = indexes.length - 2; j > start; j--) {
-            text += log.Misc.Log[indexes[j]] + '<br/>';
+            if (log.Misc.Log[indexes[j]]) {
+                text += log.Misc.Log[indexes[j]] + '<br/>';
+            }
         }
     }
     $("#log").html(text);
@@ -576,14 +614,22 @@ function SetupLog() {
     var rarityDiv = $(document.createElement("div")).attr({ "id": "rarityDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("rarityDivText")).appendTo(logDiv);
     var optionsDiv = $(document.createElement("div")).attr({ "id": "optionDiv" }).css({ "text-align": "left", "display": "inherit" }).appendTo(logDiv);
     var displayArea = $(document.createElement("textarea")).attr({ id: "displayArea", autocomplete: "off", spellcheck: "false" }).css({ "width": "750px", "height": "200px", "display": "none" }).appendTo(optionsDiv);
-    var helpDiv = $(document.createElement("div")).attr({ "id": "helpDiv" }).css({ "text-align": "left", "display": "inherit" }).html("<h5>What does that [NBA] and [BA] mean in front of my title?</h5>" +
+    var helpDiv = $(document.createElement("div")).attr({ "id": "helpDiv" }).css({ "text-align": "left", "display": "inherit" }).html("<h5>Why are there three exclamation marks next to the \"Show Log\" button?</h5>" +
+                                                                                                                                      "<p>This means that the saving of your data did <b>not</b> succeed. " +
+                                                                                                                                      "You can now do the following to be able to keep being able to collect statistics by doing the following:<br/>" +
+                                                                                                                                      "<ol><li>Reset your data in the \"Options\" tab by clicking on the \"Reset Statistics\" button or</li>" +
+                                                                                                                                      "<li>In the \"Options\" tab, click on the button \"Export data without the history\" then select the the whole text (Click into the text field and press Control + a) that is in there and copy it (Control + C)" +
+                                                                                                                                      "then you need to click on the \"Import data\" button and paste (Control + V) the text into there and hit the \"Confirm import\" button.</li></ol>" +
+                                                                                                                                      "Now your old stats (Dropped/created things, multis, rarities) are carried over but the history of the drops (e.g. You collected [material] x times) " +
+                                                                                                                                      "is not accessible anymore, though the graphs will still work.</p>" +
+                                                                                                                                      "<h5>What does that [NBA] and [BA] mean in front of my title?</h5>" +
                                                                                                                                       "<p>Basic explanation of the tags are: </br>" +
                                                                                                                                       "[NBA] = No Buff Active - [BA] = Buff Active </br>" +
                                                                                                                                       "This means that it will basically display if you currently got a food buff active or not.</p></br>" +
                                                                                                                                       "<h5>Can I contribute in any way?</h5>" +
-                                                                                                                                      "<p>Sure! If you got any suggestion feel free to message Bl00D4NGEL with it. </br>" +
-                                                                                                                                      "Can I help with this help file? </br>" +
-                                                                                                                                      "Sure thing. Just message Bl00D4NGEL once again with any idea of what could be added to this.</p>").appendTo(logDiv);
+                                                                                                                                      "<p>Sure! If you got any suggestion feel free to message Bl00D4NGEL with it.</p>" +
+                                                                                                                                      "<h5>Can I help with this help file?</h5>" +
+                                                                                                                                      "<p>Sure thing. Just message Bl00D4NGEL once again with any idea of what could be added to this.</p>").appendTo(logDiv);
     var historyDiv = $(document.createElement("div")).attr({ id: "historyDiv" }).css({ "text-align": "left", "display": "inherit" }).appendTo(logDiv);
     var graphDiv = $(document.createElement("div")).attr({ id: "graphDiv" }).css({ "text-align": "left", "display": "inherit" }).appendTo(logDiv);
     var graph_div = $(document.createElement("div")).attr({ id: "graph_div" }).css({ "width": "auto", "height": "400px", "text-align": "left", "display": "inherit" }).appendTo(graphDiv);
