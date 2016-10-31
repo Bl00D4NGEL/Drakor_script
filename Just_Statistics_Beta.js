@@ -48,10 +48,14 @@ $(document).ready(function () {
                 tradeskill = tradeskill.toLowerCase();
                 $.ajax("/armory_action/" + tradeskill + "?show=noheader").done(function (data) {
                     try {
+                        if ($("#skillLevel").html().match(/#/g).length > 1) {
+                            console.log("Aww.. the rank got written down more than once.. let's not do that");
+                            $("#skillLevel").html($("#skillLevel").html($("#skillLevel").html().replace(/\s\(.*?$/)));
+                        }
                         var currentRank = data.match(/leadResult active.*?#(\d+)<\/span>/i)[1];
                         if (!$("#skillLevel").html().match(/#(\d+)/) || $("#skillLevel").html().match(/#(\d+)\)$/)[1] !== currentRank) {
                             console.log("Current Rank not written down or changed.. updating to '" + currentRank + "'");
-                            $("#skillLevel").html($("#skillLevel").html().replace(/\s\(.*$/, ""));
+                            $("#skillLevel").html($("#skillLevel").html($("#skillLevel").html().replace(/\s\(.*?$/)));
                             $("#skillLevel").html($("#skillLevel").html() + " (#" + currentRank + ")");
                         }
                     }
