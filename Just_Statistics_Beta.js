@@ -48,13 +48,16 @@ $(document).ready(function () {
                 tradeskill = tradeskill.toLowerCase();
                 $.ajax("/armory_action/" + tradeskill + "?show=noheader").done(function (data) {
                     try {
-                        if ($("#skillLevel").html().match(/#/g).length > 1) {
+                        var currentRank = data.match(/leadResult active.*?#(\d+)<\/span>/i)[1];
+                        if (!$("#skillLevel").html().match(/#/)) { //First Time
+                            $("#skillLevel").html($("#skillLevel").html() + " (#" + currentRank + ")");
+                        }
+                        else if ($("#skillLevel").html().match(/#/g).length > 1) {
                             console.log("Aww.. the rank got written down more than once.. let's not do that");
                             $("#skillLevel").html($("#skillLevel").html($("#skillLevel").html().replace(/\s\(.*?$/)));
                         }
-                        var currentRank = data.match(/leadResult active.*?#(\d+)<\/span>/i)[1];
                         if (!$("#skillLevel").html().match(/#(\d+)/) || $("#skillLevel").html().match(/#(\d+)\)$/)[1] !== currentRank) {
-                            console.log("Current Rank not written down or changed.. updating to '" + currentRank + "'");
+                            console.log("Current Rank changed.. updating to '" + currentRank + "'");
                             $("#skillLevel").html($("#skillLevel").html($("#skillLevel").html().replace(/\s\(.*?$/)));
                             $("#skillLevel").html($("#skillLevel").html() + " (#" + currentRank + ")");
                         }
@@ -158,134 +161,21 @@ $(document).ready(function () {
 });
 
 function ProcessData(log, responseText, history, tradeskill) {
-    history = history.replace(/<script>(.*?)<\/script>/, "");
-    var log_history = history;
-    log_history = log_history.replace(/<\/?.*?>/g, "");
-    var item, amount, exp, gold;
-    var date = new Date();
-    date.setTime(date.getTime() + (-3 + date.getTimezoneOffset() / 60) * 60 * 60 * 1000);//So the date is synced with Drakor timers
-    var year = date.getFullYear();
-    var month = date.getMonth() + 1;
-    var day = date.getDate();
-    var hour = date.getHours();
-    var logDate = date.getFullYear() + '-' + (month < 10 ? '0' : '') + month + '-' + (day < 10 ? '0' : '') + day;
-    var key = (logDate + (hour < 10 ? '0' : '') + hour).replace(/\D/g, ""); //Generate a key for the dictionary for stuff per hour mapping
-    if (!log[tradeskill][key]) {
-        console.log("New Key '" + key + "' created");
-        log[tradeskill][key] = {};
-        log[tradeskill][key].Amount = 0;
-        log[tradeskill][key].Experience = 0;
-        log[tradeskill][key].Attempts = 0;
-    }
-    log[tradeskill].Attempts++;
-    log[tradeskill][key].Attempts++;
-    if ($("#history").prop('checked')) {
-        console.log($("#history").prop('checked') + " is not false");
-        log.Misc.Log[log.Misc.Index] = logDate + log_history; //Add the log to the Object via index
-        log[tradeskill].Indexes += log.Misc.Index + "|";
-    }
-    if (history.match(/anything/i)) { //Nothing-drop
-        console.log("You did not find anything.. to bad");
-        log[tradeskill].Rarity.Nothing++;
-        if (!log[tradeskill].Multi['0 (Nothing)']) {//Multicounter
-            log[tradeskill].Multi['0 (Nothing)'] = {};
-            log[tradeskill].Multi['0 (Nothing)'].Amount = 1;
-        }
-        else {
-            log[tradeskill].Multi['0 (Nothing)'].Amount++;
-        }
-        exp = history.match(/>(\d+)\s*exp</mi)[1];
-        log[tradeskill][key].Experience += Number(exp);
-    }
-    else {
-        if (history.match(/clink/mi)) { //Creation of clickable items with variating rarities!
-            try {
-                //Let's first check how many items were created
-                // console.log("HANDS WHERE I CAN SEE THEM!");
-                var createdItem = responseText.match(/\[(.*?)\]/)[1]; //To get the PATTERN name, not the created items name
-                // console.log("You created the following item: '" + createdItem + "'\nIs that correct?");
-                var createdRarities = history.match(/card(\w+)\sclink/ig);
-                var createdAmount = Number(createdRarities.length);
-                // console.log("You created " + createdAmount + " items with this attempt, am I onto something?");
-                // console.log("The items that were created had the following rarities:");
-                for (var i = 0; i < createdRarities.length; i++) { //Write the data into the log object and you should be done
-                    var dummy_rarity = createdRarities[i].match(/card(\w+)\s/)[1];
-                    log[tradeskill][dummy_rarity]++;
-                    console.log(dummy_rarity);
-                }
-                // console.log("Is that correct?");
-                if (!log[tradeskill][createdItem]) {
-                    // console.log("You created something(" + createdItem + ") not known to human kind (Or rather this log)");
-                    log[tradeskill].Items[createdItem] = {};
-                    log[tradeskill].Items[createdItem].Drop = 1;
-                    log[tradeskill].Items[createdItem].Amount = createdAmount;
+    try {
+        history = history.replace(/<script>(.*?)<\/script>/, "");
 
-                    if ($("#history").prop('checked')) {
-                        log[tradeskill].Items[createdItem].Index = log.Misc.Index + "|";
-                    }
-                }
-                else {
-                    log[tradeskill].Items[createdItem].Drop++;
-                    log[tradeskill].Items[createdItem].Amount += createdAmount;
-
-                    if ($("#history").prop('checked')) {
-                        log[tradeskill].Items[createdItem].Index += log.Misc.Index + "|";
-                    }
-                }
-                // console.log("And finally, here take that object and show it to someone or something");
-                // console.log(log[tradeskill][createdItem]);
-                if (!log[tradeskill].Multi[createdAmount]) {
-                    log[tradeskill].Multi[createdAmount] = {};
-                    log[tradeskill].Multi[createdAmount].Amount = 1;
-                }
-                else {
-                    log[tradeskill].Multi[createdAmount].Amount++;
-                }
-            }
-            catch (e) {
-                console.log("Something went wrong when trying to process a linkable item... " + e.message);
-            }
-        }
-        else {
-            var rarity = history.match(/class=\"(\w+)\s?viewmat\">/mi)[1];
-            log[tradeskill].Rarity[rarity]++;
-            item = history.match(/\[.*?\].*\[(.*?)\]/)[1];
-            amount = history.match(/<\/span>\s*x(\d+)/)[1];
-            if (!log[tradeskill].Multi[amount]) {//Multicounter
-                log[tradeskill].Multi[amount] = {};
-                log[tradeskill].Multi[amount].Amount = 1;
-            }
-            else {
-                log[tradeskill].Multi[amount].Amount++;
-            }
-            if (!log[tradeskill].Items[item]) { //Itemcounter
-                log[tradeskill].Items[item] = {};
-                log[tradeskill].Items[item].Drop = 1;
-                log[tradeskill].Items[item].Amount = Number(amount);
-
-                if ($("#history").prop('checked')) {
-                    log[tradeskill].Items[item].Indexes = log.Misc.Index + "|";
-                }
-                console.log("First time!!\nItem: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
-            }
-            else {
-                log[tradeskill].Items[item].Drop++;
-                log[tradeskill].Items[item].Amount += Number(amount);
-
-                if ($("#history").prop('checked')) {
-                    log[tradeskill].Items[item].Indexes += log.Misc.Index + "|";
-                }
-                console.log("Item: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
-            }
-        }
+        var log_history = history;
+        log_history = log_history.replace(/<\/?.*?>/g, "");
+        var item, amount, exp, gold;
         try {
             exp = history.match(/>(\d+)\s*exp/mi)[1];
         }
         catch (e) { //If you're max level it will display + x total exp
-            exp = history.match(/>\D+(\d+).*?exp.*?</mi);
+            exp = history.match(/\+<b>(\d+)<\/b>/i);
             if (!exp) { //If this still fails for whatever reason, just default to 0 exp
                 exp = 0;
                 //Log the error in the history.
+                console.log("When processing the experience gained an error occured and the gained exp was set to 0..\nMessage: " + e.message);
                 if (!log.Misc.Log[log.Misc.Index]) {
                     log.Misc.Log[log.Misc.Index] = "Something went wrong when trying to get the exp..<br/>Message: " + e.message;
                 }
@@ -297,19 +187,139 @@ function ProcessData(log, responseText, history, tradeskill) {
                 exp = exp[1];
             }
         }
-        log[tradeskill][key].Amount += Number(amount);
-        log[tradeskill][key].Experience += Number(exp);
+        var date = new Date();
+        date.setTime(date.getTime() + (-3 + date.getTimezoneOffset() / 60) * 60 * 60 * 1000);//So the date is synced with Drakor timers
+        var year = date.getFullYear();
+        var month = date.getMonth() + 1;
+        var day = date.getDate();
+        var hour = date.getHours();
+        var logDate = date.getFullYear() + '-' + (month < 10 ? '0' : '') + month + '-' + (day < 10 ? '0' : '') + day;
+        var key = (logDate + (hour < 10 ? '0' : '') + hour).replace(/\D/g, ""); //Generate a key for the dictionary for stuff per hour mapping
+        if (!log[tradeskill][key]) {
+            console.log("New Key '" + key + "' created");
+            log[tradeskill][key] = {};
+            log[tradeskill][key].Amount = 0;
+            log[tradeskill][key].Experience = 0;
+            log[tradeskill][key].Attempts = 0;
+        }
+        log[tradeskill].Attempts++;
+        log[tradeskill][key].Attempts++;
+        if ($("#history").prop('checked')) {
+            log.Misc.Log[log.Misc.Index] = logDate + log_history; //Add the log to the Object via index
+            log[tradeskill].Indexes += log.Misc.Index + "|";
+        }
+        if (history.match(/anything/i)) { //Nothing-drop
+            console.log("You did not find anything.. to bad");
+            log[tradeskill].Rarity.Nothing++;
+            if (!log[tradeskill].Multi['0 (Nothing)']) {//Multicounter
+                log[tradeskill].Multi['0 (Nothing)'] = {};
+                log[tradeskill].Multi['0 (Nothing)'].Amount = 1;
+            }
+            else {
+                log[tradeskill].Multi['0 (Nothing)'].Amount++;
+            }
+            //exp = history.match(/>(\d+)\s*exp</mi)[1];
+            log[tradeskill][key].Experience += Number(exp);
+        }
+        else {
+            if (history.match(/clink/mi)) { //Creation of clickable items with variating rarities!
+                try {
+                    //Let's first check how many items were created
+                    // console.log("HANDS WHERE I CAN SEE THEM!");
+                    var createdItem = responseText.match(/\[(.*?)\]/)[1]; //To get the PATTERN name, not the created items name
+                    // console.log("You created the following item: '" + createdItem + "'\nIs that correct?");
+                    var createdRarities = history.match(/card(\w+)\sclink/ig);
+                    var createdAmount = Number(createdRarities.length);
+                    // console.log("You created " + createdAmount + " items with this attempt, am I onto something?");
+                    // console.log("The items that were created had the following rarities:");
+                    for (var i = 0; i < createdRarities.length; i++) { //Write the data into the log object and you should be done
+                        var dummy_rarity = createdRarities[i].match(/card(\w+)\s/)[1];
+                        log[tradeskill][dummy_rarity]++;
+                        console.log(dummy_rarity);
+                    }
+                    // console.log("Is that correct?");
+                    if (!log[tradeskill][createdItem]) {
+                        // console.log("You created something(" + createdItem + ") not known to human kind (Or rather this log)");
+                        log[tradeskill].Items[createdItem] = {};
+                        log[tradeskill].Items[createdItem].Drop = 1;
+                        log[tradeskill].Items[createdItem].Amount = createdAmount;
+
+                        if ($("#history").prop('checked')) {
+                            log[tradeskill].Items[createdItem].Index = log.Misc.Index + "|";
+                        }
+                    }
+                    else {
+                        log[tradeskill].Items[createdItem].Drop++;
+                        log[tradeskill].Items[createdItem].Amount += createdAmount;
+
+                        if ($("#history").prop('checked')) {
+                            log[tradeskill].Items[createdItem].Index += log.Misc.Index + "|";
+                        }
+                    }
+                    // console.log("And finally, here take that object and show it to someone or something");
+                    // console.log(log[tradeskill][createdItem]);
+                    if (!log[tradeskill].Multi[createdAmount]) {
+                        log[tradeskill].Multi[createdAmount] = {};
+                        log[tradeskill].Multi[createdAmount].Amount = 1;
+                    }
+                    else {
+                        log[tradeskill].Multi[createdAmount].Amount++;
+                    }
+                }
+                catch (e) {
+                    console.log("Something went wrong when trying to process a linkable item... " + e.message);
+                }
+            }
+            else {
+                var rarity = history.match(/class=\"(\w+)\s?viewmat\">/mi)[1];
+                log[tradeskill].Rarity[rarity]++;
+                item = history.match(/\[.*?\].*\[(.*?)\]/)[1];
+                amount = history.match(/<\/span>\s*x(\d+)/)[1];
+                if (!log[tradeskill].Multi[amount]) {//Multicounter
+                    log[tradeskill].Multi[amount] = {};
+                    log[tradeskill].Multi[amount].Amount = 1;
+                }
+                else {
+                    log[tradeskill].Multi[amount].Amount++;
+                }
+                if (!log[tradeskill].Items[item]) { //Itemcounter
+                    log[tradeskill].Items[item] = {};
+                    log[tradeskill].Items[item].Drop = 1;
+                    log[tradeskill].Items[item].Amount = Number(amount);
+
+                    if ($("#history").prop('checked')) {
+                        log[tradeskill].Items[item].Indexes = log.Misc.Index + "|";
+                    }
+                    console.log("First time!!\nItem: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
+                }
+                else {
+                    log[tradeskill].Items[item].Drop++;
+                    log[tradeskill].Items[item].Amount += Number(amount);
+
+                    if ($("#history").prop('checked')) {
+                        log[tradeskill].Items[item].Indexes += log.Misc.Index + "|";
+                    }
+                    console.log("Item: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
+                }
+            }
+            log[tradeskill][key].Amount += Number(amount);
+            log[tradeskill][key].Experience += Number(exp);
+        }
+        gold = history.match(/\(\+([0-9,]+)\s*gold/i);
+        if (!gold) { gold = 0; }
+        else { gold = gold[1].replace(",", ""); log.Misc.GoldIndexes += log.Misc.Index + "|"; }
+        if ($("#history").prop('checked')) {
+            log.Misc.Index++; //Add 1 to the index for the next attempt.
+        }
+        log.Misc.TotalExp += Number(exp);
+        log[tradeskill].Experience += Number(exp);
+        log.Misc.Gold += Number(gold);
+        return log;
     }
-    gold = history.match(/\(\+([0-9,]+)\s*gold/i);
-    if (!gold) { gold = 0; }
-    else { gold = gold[1].replace(",", ""); log.Misc.GoldIndexes += log.Misc.Index + "|"; }
-    if ($("#history").prop('checked')) {
-        log.Misc.Index++; //Add 1 to the index for the next attempt.
+    catch (e) {
+        console.log("Oops, something went wrong when trying to process the data.. Message: " + e.message + "\nException:");
+        console.log(e);
     }
-    log.Misc.TotalExp += Number(exp);
-    log[tradeskill].Experience += Number(exp);
-    log.Misc.Gold += Number(gold);
-    return log;
 }
 
 function Create_Log_Object() {
