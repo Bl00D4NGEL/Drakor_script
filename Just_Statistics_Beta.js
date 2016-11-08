@@ -88,7 +88,7 @@ $(document).ready(function () {
                 if (!xhr.responseText.match(/depleted/i)) {
                     // var regex = /<div class="roundResult areaName">(.*?exp\)?<\/span><\/div>)/gi;
                     // var result = regex.exec(xhr.responseText); //Basic regex to get only the necessary data.
-                    var result = xhr.responseText.match(/<div class="roundResult areaName">.*?exp\)?<\/span><\/div>/gi);
+                    var result = xhr.responseText.match(/<div class="roundResult areaName">.*?exp\s*\)?<\/span><\/div>/gi);
                     //Attention, creating skills will confuse this because not every creation gives exp, but rather a full attempt will.
                     //Will need to add a different kind of splitting here so the pattern-processing works correctly (ProcessData)
                     if (result) { //This will always say true UNLESS you worked in another window thus the result will be empty -> no log entry will be made
