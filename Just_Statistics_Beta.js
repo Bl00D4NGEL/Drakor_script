@@ -344,8 +344,17 @@ function ChangeTitle(titleText, buffActive, actionStatus) {
     var foodBuffInfo = "[NBA] ";
     var log = JSON.parse(localStorage.getItem("localLog"));
     if (buffActive) { foodBuffInfo = "[BA] "; }
-    if (actionStatus === "alert" && log.Misc.Alert) {
-        alert("Creation completed/Node depleted!");
+    if (actionStatus === "alert") {
+        console.log("Log object:");
+        console.log(log);
+        try {
+            if (log.Misc.Alert) {
+                alert("Creation completed/Node depleted!");
+            }
+        }
+        catch (e) {
+            console.log("Come on.. what is wrong with the damn alert :(\n" + e.message);
+        }
     }
     $("title").text((foodBuffInfo + titleText));
 }
@@ -741,7 +750,11 @@ function SetupLog() {
     //Rarity in bar chart
     //drawChart([log[tradeskill].Rarity],"Stats", "graph_div");
     var tradeLog = $(document.createElement("div")).attr({ id: "log" }).appendTo(historyDiv);
-    var alertCheckbox = $(document.createElement("input")).attr({ id: "alert", type: "checkbox" }).on("click", function (event) { log.Misc.Alert = $(this).prop('checked'); }).prop('checked', log.Misc.Alert).insertBefore(displayArea);
+    var alertCheckbox = $(document.createElement("input")).attr({ id: "alert", type: "checkbox" }).on("click", function (event) {
+        var log = JSON.parse(localStorage.getItem("localLog"));
+        log.Misc.Alert = $(this).prop('checked');
+        localStorage.setItem("localLog", JSON.stringify(log));
+    }).prop('checked', log.Misc.Alert).insertBefore(displayArea);
     var alertSpan = $(document.createElement("span")).html("Put you to the Drakor page when the node depletes/ the pattern completes?<br/>").insertBefore(displayArea);
     var historyCheckbox = $(document.createElement("input")).attr({ id: "history", type: "checkbox" }).on("click", function (event) {
         var log = JSON.parse(localStorage.getItem("localLog"));
