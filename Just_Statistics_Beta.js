@@ -9,7 +9,7 @@
 
 $(document).ready(function () {
     var version = "v1.81";
-    var last_change = "2016-11-08";
+    var last_change = "2016-11-09";
     console.log("You're currently using Just Statistics version " + version + "\nThis version was last edited no the " + last_change);
     //Variable declaration; getting the data out of local storage
     var log;
