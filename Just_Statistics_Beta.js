@@ -86,68 +86,65 @@ $(document).ready(function () {
                 } //If tradeskill is not present in log create it
                 console.log("XHR-Responsetext:\n" + xhr.responseText);
                 if (!xhr.responseText.match(/depleted/i)) {
-                    // var regex = /<div class="roundResult areaName">(.*?exp\)?<\/span><\/div>)/gi;
-                    // var result = regex.exec(xhr.responseText); //Basic regex to get only the necessary data.
-                    var result = xhr.responseText.match(/<div class="roundResult areaName">.*?exp\s*\)?<\/span><\/div>/gi);
-                    //Attention, creating skills will confuse this because not every creation gives exp, but rather a full attempt will.
-                    //Will need to add a different kind of splitting here so the pattern-processing works correctly (ProcessData)
-                    if (result) { //This will always say true UNLESS you worked in another window thus the result will be empty -> no log entry will be made
-                        if (result.length === 1) {
-                            console.log("Processing..\n" + result[0]);
-                            result = result[0].match(/^<div.*?>(.*?exp\)?<\/span>)<\/div>/i)[1];
-                            result = result.replace(/<script>.*?<\/script>/, "");
-                            console.log("Processed..\n" + result);
-                            log = ProcessData(log, xhr.responseText, result, tradeskill);
-                        }
-                        else {
-                            for (var i = 0; i < result.length; i++) {
-                                console.log("Processing..\n" + result[i]);
-                                result = result[i].match(/^<div.*?>(.*?<\/span>)<\/div>/i)[1];
+                    try {
+                        // var regex = /<div class="roundResult areaName">(.*?exp\)?<\/span><\/div>)/gi;
+                        // var result = regex.exec(xhr.responseText); //Basic regex to get only the necessary data.
+                        var result = xhr.responseText.match(/<div class="roundResult areaName">.*?exp\s*\)?<\/span><\/div>/gi);
+                        //Attention, creating skills will confuse this because not every creation gives exp, but rather a full attempt will.
+                        //Will need to add a different kind of splitting here so the pattern-processing works correctly (ProcessData)
+                        if (result) { //This will always say true UNLESS you worked in another window thus the result will be empty -> no log entry will be made
+                            if (result.length === 1) {
+                                console.log("Processing..\n" + result[0]);
+                                result = result[0].match(/^<div.*?>(.*?exp\s*\)?<\/span>)<\/div>/i)[1];
                                 result = result.replace(/<script>.*?<\/script>/, "");
                                 console.log("Processed..\n" + result);
-                                log = ProcessData(log, xhr.responseText, result[i], tradeskill);
+                                log = ProcessData(log, xhr.responseText, result, tradeskill);
                             }
-                        }
-                        log.Misc.Attempts.Total++;
-                        log.Misc.Attempts.Node = $(".roundResult").length;
-                        //Drop analysis done, let's start with the rest
-                        var scripts = xhr.responseText.match(/<script>(.*?)<\/script>/g);
-                        var miscData = scripts[scripts.length - 1];
-                        var currentExp = miscData.match(/\(\'exp\:\s*(.*?)\s\//mi)[1].replace(",", "");
-                        var neededExp = miscData.match(/\(\'exp\:\s*.*?\/\s*(.*?)\s\(/mi)[1].replace(",", "");
-                        var attemptTime;
-                        if (!settings.url.match(/Disenchanting/i)) {
-                            attemptTime = miscData.match(/startTimer\((\d+),*/mi)[1];
-                            if (attemptTime < 5000) { attemptTime = 60000; } //Node depleted
-                        }
-                        else {
-                            attemptTime = 0;
-                        }
-                        //Calculate the needed attempts to next level and update div text in the dialog
-                        GetAttemptsToNextLevel(currentExp, neededExp, attemptTime, log[tradeskill].Experience, log[tradeskill].Attempts);
-                        //Titlechanging data
-                        var buffrarity = xhr.responseText.match(/dricon\scard(\w+)\sslot_default/i);
-                        if (buffrarity[1] !== 'None') { buffActive = true; }
-                        if (xhr.responseText.match(/\d+%\sof/gi)) {
-                            titleData = xhr.responseText.match(/(\d+)%\sof/i)[1] + "% of Node left";
-                        }
-                        else if (xhr.responseText.match(/x\d+\.\.\./)) {
-                            titleData = xhr.responseText.match(/x(\d+)\.\.\./)[1] + " attempts left";
-                        }
-                        else {
-                            titleData = "Creation done!";
-                            actionStatus = "alert";
-                        }
-                        DisplayData(log);                   //Rarity-, Multi- and Materialoverview
-                        try { //If the localstorage space is used up, this won't work
-                            localStorage.setItem("localLog", JSON.stringify(log));
-                            $(showLog).text("Show Log");
-                        }
-                        catch (e) {
-                            if (!$(showLog).text().match(/!/)) {//Add an exclamation mark to the show log button to notify the user the saving went bad
-                                $(showLog).text($(showLog.text() + " (!!!)"));
+                            else {
+                                for (var i = 0; i < result.length; i++) {
+                                    console.log("Processing..\n" + result[i]);
+                                    result = result[i].match(/^<div.*?>(.*?<\/span>)<\/div>/i)[1];
+                                    result = result.replace(/<script>.*?<\/script>/, "");
+                                    console.log("Processed..\n" + result);
+                                    log = ProcessData(log, xhr.responseText, result[i], tradeskill);
+                                }
                             }
+                            log.Misc.Attempts.Total++;
+                            log.Misc.Attempts.Node = $(".roundResult").length;
+                            //Drop analysis done, let's start with the rest
+                            var scripts = xhr.responseText.match(/<script>(.*?)<\/script>/g);
+                            var miscData = scripts[scripts.length - 1];
+                            var currentExp = miscData.match(/\(\'exp\:\s*(.*?)\s\//mi)[1].replace(",", "");
+                            var neededExp = miscData.match(/\(\'exp\:\s*.*?\/\s*(.*?)\s\(/mi)[1].replace(",", "");
+                            var attemptTime;
+                            if (!settings.url.match(/Disenchanting/i)) {
+                                attemptTime = miscData.match(/startTimer\((\d+),*/mi)[1];
+                                if (attemptTime < 5000) { attemptTime = 60000; } //Node depleted
+                            }
+                            else {
+                                attemptTime = 0;
+                            }
+                            //Calculate the needed attempts to next level and update div text in the dialog
+                            GetAttemptsToNextLevel(currentExp, neededExp, attemptTime, log[tradeskill].Experience, log[tradeskill].Attempts);
+                            //Titlechanging data
+                            var buffrarity = xhr.responseText.match(/dricon\scard(\w+)\sslot_default/i);
+                            if (buffrarity[1] !== 'None') { buffActive = true; }
+                            if (xhr.responseText.match(/\d+%\sof/gi)) {
+                                titleData = xhr.responseText.match(/(\d+)%\sof/i)[1] + "% of Node left";
+                            }
+                            else if (xhr.responseText.match(/x\d+\.\.\./)) {
+                                titleData = xhr.responseText.match(/x(\d+)\.\.\./)[1] + " attempts left";
+                            }
+                            else {
+                                titleData = "Creation done!";
+                                actionStatus = "alert";
+                            }
+                            DisplayData(log);                   //Rarity-, Multi- and Materialoverview
                         }
+                    }
+                    catch (e) {
+                        console.log("Why do you do this to me..\n" + e.message);
+                        console.log(e);
                     }
                 }
                 else {
@@ -155,6 +152,15 @@ $(document).ready(function () {
                     actionStatus = "alert";
                 }
                 ChangeTitle(titleData, buffActive, actionStatus);   //Change the title according to current status
+                try { //If the localstorage space is used up, this won't work
+                    localStorage.setItem("localLog", JSON.stringify(log));
+                    $(showLog).text("Show Log");
+                }
+                catch (e) {
+                    if (!$(showLog).text().match(/!/)) {//Add an exclamation mark to the show log button to notify the user the saving went bad
+                        $(showLog).text($(showLog.text() + " (!!!)"));
+                    }
+                }
             }
         }
     });
