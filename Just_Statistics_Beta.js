@@ -8,8 +8,8 @@
 // ==/UserScript==
 
 $(document).ready(function () {
-    var version = "v1.81";
-    var last_change = "2016-11-09";
+    var version = "v1.82";
+    var last_change = "2016-11-13";
     console.log("You're currently using Just Statistics version " + version + "\nThis version was last edited no the " + last_change);
     //Variable declaration; getting the data out of local storage
     var log;
@@ -461,7 +461,10 @@ function DisplayData(log) {
             }
             materialText += tradeskillTitle;
             for (var item in log[tradeskill].Items) { //Iterate over dropped items
-                materialText += "<p>" + item + " x" + log[tradeskill].Items[item].Amount + " (Average gained per attempt: " + (log[tradeskill].Items[item].Amount / log[tradeskill].Items[item].Drop).toFixed(2) + ")</p>";
+                materialText += "<p>" + item + " x" + log[tradeskill].Items[item].Amount + " (Average: " +
+                    (log[tradeskill].Items[item].Amount / log[tradeskill].Items[item].Drop).toFixed(2) +
+                    " | Raw Drops/Creations: " + log[tradeskill].Items[item].Drop + "/" + log[tradeskill].Attempts +
+                    " [" + (log[tradeskill].Items[item].Drop / log[tradeskill].Attempts * 100).toFixed(2) + " %])</p>";
                 totalResources += Number(log[tradeskill].Items[item].Amount);
             }
             multiText += tradeskillTitle;
