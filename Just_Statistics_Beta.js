@@ -14,7 +14,7 @@ String.prototype.paddingLeft = function(paddingValue){
     return String(paddingValue + this).slice(-paddingValue.length);
 }
 $(document).ready(function () {
-    var version = "v1.83";
+    var version = "v1.84";
     var last_change = "2016-11-19";
     console.log("You're currently using Just Statistics version " + version + "\nThis version was last edited on the " + last_change);
     //Variable declaration; getting the data out of local storage
