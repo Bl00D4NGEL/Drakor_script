@@ -38,12 +38,14 @@ $(document).ready(function () {
     log.Misc.Last_Change = last_change;
     //Load the Graph script EVEN IF the site is https.
     //Can load the chart stuff because it is https.. yay
-    if location.protocol == "http:"
+    if (location.protocol == "http:") {
         $("head").append("<script src='http://www.jchartfx.com/libs/v7/current/js/jchartfx.system.js'><\/script>");
         $("head").append("<script src='http://www.jchartfx.com/libs/v7/current/js/jchartfx.coreVector.js'><\/script>");
-    else if location.protocol == "https:"
+    }
+    else if (location.protocol == "https:") {
         $("head").append("<script src='https://rawgit.com/softwarefx/jChartFX/master/js/jchartfx.system.js'><\/script>");
         $("head").append("<script src='https://rawgit.com/softwarefx/jChartFX/master/js/jchartfx.coreVector.js'><\/script>");
+    }
     localStorage.setItem("localLog", JSON.stringify(log));
     //Add the "button" to the menu bar
     var showLog = $(document.createElement("a")).attr({ id: "hrefShowLog", class: "gs_topmenu_item" }).text("Show Log").on("click", function () { $(logDiv).dialog("open"); }).appendTo("#gs_topmenu");
