@@ -1,16 +1,22 @@
 // ==UserScript==
-// @name         Just statistics v1.81
-// @version      1.81
+// @name         Just statistics v1.83
+// @version      1.83
 // @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more...)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com*
 // @match        https://*.drakor.com*
 // ==/UserScript==
 
+/*
+New feature (Node data) still need to be tested on pattern skills (e.g. ring crafting) and Treasure Hunting
+*/
+String.prototype.paddingLeft = function (paddingValue) {
+    return String(paddingValue + this).slice(-paddingValue.length);
+}
 $(document).ready(function () {
-    var version = "v1.82";
-    var last_change = "2016-11-13";
-    console.log("You're currently using Just Statistics version " + version + "\nThis version was last edited no the " + last_change);
+    var version = "v1.83";
+    var last_change = "2016-11-19";
+    console.log("You're currently using Just Statistics version " + version + "\nThis version was last edited on the " + last_change);
     //Variable declaration; getting the data out of local storage
     var log;
     if (!localStorage.getItem("localLog")) {
@@ -28,6 +34,8 @@ $(document).ready(function () {
             log = Create_Log_Object();
         }
     }
+    log.Misc.Version = "Just Statistics version " + version;
+    log.Misc.Last_Change = last_change;
     //Load the Graph script IF the site is not https.
     //Can not load the chart stuff because it is not https.. too bad
     if (document.baseURI.match(/https/)) {
@@ -37,6 +45,7 @@ $(document).ready(function () {
         $("head").append("<script src='http://www.jchartfx.com/libs/v7/current/js/jchartfx.system.js'><\/script>");
         $("head").append("<script src='http://www.jchartfx.com/libs/v7/current/js/jchartfx.coreVector.js'><\/script>");
     }
+    localStorage.setItem("localLog", JSON.stringify(log));
     //Add the "button" to the menu bar
     var showLog = $(document.createElement("a")).attr({ id: "hrefShowLog", class: "gs_topmenu_item" }).text("Show Log").on("click", function () { $(logDiv).dialog("open"); }).appendTo("#gs_topmenu");
     $(document).ajaxComplete(function (event, xhr, settings) {
@@ -47,7 +56,9 @@ $(document).ready(function () {
                 var tradeskill = settings.url.match(/action_([a-zA-Z]+).*?\//)[1];
                 if (tradeskill === "teleport") { console.log("You teleported.. that's no tradeskill!"); return; }
                 tradeskill = tradeskill.toLowerCase();
-                $.ajax("/armory_action/" + tradeskill + "?show=noheader").done(function (data) {
+                var ladder_tradeskill = tradeskill;
+                if (tradeskill.match(/Researching/i)) { ladder_tradeskill = 'research'; }
+                $.ajax("/armory_action/" + ladder_tradeskill + "?show=noheader").done(function (data) {
                     try {
                         var currentRank = data.match(/leadResult active.*?#(\d+)<\/span>/i)[1];
                         if (!$("#skillLevel").html().match(/#/)) { //First Time
@@ -78,6 +89,7 @@ $(document).ready(function () {
                     }
                     log[tradeskill].Items = {};
                     log[tradeskill].Multi = {};
+                    log[tradeskill].Node = {};
                     log[tradeskill].Attempts = 0;
                     log[tradeskill].Indexes = "";
                     log[tradeskill].Experience = 0;
@@ -91,14 +103,25 @@ $(document).ready(function () {
                         // var result = regex.exec(xhr.responseText); //Basic regex to get only the necessary data.
                         var result = xhr.responseText.match(/<div class="roundResult areaName">.*?exp\s*\)?<\/span><\/div>/gi);
                         //Attention, creating skills will confuse this because not every creation gives exp, but rather a full attempt will.
-                        //Will need to add a different kind of splitting here so the pattern-processing works correctly (ProcessData)
                         if (result) { //This will always say true UNLESS you worked in another window thus the result will be empty -> no log entry will be made
+                            var nodeId = xhr.responseText.match(/starttimer\(.*?action_.*?-(.*?)-/i);
+                            // if(nodeId){console.log("Node-Id is: " + nodeId[1]);}
+                            var nodeName = $(".locationTitle").text();
+                            //Attention! If the node is a settlement node, the level-range can be adjusted. Same goes for TH => adjust node level range to currently selected level range
+                            if (nodeName.match(/settlement|treasure/i)) {
+                                console.log("You're working on a Settlement node or a TH node!");
+                                nodeName = nodeName.match(/(.*?)\(/)[1]; //Only the text is what we want for the log.
+                                var selectLevelFrom = $("#minRange").val();;
+                                var selectLevelTo = $("#maxRange").val();;
+                                nodeName += "(Node Level " + selectLevelFrom + " - " + selectLevelTo + ")";
+                                console.log("Changed node-name to: " + nodeName);
+                            }
                             if (result.length === 1) {
                                 console.log("Processing..\n" + result[0]);
                                 result = result[0].match(/^<div.*?>(.*?exp\s*\)?<\/span>)<\/div>/i)[1];
                                 result = result.replace(/<script>.*?<\/script>/, "");
                                 console.log("Processed..\n" + result);
-                                log = ProcessData(log, xhr.responseText, result, tradeskill);
+                                log = ProcessData(log, xhr.responseText, result, tradeskill, nodeName);
                             }
                             else {
                                 for (var i = 0; i < result.length; i++) {
@@ -106,7 +129,7 @@ $(document).ready(function () {
                                     result = result[i].match(/^<div.*?>(.*?<\/span>)<\/div>/i)[1];
                                     result = result.replace(/<script>.*?<\/script>/, "");
                                     console.log("Processed..\n" + result);
-                                    log = ProcessData(log, xhr.responseText, result[i], tradeskill);
+                                    log = ProcessData(log, xhr.responseText, result[i], tradeskill, nodeName);
                                 }
                             }
                             log.Misc.Attempts.Total++;
@@ -167,13 +190,13 @@ $(document).ready(function () {
     SetupLog();
 });
 
-function ProcessData(log, responseText, history, tradeskill) {
+function ProcessData(log, responseText, history, tradeskill, nodeName) {
     try {
         history = history.replace(/<script>(.*?)<\/script>/, "");
 
         var log_history = history;
         log_history = log_history.replace(/<\/?.*?>/g, "");
-        var item, amount, exp, gold;
+        var item, amount, multi, exp, gold, rarity;
         try {
             exp = history.match(/>(\d+)\s*exp/mi)[1];
         }
@@ -209,68 +232,46 @@ function ProcessData(log, responseText, history, tradeskill) {
             log[tradeskill][key].Experience = 0;
             log[tradeskill][key].Attempts = 0;
         }
+        if (!log[tradeskill].Node[nodeName]) {
+            console.log(nodeName + " is a new node and will be added to the object");
+            log[tradeskill].Node[nodeName] = {};
+            log[tradeskill].Node[nodeName].Items = {};
+            log[tradeskill].Node[nodeName].Rarity = {};
+            var rarities = ['Nothing', 'Common', 'Superior', 'Rare', 'Epic', 'Legendary'];
+            for (var i = 0; i < rarities.length; i++) { log[tradeskill].Node[nodeName].Rarity[rarities[i]] = 0; }
+            log[tradeskill].Node[nodeName].Misc = {};
+            log[tradeskill].Node[nodeName].Misc.Experience = 0;
+            log[tradeskill].Node[nodeName].Misc.Attempts = 0;
+            console.log(log[tradeskill].Node[nodeName]);
+        }
         log[tradeskill].Attempts++;
-        log[tradeskill][key].Attempts++;
+        log[tradeskill].Node[nodeName].Misc.Attempts++;
         if ($("#history").prop('checked')) {
             log.Misc.Log[log.Misc.Index] = logDate + log_history; //Add the log to the Object via index
             log[tradeskill].Indexes += log.Misc.Index + "|";
+            log.Misc.Index++; //Add 1 to the index for the next attempt.
         }
         if (history.match(/anything/i)) { //Nothing-drop
             console.log("You did not find anything.. to bad");
             log[tradeskill].Rarity.Nothing++;
-            if (!log[tradeskill].Multi['0 (Nothing)']) {//Multicounter
-                log[tradeskill].Multi['0 (Nothing)'] = {};
-                log[tradeskill].Multi['0 (Nothing)'].Amount = 1;
-            }
-            else {
-                log[tradeskill].Multi['0 (Nothing)'].Amount++;
-            }
-            //exp = history.match(/>(\d+)\s*exp</mi)[1];
-            log[tradeskill][key].Experience += Number(exp);
+            log[tradeskill].Node[nodeName].Rarity.Nothing++;
+            multi = 0;
+            amount = 1; //I dropped ONE item whose name is NOTHING
+            item = "Nothing";
+            rarity = "Nothing";
         }
         else {
             if (history.match(/clink/mi)) { //Creation of clickable items with variating rarities!
                 try {
-                    //Let's first check how many items were created
-                    // console.log("HANDS WHERE I CAN SEE THEM!");
-                    var createdItem = responseText.match(/\[(.*?)\]/)[1]; //To get the PATTERN name, not the created items name
-                    // console.log("You created the following item: '" + createdItem + "'\nIs that correct?");
-                    var createdRarities = history.match(/card(\w+)\sclink/ig);
-                    var createdAmount = Number(createdRarities.length);
-                    // console.log("You created " + createdAmount + " items with this attempt, am I onto something?");
-                    // console.log("The items that were created had the following rarities:");
-                    for (var i = 0; i < createdRarities.length; i++) { //Write the data into the log object and you should be done
-                        var dummy_rarity = createdRarities[i].match(/card(\w+)\s/)[1];
+                    //Let's first check what and how many items were created
+                    item = responseText.match(/\[(.*?)\]/)[1]; //To get the PATTERN name, not the created items name
+                    rarity = history.match(/card(\w+)\sclink/ig);
+                    amount = Number(rarity.length);
+                    for (var i = 0; i < rarity.length; i++) { //Write the data into the log object and you should be done
+                        var dummy_rarity = rarity[i].match(/card(\w+)\s/)[1];
                         log[tradeskill][dummy_rarity]++;
-                        console.log(dummy_rarity);
-                    }
-                    // console.log("Is that correct?");
-                    if (!log[tradeskill][createdItem]) {
-                        // console.log("You created something(" + createdItem + ") not known to human kind (Or rather this log)");
-                        log[tradeskill].Items[createdItem] = {};
-                        log[tradeskill].Items[createdItem].Drop = 1;
-                        log[tradeskill].Items[createdItem].Amount = createdAmount;
-
-                        if ($("#history").prop('checked')) {
-                            log[tradeskill].Items[createdItem].Index = log.Misc.Index + "|";
-                        }
-                    }
-                    else {
-                        log[tradeskill].Items[createdItem].Drop++;
-                        log[tradeskill].Items[createdItem].Amount += createdAmount;
-
-                        if ($("#history").prop('checked')) {
-                            log[tradeskill].Items[createdItem].Index += log.Misc.Index + "|";
-                        }
-                    }
-                    // console.log("And finally, here take that object and show it to someone or something");
-                    // console.log(log[tradeskill][createdItem]);
-                    if (!log[tradeskill].Multi[createdAmount]) {
-                        log[tradeskill].Multi[createdAmount] = {};
-                        log[tradeskill].Multi[createdAmount].Amount = 1;
-                    }
-                    else {
-                        log[tradeskill].Multi[createdAmount].Amount++;
+                        log[tradeskill].Node[nodeName].Rarity[dummy_rarity]++;
+                        console.log("Crafted rarity: " + dummy_rarity);
                     }
                 }
                 catch (e) {
@@ -278,54 +279,67 @@ function ProcessData(log, responseText, history, tradeskill) {
                 }
             }
             else {
-                var rarity = history.match(/class=\"(\w+)\s?viewmat\">/mi)[1];
+                rarity = history.match(/class=\"(\w+)\s?viewmat\">/mi)[1];
                 log[tradeskill].Rarity[rarity]++;
+                log[tradeskill].Node[nodeName].Rarity[rarity]++;
                 item = history.match(/\[.*?\].*\[(.*?)\]/)[1];
                 amount = history.match(/<\/span>\s*x(\d+)/)[1];
-                if (!log[tradeskill].Multi[amount]) {//Multicounter
-                    log[tradeskill].Multi[amount] = {};
-                    log[tradeskill].Multi[amount].Amount = 1;
-                }
-                else {
-                    log[tradeskill].Multi[amount].Amount++;
-                }
-                if (!log[tradeskill].Items[item]) { //Itemcounter
-                    log[tradeskill].Items[item] = {};
-                    log[tradeskill].Items[item].Drop = 1;
-                    log[tradeskill].Items[item].Amount = Number(amount);
-
-                    if ($("#history").prop('checked')) {
-                        log[tradeskill].Items[item].Indexes = log.Misc.Index + "|";
-                    }
-                    console.log("First time!!\nItem: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
-                }
-                else {
-                    log[tradeskill].Items[item].Drop++;
-                    log[tradeskill].Items[item].Amount += Number(amount);
-
-                    if ($("#history").prop('checked')) {
-                        log[tradeskill].Items[item].Indexes += log.Misc.Index + "|";
-                    }
-                    console.log("Item: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
-                }
             }
-            log[tradeskill][key].Amount += Number(amount);
-            log[tradeskill][key].Experience += Number(exp);
+            multi = amount;
+        }
+        log[tradeskill][key].Attempts++;
+        log[tradeskill][key].Amount += Number(amount);
+        log[tradeskill][key].Experience += Number(exp);
+        if (!log[tradeskill].Multi[multi]) {//Multicounter
+            log[tradeskill].Multi[multi] = {};
+            log[tradeskill].Multi[multi].Amount = 1;
+        }
+        else {
+            log[tradeskill].Multi[multi].Amount++;
+        }
+        if (!log[tradeskill].Items[item]) { //Itemcounter
+            log[tradeskill].Items[item] = {};
+            log[tradeskill].Items[item].Drop = 1;
+            log[tradeskill].Items[item].Amount = Number(amount);
+            if ($("#history").prop('checked')) {
+                log[tradeskill].Items[item].Indexes = log.Misc.Index + "|";
+            }
+            console.log("First time!!\nItem: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
+        }
+        else {
+            log[tradeskill].Items[item].Drop++;
+            log[tradeskill].Items[item].Amount += Number(amount);
+
+            if ($("#history").prop('checked')) {
+                log[tradeskill].Items[item].Indexes += log.Misc.Index + "|";
+            }
+            console.log("Item: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
+        }
+        if (!log[tradeskill].Items[item].Rarity) { //If rarity hasn't been set yet (Older versions did not have this)
+            log[tradeskill].Items[item].Rarity = rarity; //This will take the last-generated rarity on this function (Pattern that create different rarities *will* bug on this.
+        }
+        if (!log[tradeskill].Node[nodeName].Items[item]) {
+            log[tradeskill].Node[nodeName].Items[item] = {};
+            log[tradeskill].Node[nodeName].Items[item].Attempts = 1;
+            log[tradeskill].Node[nodeName].Items[item].Rarity = rarity; //This will take the last-generated rarity on this function (Pattern that create different rarities *will* bug on this.
+
+        }
+        else {
+            log[tradeskill].Node[nodeName].Items[item].Attempts++;
         }
         gold = history.match(/\(\+([0-9,]+)\s*gold/i);
         if (!gold) { gold = 0; }
         else { gold = gold[1].replace(",", ""); log.Misc.GoldIndexes += log.Misc.Index + "|"; }
-        if ($("#history").prop('checked')) {
-            log.Misc.Index++; //Add 1 to the index for the next attempt.
-        }
         log.Misc.TotalExp += Number(exp);
         log[tradeskill].Experience += Number(exp);
+        log[tradeskill].Node[nodeName].Misc.Experience += Number(exp);
         log.Misc.Gold += Number(gold);
         return log;
     }
     catch (e) {
-        console.log("Oops, something went wrong when trying to process the data.. Message: " + e.message + "\nException:");
+        console.log("Oops, something went wrong when trying to process the data in the ProcessData function.. Message: " + e.message + "\nException:");
         console.log(e);
+        return log;
     }
 }
 
@@ -407,9 +421,8 @@ function GetAttemptsToNextLevel(currentExp, neededExp, attemptTime, totalExp, to
     var attemptsToLevel = Math.floor(diffExp / averageExperience);
     var timeToLevel = attemptsToLevel * attemptTime; //In Milliseconds
     var stringTimeToLevel = ConvertIntoSmallerTimeFormat(timeToLevel); //Convert into String like "2 days 12 hours"
-    $("#miscDiv").html("<p>Experience left to level-up: <b>" + diffExp + "</b><br/>Average attempts to level-up: " + attemptsToLevel +
-                       "<br/>This takes about <b>" + stringTimeToLevel + "</b> on this node</p>");
-    localStorage.setItem("miscDivText", $("#miscDiv").html());
+    localStorage.setItem("expText", "<p>Experience left to level-up: <b>" + diffExp + "</b><br/>Average attempts to level-up: " + attemptsToLevel +
+                         "<br/>This takes about <b>" + stringTimeToLevel + "</b> on this node</p>");
 }
 
 function ExportDataWithoutHistory() {
@@ -429,6 +442,9 @@ function ExportDataWithoutHistory() {
     return log;
 }
 
+function GetPercent(val1, val2) {
+    return (val1 / val2 * 100).toFixed(2);
+}
 function DisplayData(log) {
     var colorDict = {
         "Nothing": "#0aa",
@@ -443,10 +459,11 @@ function DisplayData(log) {
     var rarityText = "<p><b>Rarities collected</b></p>";
     var materialText = "<p><b>You have collected..</b></p>";
     var multiText = materialText;
+    var nodeText = "";
     var averageGold = Math.floor(log.Misc.Gold / totalAttempts);
     var averageExperience = Math.floor(log.Misc.TotalExp / totalAttempts);
     var averageResources = (totalResources / totalAttempts).toFixed(2);
-    var miscOutput = "<p>You have gained " + log.Misc.TotalExp + " total experience(" + averageExperience + " average experience)</p><p>You have collected " +
+    var miscOutput = "<h4>" + log.Misc.Version + " last updated on " + log.Misc.Last_Change + "</h4><p>You have gained " + log.Misc.TotalExp + " total experience(" + averageExperience + " average experience)</p><p>You have collected " +
         log.Misc.Gold + " total gold(" + averageGold + " average gold)</p><p>Attempts/Creations on this node/pattern: " +
         log.Misc.Attempts.Node + "</p><p>Total collection attempts/creations: " + totalAttempts + "</p>";
     for (var tradeskill in log) { //Iterate over tradeskills
@@ -456,23 +473,55 @@ function DisplayData(log) {
             rarityText += tradeskillTitle;
             for (var rarity in colorDict) {
                 if (log[tradeskill].Rarity[rarity]) {
-                    rarityText += "<p style='color:" + colorDict[rarity] + ";'>" + rarity + ": " + log[tradeskill].Rarity[rarity] + " (" + (log[tradeskill].Rarity[rarity] / log[tradeskill].Attempts * 100).toFixed(2) + "%)</p>";
+                    var percent = GetPercent(log[tradeskill].Rarity[rarity], log[tradeskill].Attempts);
+                    if (percent < 100) { percent = percent.paddingLeft(Array(6).join('0')); }
+                    rarityText += "<pre style='color:" + colorDict[rarity] + ";'>" +
+                        (rarity + ": " + log[tradeskill].Rarity[rarity] + "/" + log[tradeskill].Attempts +
+                         " (" + percent + "%)</pre>").paddingLeft(Array(48).join(' '));
                 }
             }
             materialText += tradeskillTitle;
             for (var item in log[tradeskill].Items) { //Iterate over dropped items
-                materialText += "<p>" + item + " x" + log[tradeskill].Items[item].Amount + " (Average: " +
-                    (log[tradeskill].Items[item].Amount / log[tradeskill].Items[item].Drop).toFixed(2) +
+                var itemString = item + " x" + log[tradeskill].Items[item].Amount;
+                itemString = itemString.paddingLeft(Array(32).join(' '));
+                var percent = GetPercent(log[tradeskill].Items[item].Drop, log[tradeskill].Attempts);
+                if (percent < 100) { percent = percent.paddingLeft(Array(6).join('0')); }
+                itemString += " (Average: " + (log[tradeskill].Items[item].Amount / log[tradeskill].Items[item].Drop).toFixed(2) +
                     " | Raw Drops/Creations: " + log[tradeskill].Items[item].Drop + "/" + log[tradeskill].Attempts +
-                    " [" + (log[tradeskill].Items[item].Drop / log[tradeskill].Attempts * 100).toFixed(2) + " %])</p>";
+                    " [" + percent + " %])</pre>";
+                materialText += "<pre style='color:" + colorDict[log[tradeskill].Items[item].Rarity] + "';>" + itemString;
                 totalResources += Number(log[tradeskill].Items[item].Amount);
             }
             multiText += tradeskillTitle;
             for (var multi in log[tradeskill].Multi) { //Iterate over multis
-                multiText += "<p>Multi: " + multi + " Gotten: " + log[tradeskill].Multi[multi].Amount + " time(s). (" + (log[tradeskill].Multi[multi].Amount / log[tradeskill].Attempts * 100).toFixed(2) + "%)</p>";
+                var percent = GetPercent(log[tradeskill].Multi[multi].Amount, log[tradeskill].Attempts);
+                if (percent < 100) { percent = percent.paddingLeft(Array(6).join('0')); }
+                multiText += "<pre>" + ("Multi: " + multi + " Gotten: " + log[tradeskill].Multi[multi].Amount + "/" + log[tradeskill].Attempts +
+                                        " time(s). (" + percent + "%)</pre>").paddingLeft(Array(48).join(' '));;
             }
             miscOutput += tradeskillTitle;
             miscOutput += "<p>Total Experience: " + log[tradeskill].Experience + " (" + Math.floor(log[tradeskill].Experience / log[tradeskill].Attempts) + " average Experience)<br/>Total Attempts: " + log[tradeskill].Attempts + "</p>";
+            for (var node in log[tradeskill].Node) {
+                nodeText += "<h3>" + node + "</h3><p>You gained " + log[tradeskill].Node[node].Misc.Experience +
+                    " experience and performed a total of " + log[tradeskill].Node[node].Misc.Attempts + " attempts on this node.</p><h4>Items</h4>";
+                for (var item in log[tradeskill].Node[node].Items) {
+                    var percent = GetPercent(log[tradeskill].Node[node].Items[item].Attempts, log[tradeskill].Node[node].Misc.Attempts);
+                    if (percent < 100) { percent = percent.paddingLeft(Array(6).join('0')); }
+                    nodeText += "<pre style='color:" + colorDict[log[tradeskill].Node[node].Items[item].Rarity] + ";'>" +
+                        (item + " => " + log[tradeskill].Node[node].Items[item].Attempts + "/" + log[tradeskill].Node[node].Misc.Attempts +
+                         " (" + percent + "%)</pre>").paddingLeft(Array(48).join(' '));
+                }
+                nodeText += "<h4>Rarity</h4>";
+                for (var rarity in log[tradeskill].Node[node].Rarity) {
+                    if (log[tradeskill].Node[node].Rarity[rarity]) {
+                        var percent = GetPercent(log[tradeskill].Node[node].Rarity[rarity], log[tradeskill].Node[node].Misc.Attempts);
+                        if (percent < 100) { percent = percent.paddingLeft(Array(6).join('0')); }
+                        nodeText += "<pre style='color:" + colorDict[rarity] + ";'>" +
+                            (rarity + ": " + log[tradeskill].Node[node].Rarity[rarity] + "/" + log[tradeskill].Node[node].Misc.Attempts +
+                             " (" + percent + "%)</pre>").paddingLeft(Array(48).join(' '));
+                    }
+                }
+            }
         }
     }
     $("#rarityDiv").html(rarityText);
@@ -481,8 +530,10 @@ function DisplayData(log) {
     localStorage.setItem("materialDivText", $("#materialDiv").html());
     $("#multiDiv").html(multiText);
     localStorage.setItem("multiDivText", $("#multiDiv").html());
-    $("#miscDiv").html($("#miscDiv").html() + miscOutput); //Add the previous text there because of exp information.
+    $("#miscDiv").html(localStorage.getItem("expText") + miscOutput); //Add the previous text there because of exp information.
     localStorage.setItem("miscDivText", $("#miscDiv").html());
+    $("#nodeDiv").html(nodeText);
+    localStorage.setItem("nodeDivText", $("#nodeDiv").html());
 }
 /*
 timeInMs gets calculated down to hours, minutes and seconds and gets output as a string
@@ -631,20 +682,24 @@ function SetupLog() {
     var tradeSelectRarityChart;
     var log = JSON.parse(localStorage.getItem("localLog"));
     var fragment = document.createDocumentFragment();
-    var logDiv = $(document.createElement("div")).attr({ id: "logDiv", title: "Drop Log" }).css({ "font-size": "14px", "background-color": "lightgrey", "display": "none" }).html('<ul><li><a href="#materialDiv">Drops/ Creations</a></li>' +
-        '<li><a href ="#multiDiv">Multis</a></li>' +
-        '<li><a href ="#miscDiv">Miscellaneous</a></li>' +
-        '<li><a href ="#rarityDiv">Rarites</a></li>' +
-        '<li><a href ="#optionDiv">Options</a></li>' +
-        '<li><a href ="#helpDiv">Help(WIP)</a></li>' +
-        '<li><a href ="#historyDiv">History</a></li>' +
-        '<li><a href ="#graphDiv">Graphs</a></li></ul>').appendTo(fragment);
+    var logDiv = $(document.createElement("div")).attr({ id: "logDiv", title: "Drop Log" })
+    .css({ "font-size": "14px", "background-color": "lightgrey", "display": "none" })
+    .html('<ul><li><a href="#materialDiv">Items</a></li>' +
+          '<li><a href ="#multiDiv">Multis</a></li>' +
+          '<li><a href ="#rarityDiv">Rarites</a></li>' +
+          '<li><a href ="#nodeDiv">Node data</a></li>' +
+          '<li><a href ="#miscDiv">Miscellaneous</a></li>' +
+          '<li><a href ="#optionDiv">Options</a></li>' +
+          '<li><a href ="#helpDiv">Help</a></li>' +
+          '<li><a href ="#historyDiv">History</a></li>' +
+          '<li><a href ="#graphDiv">Graphs</a></li></ul>').appendTo(fragment);
     var materialDiv = $(document.createElement("div")).attr({ "id": "materialDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("materialDivText")).appendTo(logDiv);
     // $(document.createElement("div")).attr({"id": "materialDivText"}).css({"text-align":"left", "display": "inherit"}).appendTo(materialDiv);
     var multiDiv = $(document.createElement("div")).attr({ "id": "multiDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("multiDivText")).appendTo(logDiv);
     // $(document.createElement("label")).attr({"id": "multiDivText"}).css({"text-align":"left", "display": "inherit"}).appendTo(multiDiv);
     var miscDiv = $(document.createElement("div")).attr({ "id": "miscDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("miscDivText")).appendTo(logDiv);
     var rarityDiv = $(document.createElement("div")).attr({ "id": "rarityDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("rarityDivText")).appendTo(logDiv);
+    var nodeDiv = $(document.createElement("div")).attr({ "id": "nodeDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("nodeDivText")).appendTo(logDiv);
     var optionsDiv = $(document.createElement("div")).attr({ "id": "optionDiv" }).css({ "text-align": "left", "display": "inherit" }).appendTo(logDiv);
     var displayArea = $(document.createElement("textarea")).attr({ id: "displayArea", autocomplete: "off", spellcheck: "false" }).css({ "width": "750px", "height": "200px", "display": "none" }).appendTo(optionsDiv);
     var helpDiv = $(document.createElement("div")).attr({ "id": "helpDiv" }).css({ "text-align": "left", "display": "inherit" }).html("<h5>Why are there three exclamation marks next to the \"Show Log\" button?</h5>" +
@@ -667,19 +722,10 @@ function SetupLog() {
     var graphDiv = $(document.createElement("div")).attr({ id: "graphDiv" }).css({ "text-align": "left", "display": "inherit" }).appendTo(logDiv);
     var graph_div = $(document.createElement("div")).attr({ id: "graph_div" }).css({ "width": "auto", "height": "400px", "text-align": "left", "display": "inherit" }).appendTo(graphDiv);
     if (!log.Misc.Https) { //It should only add the Graph stuff if it can even be loaded which can not be done if the connection is https.
-        var formDiv = $(document.createElement("div")).css("display", "none").insertBefore(graph_div);
+        var formDiv = $(document.createElement("div")).css("display", "block").insertBefore(graph_div);
         $(document.createElement("span")).text("Select a tradeskill").insertBefore(formDiv);
         var graphForm = $(document.createElement("form")).on("submit", function (e) { e.preventDefault(); }).appendTo(formDiv);
-        var tradeskillSelect = $(document.createElement("select")).on("change", function () {
-            if ($(this).val()) {
-                $(formDiv).css("display", "block");
-                $("#rarityButton").css("display", "initial");
-            }
-            else {
-                $(formDiv).css("display", "none");
-                $("#rarityButton").css("display", "none");
-            }
-        }).insertBefore(formDiv);
+        var tradeskillSelect = $(document.createElement("select")).insertBefore(formDiv);
         var rarityButton = $(document.createElement("button")).attr({ id: "rarityButton" }).css("display", "none").html("Rarities").on("click", function () {
             var jsonArray = [];
             for (var rarity in log[$(tradeskillSelect).val()].Rarity) {
@@ -691,7 +737,7 @@ function SetupLog() {
             DrawChart(jsonArray, "Rarities", "Pie");
         }).insertBefore(formDiv);
         for (var tradeskill in log) {
-            if (tradeskill === "Misc") { tradeskill = ""; }
+            if (tradeskill === "Misc") { continue; }
             $(document.createElement("option")).attr({ value: tradeskill }).text(tradeskill).appendTo(tradeskillSelect);
         }
         $(document.createElement("span")).html("Select the details you want to display<br/>").appendTo(graphForm);
@@ -801,6 +847,15 @@ function SetupLog() {
         $(importButton).text("Import data").val("import_1");
         // console.log(ExportDataWithoutHistory());
     }).insertBefore(displayArea);
+    var getNewestCodeButton = $(document.createElement("button")).attr({ id: "codeButton" }).html("Get newest code of this script").css({ "width": "auto", "height": "auto" }).on("click", function () {
+        var codeUrl = 'https://rawgit.com/Bl00D4NGEL/Drakor_script/master/Just_Statistics_Beta.js';
+        $.ajax(codeUrl, {
+            dataType: 'text', //To stop auto-executing the script that gets sent back
+            success: function (response) {
+                $(displayArea).css("display", "block").val(response);
+            }
+        });
+    }).insertBefore(displayArea);
     var resetLocal = $(document.createElement("button")).attr({ id: "resetLocal" }).html("Reset Localstorage").css({ "width": "auto", "height": "auto" }).on("click", function () {
         localStorage.clear();
     }).insertAfter(resetButton);
@@ -868,6 +923,7 @@ function SetupLog() {
         height: 550
     });
     $(fragment).appendTo("#gs_topmenu");
+    DisplayData(log); //Reload the logtexts
 }
 
 function ResetStatistics() {
