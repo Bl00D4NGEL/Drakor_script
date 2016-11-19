@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Just statistics v1.83
-// @version      1.83
+// @name         Just statistics v1.84
+// @version      1.84
 // @description  Collection/Creation log (Tracks drops/creates, multidrops/-creates, displays the different rarities that dropped and more...)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com*
