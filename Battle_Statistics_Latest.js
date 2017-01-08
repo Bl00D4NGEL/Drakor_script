@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Battle-statistics v1.51
-// @version      1.51
+// @name         Battle-statistics v1.511
+// @version      1.511
 // @description  Tracks statistics of battles (Arena and Node)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com*
@@ -9,7 +9,7 @@
 
 var debug = 0;
 $(document).ready(function () {
-	var version = "v1.5";
+	var version = "v1.511";
 	SetupLiveLog(); //Live-log-div setup under chat
 	LiveLog("You're currently using Battle Statistics version " + version);
 	CheckInventory(); //To load the durability data into the livelog
@@ -176,8 +176,6 @@ $(document).ready(function () {
 				}
 			});
 		}
-
-
 		else if(settings.url.match(/\/world\/disenchanting/i)){DisenchantSetup();} //Setup of the selects
 		else if(settings.url.match(/\/world\/action_disenchanting/i)){LiveLog("You disenchanted an item");SelectItemToDisenchant();} //Auto de on enter press
 		else if(settings.url.match(/(chat|sell|show|openloot|battle)/i)){}
@@ -431,6 +429,7 @@ function DisenchantSetup(){
 function SelectItemToDisenchant(){
 	var rarities =  ["Common", "Superior", "Rare", "Epic", "Legendary"];
 	var possibleItems = $(".roundResult.areaName").find(".cLink");
+	var itemToDE = undefined; // Set variable to undefined to reset the item this var contains
 	for(var i=0;i<possibleItems.length;i++){
 		var item = possibleItems[i];
 		var type = item.innerText.match(/(battle|enchant|augment)/i)[1];
@@ -439,10 +438,18 @@ function SelectItemToDisenchant(){
 		if($("#" + type + "-" + rarity).prop('checked')){ //New change
 			console.log("Item can be DE'd..");
 			console.log($(item));
-			AddEnterShortcut($(item).parents().children().get(0));
-			var span = $(document.createElement("span")).html("<br/>This item will be Disenchanted ").insertAfter($("#disenchantingTable"));
-			$(item).clone().appendTo(span);
-			return;
+			itemToDE = item;
+			i=possibleItems.length;
 		}
+	}
+
+	AddEnterShortcut($(itemToDE).parents().children().get(0));
+	var span = $(document.createElement("span")).insertAfter($("#disenchantingTable"));
+	if(itemToDE === undefined){
+		$(span).html("<br/>There is no item to be disenchanted");
+	}
+	else{
+		$(span).html("<br>This is will be disenchanted: ");
+		$(itemToDE).clone().appendTo(span);
 	}
 }
