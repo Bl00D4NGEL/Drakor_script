@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Battle-statistics v1.511
-// @version      1.511
+// @name         Battle-statistics v1.512
+// @version      1.512
 // @description  Tracks statistics of battles (Arena and Node)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com*
@@ -9,7 +9,7 @@
 
 var debug = 0;
 $(document).ready(function () {
-	var version = "v1.511";
+	var version = "v1.512";
 	SetupLiveLog(); //Live-log-div setup under chat
 	LiveLog("You're currently using Battle Statistics version " + version);
 	CheckInventory(); //To load the durability data into the livelog
@@ -267,13 +267,16 @@ function CheckInventory(){
 		}
 		var inventorySpaces = Number(data.match(/<div\sid=\"char_inventory".*?><div.*?b>([0-9,]+).*?<\/b>/)[1].replace(",",""));
 		var log = JSON.parse(localStorage.getItem("battleLog"));
+		if(debug > 0){
+			console.log("Inventory-spaces: " + inventorySpaces + "\nlog.CurrentLoot: " + log.CurrentLoot);
+		}
 		//Because sometimes the loot counter doesn't update let's do it here again
 		if($("#load-openloot").html().match(/(\d+)/)[1] === "0" && log.CurrentLoot > 0){
 			LiveLog("The Lootbag has been opened without being noticed");
 			log.CurrentLoot = 0;
 			localStorage.setItem("battleLog", JSON.stringify(log));
 		}
-		if(log.CurrentLoot >= inventorySpaces){
+		if(inventorySpaces === "0"){
 			alert("Not enough inventory space");
 		}
 		var duras = spellArea.match(/remaining durability\: (\d+)/gi);
@@ -283,7 +286,7 @@ function CheckInventory(){
 			if(dura < 10){dura = "<span style='color: red'><b>0" + dura + "</b></span>";}
 			output += dura + " | ";
 		}
-		output += '<br/>Inventory spaces left: ' + (inventorySpaces - log.CurrentLoot);
+		output += '<br/>Inventory spaces left: ' + inventorySpaces;
 		console.log("Updated durability div to " + output);
 		$("#durabilityDisplay").html(output);
 	});
