@@ -224,7 +224,7 @@ function GetAllPatterns(){
 					}
 					else{
 						console.log("ID: " + id + " is already bound to an object..\nName: " + name + "\nObject:");
-						conosle.log(object[id]);
+						console.log(object[id]);
 					}
 				}
 			});
