@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Battle-statistics v1.512
-// @version      1.512
+// @name         Battle-statistics v1.513
+// @version      1.513
 // @description  Tracks statistics of battles (Arena and Node)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com*
@@ -9,7 +9,7 @@
 
 var debug = 0;
 $(document).ready(function () {
-	var version = "v1.512";
+	var version = "v1.513";
 	SetupLiveLog(); //Live-log-div setup under chat
 	LiveLog("You're currently using Battle Statistics version " + version);
 	CheckInventory(); //To load the durability data into the livelog
@@ -415,15 +415,22 @@ function DisenchantSetup(){
 		$(td).appendTo(row);
 	}
 	var hideRow = $(document.createElement("td")).attr({'colspan': '2'}).css('text-align', 'center').html("Hide Drop-Downs").on("click", function(){
+		var log = JSON.parse(localStorage.getItem("battleLog"));
 		if($(this).html().match(/hide/i)){
 			$(".disenchantingSelect").css("display", "none");
 			$(this).html("Show Drop-Downs");
+			log.ShowDeingSelects = false;
 		}
 		else{
 			$(".disenchantingSelect").css("display", "table-row");
 			$(this).html("Hide Drop-Downs");
+			log.ShowDeingSelects = true;
 		}
+		localStorage.setItem("battleLog", JSON.stringy(log));
 	}).appendTo(table);
+	if(!log.ShowDeingSelects){
+		$(hideRow).html("Show Drop-Downs").css("display", "none");
+	}
 	localStorage.setItem("battleLog", JSON.stringify(log));
 	$(table).insertAfter("#slots-remaining");
 	$("td").css("vertical-align", "middle");
