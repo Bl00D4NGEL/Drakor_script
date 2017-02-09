@@ -429,7 +429,8 @@ function DisenchantSetup(){
 		localStorage.setItem("battleLog", JSON.stringy(log));
 	}).appendTo(table);
 	if(!log.ShowDeingSelects){
-		$(hideRow).html("Show Drop-Downs").css("display", "none");
+		$(hideRow).html("Show Drop-Downs");
+		$(".disenchantingSelect").css("display", "none");
 	}
 	localStorage.setItem("battleLog", JSON.stringify(log));
 	$(table).insertAfter("#slots-remaining");
