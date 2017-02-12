@@ -7,7 +7,7 @@
 // @match        https://*.drakor.com*
 // ==/UserScript==
 
-var debug = 0;
+var debug = 1;
 $(document).ready(function () {
 	var version = "v1.513";
 	SetupLiveLog(); //Live-log-div setup under chat
@@ -414,8 +414,11 @@ function DisenchantSetup(){
 		}
 		$(td).appendTo(row);
 	}
+	if(debug > 0)
+		LiveLog("D: Showing selects: " + log.ShowDeingSelects);
 	var hideRow = $(document.createElement("td")).attr({'colspan': '2'}).css('text-align', 'center').html("Hide Drop-Downs").on("click", function(){
 		var log = JSON.parse(localStorage.getItem("battleLog"));
+		LiveLog("D: Showing options is currently: " + log.ShowDeingSelects);
 		if($(this).html().match(/hide/i)){
 			$(".disenchantingSelect").css("display", "none");
 			$(this).html("Show Drop-Downs");
@@ -426,15 +429,17 @@ function DisenchantSetup(){
 			$(this).html("Hide Drop-Downs");
 			log.ShowDeingSelects = true;
 		}
-		localStorage.setItem("battleLog", JSON.stringy(log));
+		LiveLog("D: Showing options is now: " + log.ShowDeingSelects);
+		localStorage.setItem("battleLog", JSON.stringify(log));
 	}).appendTo(table);
-	if(!log.ShowDeingSelects){
+	$(table).insertAfter("#slots-remaining");
+	$("td").css("vertical-align", "middle");
+	if(log.ShowDeingSelects !== true){
+		log.ShowDeingSelects = false; //Backwards compatibility
 		$(hideRow).html("Show Drop-Downs");
 		$(".disenchantingSelect").css("display", "none");
 	}
 	localStorage.setItem("battleLog", JSON.stringify(log));
-	$(table).insertAfter("#slots-remaining");
-	$("td").css("vertical-align", "middle");
 }
 
 function SelectItemToDisenchant(){
