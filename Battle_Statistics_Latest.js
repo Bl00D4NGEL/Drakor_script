@@ -7,7 +7,7 @@
 // @match        https://*.drakor.com*
 // ==/UserScript==
 
-var debug = 1;
+var debug = 0;
 $(document).ready(function () {
 	var version = "v1.513";
 	SetupLiveLog(); //Live-log-div setup under chat
