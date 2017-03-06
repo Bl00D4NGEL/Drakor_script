@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Battle-statistics v1.6
-// @version      1.6
+// @name         Battle-statistics v1.61
+// @version      1.61
 // @description  Tracks statistics of battles (Arena and Node)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com*
@@ -14,10 +14,11 @@ Armory function
 drap/drop? enchants to specific equipment for quick overview of what enchants are needed
 mark them in the inventory if dragged?
 
+Add comparison between augments x equipped augments
 */
-var debug = 0;
+var debug = 1;
 $(document).ready(function () {
-    var version = "v1.6";
+    var version = "v1.61";
     SetupLiveLog(); //Live-log-div setup under chat
     LiveLog("You're currently using Battle Statistics version " + version);
     CheckInventory(); //To load the durability data into the livelog
@@ -38,11 +39,11 @@ $(document).ready(function () {
         LiveLog("D: Current Loot (Drakor) is " + $("#load-openloot").html().match(/(\d+)/)[1] + " and log.CurrentLoot is " + log.CurrentLoot);
     }
     if (log.CurrentLoot > 0 && $("#load-openloot").html().match(/(\d+)/)[1] !== "0") {
-        LiveLog("Set 'Actual Loot' to " + log.CurrentLoot);
+        //LiveLog("Set 'Actual Loot' to " + log.CurrentLoot);
         var lootbagText = $("#load-openloot").html().match(/(.*\d+).*/)[1];
         $("#load-openloot").html(lootbagText + "(" + log.CurrentLoot + ")");
     }
-    else if ($("#load-openloot").html().match(/(\d+)/)[1] === "0") {
+    else if ($("#load-openloot").html().match(/(\d+)/)[1] === "0" && log.CurrentLoot !== 0) {
         log.CurrentLoot = 0;
         localStorage.setItem("battleLog", JSON.stringify(log));
         LiveLog("Setting 'Actual Loot' to 0 because the loot bag got opened without notice");
@@ -196,25 +197,36 @@ $(document).ready(function () {
 					Enchant
 					Item
 					Battle
-					=======> Extra objects
 					Augment
 					Durability Scroll
-					=======> Normal Variables
+					=======> Extra objects
 					*/
                     try {
-                        //First let's ensure the backwards compatibility
-                        if (log[diff]['Item Augment'] === undefined || log[diff]['Durability Scroll'] === undefined) {
-                            //This did not exist in the older versions..
-                            log[diff]['Item Augment'] = 0;
-                            log[diff]['Durability Scroll'] = 0;
-                        }
-                        if (type === "Item Augment" || type === "Durability Scroll") {
-                            log[diff][type]++;
-                            console.log("Added something to log->" + diff + "->" + type + " .. okay?");
-                            continue; //Do not go further than this because we do not want double tracking, do we?
-                        }
                         var otherItem = type.match(/(spell|equipment|food|enchant) \: ([\w\s\d]+)/i);
-                        if (otherItem) {
+                        if (type === "Item Augment" || type === "Durability Scroll") {
+                            try {
+                                if (!log[diff][type][type][rarity]) {
+                                    log[diff][type][type][rarity] = 1;
+                                }
+                                else {
+                                    log[diff][type][type][rarity]++;
+                                }
+                                console.log("Added something to log->" + diff + "->" + type + "->" + type + "->" + rarity + " .. okay?");
+                            }
+                            catch (ex) {
+                                //older versions did not have this -> add it now
+                                try { //try again
+                                    log[diff][type] = {};
+                                    log[diff][type][type] = {};
+                                    log[diff][type][type][rarity] = 1;
+                                    console.log("NEW: Added something to log->" + diff + "->" + type + "->" + type + "->" + rarity + " .. okay?");
+                                }
+                                catch (ex) {
+                                    console.log("Come on..");
+                                }
+                            }
+                        }
+                        else if (otherItem) {
                             if (!log[diff][otherItem[1]]) { log[diff][otherItem[1]] = {}; }
                             if (!log[diff][otherItem[1]][otherItem[2]]) {
                                 log[diff][otherItem[1]][otherItem[2]] = {};
@@ -223,6 +235,7 @@ $(document).ready(function () {
                             else {
                                 log[diff][otherItem[1]][otherItem[2]][rarity]++;
                             }
+                            localStorage.setItem("battleLog", JSON.stringify(log));
                             if (debug > 0) {
                                 console.log("Added something to log->" + diff + "->" + otherItem[1] + "->" + otherItem[2] + "->" + rarity + " .. okay?");
                             }
@@ -254,16 +267,9 @@ $(document).ready(function () {
                         alert("This item has been locked by you. Please unlock it in order to be able to double-click sell it.");
                         return;
                     }
-                    var cardId = "div#card" + plainId;
-                    setTimeout(function () { // We need a timeout here because the card actually needs to load.
-                        var cardValue = $(cardId).text().match(/([0-9,]+)\sgold/i)[1].replace(",", "");
-                        var log = JSON.parse(localStorage.getItem("battleLog"));
-                        log.LootGold += Number(cardValue);
-                        log.ItemsSold++;
-                        localStorage.setItem("battleLog", JSON.stringify(log));
-                        LiveLog("Sold an item for  " + cardValue + " gold.");
-                    }, 500);
-                    $.ajax("/sell/" + plainId).done(function (data) { $("#drakorWorld").html(data); });
+
+                    setTimeout(TrackSelling(plainId), 1000); // We need a timeout here because the card actually needs to load.
+                    //$.ajax("/sell/" + plainId).done(function(data){$("#drakorWorld").html(data);});
                 }
             });
             $(".drIcon").on("click", function (e) {
@@ -271,10 +277,16 @@ $(document).ready(function () {
                     if (e.currentTarget.id) {
                         var plainId = e.currentTarget.id.slice(4);
                         var cardId = "card" + plainId;
+                        //<div id="sell-3102918" class="cardButton linkSell">Sell</div>
+                        $("#sell-" + plainId).on("click", function (e) {
+                            TrackSelling(e.currentTarget.id.slice(5), false);
+                        });
                         if ($("#lock-" + plainId).length === 0) {
                             //Create new "lock" button.
                             var lockButton = $(document.createElement("div")).attr({ 'id': 'lock-' + plainId, 'class': 'cardButton' }).html("Lock");
-                            lockButton.insertBefore($($("#card" + plainId).find(".cardMenu").children().get(3)));
+                            var toInsert = $("#card" + plainId).find(".cardMenu").children();
+                            lockButton.insertBefore($(toInsert.get(toInsert.length - 1)));
+                            //lockButton.insertBefore($($("#card" + plainId).find(".cardMenu").children().get(3)));
                             var log = JSON.parse(localStorage.getItem("battleLog"));
                             if (!log.LockedItems) { //Backwards compatibility
                                 log.LockedItems = {};
@@ -299,6 +311,34 @@ $(document).ready(function () {
                                     localStorage.setItem("battleLog", JSON.stringify(log));
                                 }
                             });
+                        }
+                        if ($("#card" + plainId).find(".cardType")[0].innerHTML.match(/(item :|weapon)/i)) {
+                            console.log("ITEM!!");
+                            if ($("#base-" + plainId).length === 0) {
+                                var baseButton = $(document.createElement("div")).attr({ 'id': 'base-' + plainId, 'class': 'cardButton' }).html("Show Base");
+                                var toInsert = $("#card" + plainId).find(".cardMenu").children();
+                                baseButton.insertBefore($(toInsert.get(toInsert.length - 1)));
+                                baseButton.on("click", function (e) {
+                                    var id = e.currentTarget.id.slice(5);
+                                    console.log("CHECKING HTML FOR $(\"#base-" + id + "\").html()");
+                                    if ($("#base-" + id).html() == "Show Base") {
+                                        console.log("Getting base stats..");
+                                        GetBaseStats(id);
+                                        $("#base-" + id).html("Show Total");
+                                    }
+                                    else {
+                                        console.log("setting default..");
+                                        $.ajax("/show/viewcard/" + id).success(function (data) {
+                                            var details = data.match(/<div class="cardDetail">(.*?)<\/div>/i)[1];
+                                            $("#card" + id).find(".cardDetail")[0].innerHTML = details;
+                                        });
+                                        $("#base-" + id).html("Show Base");
+                                    }
+                                });
+                            }
+                        }
+                        else {
+                            console.log("This item has been clicked alreaddy.. still want to add the base button?");
                         }
                     }
                 }, 500, e);
@@ -326,15 +366,16 @@ $(document).ready(function () {
                     output += "There are " + $(".en-" + type).length + " " + type + " Enchants in your inventory<br>";
                     $(".en-" + type).css("background-color", "blue");
                 }
-            }
-            if (output !== '') {
                 $("#enchantDiv").html(output);
             }
         }
         else if (settings.url.match(/\/world\/disenchanting/i)) { DisenchantSetup(); } //Setup of the selects
         else if (settings.url.match(/\/world\/action_disenchanting/i)) { LiveLog("You disenchanted an item"); SelectItemToDisenchant(); } //Auto de on enter press
         else if (settings.url.match(/\/use\/\d+\/confirm/i) && xhr.responseText.match(/durability/i && xhr.responseText.match(/rune|scroll/i))) { LiveLog("You repaired an item with a Durability Scroll/ Rune"); }
-        else if (settings.url.match(/(chat|sell|show|battle)/i)) { }
+        else if (settings.url.match(/gen_action\/shuffleitem\/\d+\/confirm/)) {
+            LiveLog("You tinkered an item");
+        }
+        else if (settings.url.match(/(chat|sell|battle)/i)) { }
 
         else {
             if (debug > 0) {
@@ -349,6 +390,107 @@ $(document).ready(function () {
 
     });
 });
+
+function SubstractBaseStats(data, base_stats) {
+    try {
+        var details = data.match(/<div class="cardDetail">(.*?)<\/div>/i)[1];
+        var stats = details.match(/\+\d+[\w\s]+</ig);
+        for (var i = 0; i < stats.length; i++) {
+            var val = stats[i].match(/\+(\d+)/)[1];
+            var stat = stats[i].match(/\+\d+ ([\s\w]+) /)[1];
+            stat = stat.replace(/\s$/, "");
+            base_stats[stat] -= Number(val);
+        }
+        return base_stats;
+    }
+    catch (ex) {
+        LiveLog("Something went wrong when trying to calcuate the base stats for that item.");
+    }
+}
+
+function GetBaseStats(itemId) {
+    var BASEURL = "/show/viewcard/";
+    $.ajax(BASEURL + itemId).success(function (data) {
+        //Get Augment Id
+        var enchOK = false;
+        var augOK = false;
+        var augmentId = data.match(/<div id="aug-(\d+)"/);
+        //Get Enchant Id
+        var enchantId = data.match(/div id="enc-(\d+)"/);
+        var order = [];
+
+        var base_stats = {};
+
+        //Analyse Stats of base item
+        var details = data.match(/<div class="cardDetail">(.*?)<\/div>/i)[1];
+        var stats = details.match(/\+\d+[\w\s]+</ig);
+        for (var i = 0; i < stats.length; i++) {
+            var val = stats[i].match(/\+(\d+)/)[1];
+            var stat = stats[i].match(/\+\d+ ([\s\w]+) /)[1];
+            stat = stat.replace(/\s$/, "");
+            base_stats[stat] = Number(val);
+            order.push(stat);
+        }
+        if (augmentId) {
+            //Base stats = check, let's go for the augment.
+            $.ajax(BASEURL + augmentId[1]).success(function (data) {
+                base_stats = SubstractBaseStats(data, base_stats);
+                augOK = true;
+            });
+        }
+        else {
+            augOK = true;
+        }
+        //augment stats = check, let's go for the enchant.
+        if (enchantId) {
+            $.ajax(BASEURL + enchantId[1]).success(function (data) {
+                base_stats = SubstractBaseStats(data, base_stats);
+                enchOK = true;
+            });
+        }
+        else {
+            enchOK = true;
+        }
+
+        var myTimer = setInterval(function () {
+            if (enchOK && augOK) {
+                //Generating new HTML for the item
+                var output = "";
+                for (var i = 0; i < order.length; i++) {
+                    if (base_stats[order[i]] > 0) {
+                        output += "+" + base_stats[order[i]] + " " + order[i] + "<br>";
+                    }
+                }
+                $("#card" + itemId).find(".cardDetail")[0].innerHTML = output;
+                clearInterval(myTimer);
+            }
+        }, 100, enchOK, augOK, base_stats);
+    });
+
+}
+
+function TrackSelling(Id, makeAjax) {
+    if (makeAjax === undefined) { makeAjax = true; }
+    var myTimer = setInterval(function () {
+        var cardId = "div#card" + Id;
+        var cardText = $(cardId).text();
+        if (!cardText.match(/loading/)) {
+            cardValue = cardText.match(/([0-9,]+)\sgold/i)[1].replace(",", "");
+            var log = JSON.parse(localStorage.getItem("battleLog"));
+            log.LootGold += Number(cardValue);
+            log.ItemsSold++;
+            localStorage.setItem("battleLog", JSON.stringify(log));
+            LiveLog("Sold an item for  " + cardValue + " gold.");
+            //Manual ajax call
+            if (makeAjax) {
+                $.ajax("/sell/" + Id).done(function (data) { $("#drakorWorld").html(data); });
+            }
+            clearInterval(myTimer);
+        }
+        else {//wait...
+        }
+    }, 100);
+}
 
 function GenerateHistory(log, battleId, text) {
     try {
@@ -466,7 +608,7 @@ function DisplayHistory(spanObject) {
 function SetupLiveLog() {
     var fragment = document.createDocumentFragment();
     var div = $(document.createElement("div"));
-    var baseDiv = $(div).attr({ title: "Battle Log" })
+    var baseDiv = $(div).attr({ id: "battleLogDialog", title: "Battle Log" })
 	.css({ "font-size": "14px", "background-color": "lightgrey", "display": "none", 'text-align': 'left' })
 	.on("mouseenter", function () {
 	    $(".showHistory").on("click", function () {
@@ -476,6 +618,24 @@ function SetupLiveLog() {
 	.on("mouseleave", function () {
 	    $(".showHistory").off("click");
 	})
+	.on("dialogdragstop", function () {
+	    var log = JSON.parse(localStorage.getItem("battleLog"));
+	    var vals = ['left', 'top', 'right', 'bottom'];
+	    for (var i = 0; i < vals.length; i++) {
+	        //console.log(vals[i] + ": OLD: " + log["dialog-" + vals[i]] + " | NEW: " + $($(this).parents().get(0)).css(vals[i]));
+	        log["dialog-" + vals[i]] = $($(this).parents().get(0)).css(vals[i]);
+	    }
+	    localStorage.setItem("battleLog", JSON.stringify(log));
+	})
+	.on("dialogresizestop", function () {
+	    var log = JSON.parse(localStorage.getItem("battleLog"));
+	    var vals = ['width', 'height'];
+	    for (var i = 0; i < vals.length; i++) {
+	        //console.log(vals[i] + ": OLD: " + log["dialog-" + vals[i]] + " | NEW: " + $($(this).parents().get(0)).css(vals[i]));
+	        log["dialog-" + vals[i]] = $($(this).parents().get(0)).css(vals[i]);
+	    }
+	    localStorage.setItem("battleLog", JSON.stringify(log));
+	})
 	.appendTo(fragment);
     baseDiv.dialog({
         autoOpen: false,
@@ -483,9 +643,12 @@ function SetupLiveLog() {
             effect: "blind",
             duration: 500
         },
-        width: 600,
-        height: 400
+        close: {
+            effect: "slide",
+            duration: 500
+        }
     });
+
     var duraDiv = $(document.createElement("div")).clone()
 	.attr({ id: 'durabilityDisplay' })
 	.css({ 'background-color': 'orange', 'text-align': 'center', 'width': '100%' }).appendTo(baseDiv);
@@ -499,7 +662,23 @@ function SetupLiveLog() {
     var showLog = $(document.createElement("a")).attr({ id: "liveLogButton", class: "gs_topmenu_item" })
 	.text("Battle Log")
 	.on("click", function () {
-	    $(baseDiv).dialog("open");
+	    if ($("#battleLogDialog").dialog("isOpen")) {
+	        $("#battleLogDialog").dialog("close");
+	    }
+	    else {
+	        setTimeout(function () { // We need a timeout here since we need to wait for the dialog to appear to be able to modify it
+	            var log = JSON.parse(localStorage.getItem("battleLog"));
+	            var vals = ['left', 'top', 'right', 'bottom', 'width', 'height'];
+	            for (var i = 0; i < vals.length; i++) {
+	                //log['dialog-' + vals[i]] = log['dialog-' + vals[i]].replace("px", "");
+	                //console.log("SETTING " + vals[i] + " -> " + log['dialog-' + vals[i]]);
+	                //.dialog( "option", "width", 500 );
+	                $($("#battleLogDialog").parents().get(0)).css(vals[i], log['dialog-' + vals[i]]);
+	            }
+	            $("#battleLogDialog").css("height", (Number(log['dialog-height'].replace("px", "")) - 50) + "px");
+	        }, 600);
+	        $(baseDiv).dialog("open");
+	    }
 	})
 	.appendTo("#gs_topmenu");
 
@@ -721,7 +900,7 @@ function SetupLog() {
 function DisplayStatistics(difficulty) {
     $("#tableDiv").html("");
     var totalFights = Number(log[difficulty].Won) + Number(log[difficulty].Lost);
-    var fightLootKeys = ["WonWithoutLoot", "Common", "Superior", "Rare", "Epic", "Legendary", "Item Augment", "Durability Scroll"];
+    var fightLootKeys = ["WonWithoutLoot", "Common", "Superior", "Rare", "Epic", "Legendary"];
     var fightAverageKeys = ['Gold', 'Experience', 'Loot'];
     var fightTotalPercentage = ["Won", "Lost"];
     var table = $(document.createElement("table")).css({ "border": "1px solid white", "width": "100%" });
@@ -763,10 +942,10 @@ function DisplayStatistics(difficulty) {
         tr.appendTo(table);
     }
     for (var keys in logObj) {
-        if (keys === "Spell" || keys === "Equipment" || keys === "Food" || keys === "Enchant") {
+        if (keys === "Spell" || keys === "Equipment" || keys === "Food" || keys === "Enchant" || keys === "Item Augment" || keys === "Durability Scroll") {
             //These keys all have subitems.
             var totalCounter = 0;
-            var subtable = $(document.createElement("table")).css({ "display": "none", "width": "100%" }).attr({ 'id': 'subtable-' + keys });
+            var subtable = $(document.createElement("table")).css({ "display": "none", "width": "100%" }).attr({ 'id': 'subtable-' + keys.replace(" ", "_") });
             var rarities = ['Common', 'Superior', 'Rare', 'Epic', 'Legendary'];
             var shortRarities = ['C', 'S', 'R', 'E', 'L'];
             var tr = CreateTableRow(["Type", "Total", shortRarities]);
@@ -798,7 +977,7 @@ function DisplayStatistics(difficulty) {
 					keys,
 					totalCounter + " (" + (totalCounter / logObj.Loot * 100).toFixed(2) + " %)"
                 ]);
-                tr.attr({ 'id': 'tr-subtable-' + keys });
+                tr.attr({ 'id': 'tr-subtable-' + keys.replace(" ", "_") });
                 tr.appendTo(table);
             }
         }
