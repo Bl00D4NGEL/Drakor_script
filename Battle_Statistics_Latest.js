@@ -16,7 +16,7 @@ mark them in the inventory if dragged?
 
 Add comparison between augments x equipped augments
 */
-var debug = 1;
+var debug = 0;
 $(document).ready(function () {
     var version = "v1.61";
     SetupLiveLog(); //Live-log-div setup under chat
