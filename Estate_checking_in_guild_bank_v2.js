@@ -23,27 +23,29 @@ var estates = {
 };
 
 var fired_ajax = 0;
-$(".guildMenu").html($(".guildMenu").html() + "<br>");
+$(document).ready(function () {
+    $(".guildMenu").html($(".guildMenu").html() + "<br>");
 
-for (var estate in estates) {
-    var button = $(document.createElement("button")).attr({ 'id': 'estate-' + estates[estate], 'class': 'gs_topmenu_item' }).html(estate).on("click", function (e) {
-        if (e.currentTarget.id) {
-            $("#estate-output").html("<h1>LOADING " + $(this).html().toUpperCase() + "...</h1>");
-            var materials = {};
-            var id = e.currentTarget.id.match(/(\d+)/)[1];
-            GetMaterials(id, materials);
-            var fired = false;
-            var myTimer = setInterval(function () {
-                if (!fired && fired_ajax > 0) { fired = true; }
-                if (fired && fired_ajax === 0) {
-                    Recursive_1(materials);
-                    clearInterval(myTimer);
-                }
-            }, 10, materials);
-        }
-    }).appendTo($(".guildMenu"));
-}
-$(document.createElement("div")).attr({ 'id': 'estate-output' }).insertAfter($(".guildMenu"));
+    for (var estate in estates) {
+        var button = $(document.createElement("button")).attr({ 'id': 'estate-' + estates[estate], 'class': 'gs_topmenu_item' }).html(estate).on("click", function (e) {
+            if (e.currentTarget.id) {
+                $("#estate-output").html("<h1>LOADING " + $(this).html().toUpperCase() + "...</h1>");
+                var materials = {};
+                var id = e.currentTarget.id.match(/(\d+)/)[1];
+                GetMaterials(id, materials);
+                var fired = false;
+                var myTimer = setInterval(function () {
+                    if (!fired && fired_ajax > 0) { fired = true; }
+                    if (fired && fired_ajax === 0) {
+                        Recursive_1(materials);
+                        clearInterval(myTimer);
+                    }
+                }, 10, materials);
+            }
+        }).appendTo($(".guildMenu"));
+    }
+    $(document.createElement("div")).attr({ 'id': 'estate-output' }).insertAfter($(".guildMenu"));
+});
 
 function GetMaterials(id, materials) {
     $.ajax(BASE + "/show/patternbasic/" + id).success(function (data) {
