@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Battle-statistics v1.61
-// @version      1.61
+// @name         Battle-statistics v1.611
+// @version      1.611
 // @description  Tracks statistics of battles (Arena and Node)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com*
@@ -15,10 +15,57 @@ drap/drop? enchants to specific equipment for quick overview of what enchants ar
 mark them in the inventory if dragged?
 
 Add comparison between augments x equipped augments
+
+log{
+    Augment => { }
+    ConsolationLoot => Integer
+    CurrentLoot => Integer
+    Easy => {
+        Common => Integer
+        ConsolationLoot => Integer
+        Durability Scroll => {}
+        Enchant => {}
+        Epic => Integer
+        Equipment => {}
+        Experience => Integer
+        Food => {}
+        Gold => Integer
+        Item Augment => {}
+        Legendary => Integer
+        Loot => Integer
+        Lost => Integer
+        Rare => Integer
+        Spell => {}
+        Superior => Integer
+        Won => Integer
+        WonWithoutLoot => Integer
+    }
+    Elite => {}
+    Enchant => {}
+    Experience => Integer
+    Gold => Integer
+    Hard => {}
+    ItemsSold => Integer
+    LockedItems => {}
+    LootGold => Integer
+    Lost => Integer
+    Medium => {}
+    Spell => {}
+    TotalLoot => Integer
+    Won => Integer
+    WonWithoutLoot => Integer
+    dialog-bottom => String
+    dialog-height => String
+    dialog-left => String
+    dialog-right => String
+    dialog-top => String
+    dialog-width => String
+}
 */
 var debug = 0;
+var disableDoubleClickSelling = 0;
 $(document).ready(function () {
-    var version = "v1.61";
+    var version = "v1.611";
     SetupLiveLog(); //Live-log-div setup under chat
     LiveLog("You're currently using Battle Statistics version " + version);
     CheckInventory(); //To load the durability data into the livelog
@@ -273,7 +320,7 @@ $(document).ready(function () {
                 }
             });
             $(".drIcon").on("click", function (e) {
-                setTimeout(function () {
+                var myTimer = setInterval(function () {
                     if (e.currentTarget.id) {
                         var plainId = e.currentTarget.id.slice(4);
                         var cardId = "card" + plainId;
@@ -302,10 +349,12 @@ $(document).ready(function () {
                                     if (!log.LockedItems) { log.LockedItems = {}; } //Backwards compatbility
                                     if (log.LockedItems[plainId]) {
                                         log.LockedItems[plainId] = false;
+                                        $("#icon" + plainId).find(".iconLevel").css("background-color", "black");
                                         $("#lock-" + plainId).html("Lock");
                                     }
                                     else {
                                         log.LockedItems[plainId] = true;
+                                        $("#icon" + plainId).find(".iconLevel").css("background-color", "green");
                                         $("#lock-" + plainId).html("Un-Lock");
                                     }
                                     localStorage.setItem("battleLog", JSON.stringify(log));
@@ -313,7 +362,6 @@ $(document).ready(function () {
                             });
                         }
                         if ($("#card" + plainId).find(".cardType")[0].innerHTML.match(/(item :|weapon)/i)) {
-                            console.log("ITEM!!");
                             if ($("#base-" + plainId).length === 0) {
                                 var baseButton = $(document.createElement("div")).attr({ 'id': 'base-' + plainId, 'class': 'cardButton' }).html("Show Base");
                                 var toInsert = $("#card" + plainId).find(".cardMenu").children();
@@ -340,8 +388,9 @@ $(document).ready(function () {
                         else {
                             console.log("This item has been clicked alreaddy.. still want to add the base button?");
                         }
+                        clearInterval(myTimer);
                     }
-                }, 500, e);
+                }, 100, e);
             });
             var counter = {};
             $(".drIcon").each(function (index, obj) {
@@ -471,11 +520,17 @@ function GetBaseStats(itemId) {
 
 function TrackSelling(Id, makeAjax) {
     if (makeAjax === undefined) { makeAjax = true; }
+    if (debug > 1) { LiveLog("Debug > 1 => Not selling this item!"); makeAjax = false; }
+    if (disableDoubleClickSelling === 1) { LiveLog("Preventing to sell this item via double-click!"); makeAjax = false; }
     var myTimer = setInterval(function () {
         var cardId = "div#card" + Id;
         var cardText = $(cardId).text();
         if (!cardText.match(/loading/)) {
             cardValue = cardText.match(/([0-9,]+)\sgold/i)[1].replace(",", "");
+            var scroll = cardText.match(/([0-9,]+)\s?\/\s?[0-9,]+\sgold/i);
+            if (scroll) { //Scroll has two values, use the first one.
+                cardValue = scroll[1].replace(",", "");
+            }
             var log = JSON.parse(localStorage.getItem("battleLog"));
             log.LootGold += Number(cardValue);
             log.ItemsSold++;
