@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Battle-statistics v1.611
-// @version      1.611
+// @name         Battle-statistics v1.612
+// @version      1.612
 // @description  Tracks statistics of battles (Arena and Node)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com*
@@ -17,55 +17,55 @@ mark them in the inventory if dragged?
 Add comparison between augments x equipped augments
 
 log{
-    Augment => { }
-    ConsolationLoot => Integer
-    CurrentLoot => Integer
-    Easy => {
-        Common => Integer
-        ConsolationLoot => Integer
-        Durability Scroll => {}
-        Enchant => {}
-        Epic => Integer
-        Equipment => {}
-        Experience => Integer
-        Food => {}
-        Gold => Integer
-        Item Augment => {}
-        Legendary => Integer
-        Loot => Integer
-        Lost => Integer
-        Rare => Integer
-        Spell => {}
-        Superior => Integer
-        Won => Integer
-        WonWithoutLoot => Integer
-    }
-    Elite => {}
-    Enchant => {}
-    Experience => Integer
-    Gold => Integer
-    Hard => {}
-    ItemsSold => Integer
-    LockedItems => {}
-    LootGold => Integer
-    Lost => Integer
-    Medium => {}
-    Spell => {}
-    TotalLoot => Integer
-    Won => Integer
-    WonWithoutLoot => Integer
-    dialog-bottom => String
-    dialog-height => String
-    dialog-left => String
-    dialog-right => String
-    dialog-top => String
-    dialog-width => String
+Augment => { }
+ConsolationLoot => Integer
+CurrentLoot => Integer
+Easy => {
+Common => Integer
+ConsolationLoot => Integer
+Durability Scroll => {}
+Enchant => {}
+Epic => Integer
+Equipment => {}
+Experience => Integer
+Food => {}
+Gold => Integer
+Item Augment => {}
+Legendary => Integer
+Loot => Integer
+Lost => Integer
+Rare => Integer
+Spell => {}
+Superior => Integer
+Won => Integer
+WonWithoutLoot => Integer
+}
+Elite => {}
+Enchant => {}
+Experience => Integer
+Gold => Integer
+Hard => {}
+ItemsSold => Integer
+LockedItems => {}
+LootGold => Integer
+Lost => Integer
+Medium => {}
+Spell => {}
+TotalLoot => Integer
+Won => Integer
+WonWithoutLoot => Integer
+dialog-bottom => String
+dialog-height => String
+dialog-left => String
+dialog-right => String
+dialog-top => String
+dialog-width => String
 }
 */
-var debug = 0;
+var debug = 1;
 var disableDoubleClickSelling = 0;
 $(document).ready(function () {
-    var version = "v1.611";
+    var version = "v1.612";
     SetupLiveLog(); //Live-log-div setup under chat
     LiveLog("You're currently using Battle Statistics version " + version);
     CheckInventory(); //To load the durability data into the livelog
@@ -224,22 +224,23 @@ $(document).ready(function () {
             var lootItems = 0;
             var lootbags = xhr.responseText.match(/<h3>(.*?)<script>/g);
             for (var i = 0; i < lootbags.length; i++) {
-                var lootbag = lootbags[i];
-                var diff = lootbag.match(/\((\w+)\)/)[1];
-                var items = lootbag.match(/<div class="cardContainer.*?<\/b>\s*<\/div>\s*<\/div>/g);
-                for (var j = 0; j < items.length; j++) {
-                    lootItems++;
-                    var item = items[j];
-                    var rarity = item.match(/cardquality\">(\w+)</i)[1];
-                    log[diff][rarity]++;
-                    var image = item.match(/<img.*?\/images\/(\w+)\/[\d\w]+\.png/);
-                    var type = item.match(/<span class=\"cardType\">([\w\s\d:?]+)</i)[1];
-                    type = type.replace("Item : ", "Equipment : ");
-                    type = type.replace("Battle", "Spell");
-                    if (type === "Weapon") {
-                        type = "Equipment : Weapon";
-                    }
-                    /*
+                try {
+                    var lootbag = lootbags[i];
+                    var diff = lootbag.match(/\((\w+)\)/)[1];
+                    var items = lootbag.match(/<div class="cardContainer.*?<\/b>\s*<\/div>\s*<\/div>/g);
+                    for (var j = 0; j < items.length; j++) {
+                        lootItems++;
+                        var item = items[j];
+                        var rarity = item.match(/cardquality\">(\w+)</i)[1];
+                        log[diff][rarity]++;
+                        var image = item.match(/<img.*?\/images\/(\w+)\/[\d\w]+\.png/);
+                        var type = item.match(/<span class=\"cardType\">([\w\s\d:?]+)</i)[1];
+                        type = type.replace("Item : ", "Equipment : ");
+                        type = type.replace("Battle", "Spell");
+                        if (type === "Weapon") {
+                            type = "Equipment : Weapon";
+                        }
+                        /*
 					Food
 					Enchant
 					Item
@@ -248,52 +249,56 @@ $(document).ready(function () {
 					Durability Scroll
 					=======> Extra objects
 					*/
-                    try {
-                        var otherItem = type.match(/(spell|equipment|food|enchant) \: ([\w\s\d]+)/i);
-                        if (type === "Item Augment" || type === "Durability Scroll") {
-                            try {
-                                if (!log[diff][type][type][rarity]) {
-                                    log[diff][type][type][rarity] = 1;
-                                }
-                                else {
-                                    log[diff][type][type][rarity]++;
-                                }
-                                console.log("Added something to log->" + diff + "->" + type + "->" + type + "->" + rarity + " .. okay?");
-                            }
-                            catch (ex) {
-                                //older versions did not have this -> add it now
-                                try { //try again
-                                    log[diff][type] = {};
-                                    log[diff][type][type] = {};
-                                    log[diff][type][type][rarity] = 1;
-                                    console.log("NEW: Added something to log->" + diff + "->" + type + "->" + type + "->" + rarity + " .. okay?");
+                        try {
+                            var otherItem = type.match(/(spell|equipment|food|enchant) \: ([\w\s\d]+)/i);
+                            if (type === "Item Augment" || type === "Durability Scroll") {
+                                try {
+                                    if (!log[diff][type][type][rarity]) {
+                                        log[diff][type][type][rarity] = 1;
+                                    }
+                                    else {
+                                        log[diff][type][type][rarity]++;
+                                    }
+                                    console.log("Added something to log->" + diff + "->" + type + "->" + type + "->" + rarity + " .. okay?");
                                 }
                                 catch (ex) {
-                                    console.log("Come on..");
+                                    //older versions did not have this -> add it now
+                                    try { //try again
+                                        log[diff][type] = {};
+                                        log[diff][type][type] = {};
+                                        log[diff][type][type][rarity] = 1;
+                                        console.log("NEW: Added something to log->" + diff + "->" + type + "->" + type + "->" + rarity + " .. okay?");
+                                    }
+                                    catch (ex) {
+                                        console.log("Come on..");
+                                    }
                                 }
                             }
-                        }
-                        else if (otherItem) {
-                            if (!log[diff][otherItem[1]]) { log[diff][otherItem[1]] = {}; }
-                            if (!log[diff][otherItem[1]][otherItem[2]]) {
-                                log[diff][otherItem[1]][otherItem[2]] = {};
-                                log[diff][otherItem[1]][otherItem[2]][rarity] = 1;
+                            else if (otherItem) {
+                                if (!log[diff][otherItem[1]]) { log[diff][otherItem[1]] = {}; }
+                                if (!log[diff][otherItem[1]][otherItem[2]]) {
+                                    log[diff][otherItem[1]][otherItem[2]] = {};
+                                    log[diff][otherItem[1]][otherItem[2]][rarity] = 1;
+                                }
+                                else {
+                                    log[diff][otherItem[1]][otherItem[2]][rarity]++;
+                                }
+                                localStorage.setItem("battleLog", JSON.stringify(log));
+                                if (debug > 0) {
+                                    console.log("Added something to log->" + diff + "->" + otherItem[1] + "->" + otherItem[2] + "->" + rarity + " .. okay?");
+                                }
                             }
                             else {
-                                log[diff][otherItem[1]][otherItem[2]][rarity]++;
-                            }
-                            localStorage.setItem("battleLog", JSON.stringify(log));
-                            if (debug > 0) {
-                                console.log("Added something to log->" + diff + "->" + otherItem[1] + "->" + otherItem[2] + "->" + rarity + " .. okay?");
+                                LiveLog("Cannot determine type..<br>TYPE: '" + type + "'");
                             }
                         }
-                        else {
-                            LiveLog("Cannot determine type..<br>TYPE: '" + type + "'");
+                        catch (ex) {
+                            LiveLog("When trying to get the type for the dropped items something went wrong...<br>Message: " + ex.message + "<br>TYPE: " + type);
                         }
                     }
-                    catch (ex) {
-                        LiveLog("When trying to get the type for the dropped items something went wrong...<br>Message: " + ex.message);
-                    }
+                }
+                catch (ex) {
+                    LiveLog("When trying to process a loot item this happened: " + ex.message);
                 }
             }
             //Okay let's try something here, shall we?
@@ -321,7 +326,7 @@ $(document).ready(function () {
             });
             $(".drIcon").on("click", function (e) {
                 var myTimer = setInterval(function () {
-                    if (e.currentTarget.id) {
+                    if (!$("#card" + e.currentTarget.id.slice(4)).text().match(/loading/i)) {
                         var plainId = e.currentTarget.id.slice(4);
                         var cardId = "card" + plainId;
                         //<div id="sell-3102918" class="cardButton linkSell">Sell</div>
@@ -386,7 +391,7 @@ $(document).ready(function () {
                             }
                         }
                         else {
-                            console.log("This item has been clicked alreaddy.. still want to add the base button?");
+                            console.log("This item has been clicked already.. still want to add the base button?");
                         }
                         clearInterval(myTimer);
                     }
@@ -523,26 +528,39 @@ function TrackSelling(Id, makeAjax) {
     if (debug > 1) { LiveLog("Debug > 1 => Not selling this item!"); makeAjax = false; }
     if (disableDoubleClickSelling === 1) { LiveLog("Preventing to sell this item via double-click!"); makeAjax = false; }
     var myTimer = setInterval(function () {
-        var cardId = "div#card" + Id;
-        var cardText = $(cardId).text();
-        if (!cardText.match(/loading/)) {
-            cardValue = cardText.match(/([0-9,]+)\sgold/i)[1].replace(",", "");
-            var scroll = cardText.match(/([0-9,]+)\s?\/\s?[0-9,]+\sgold/i);
-            if (scroll) { //Scroll has two values, use the first one.
-                cardValue = scroll[1].replace(",", "");
+        try {
+            var cardId = "div#card" + Id;
+            var cardText = $(cardId).text();
+            var cardValue = 0;
+            if (!cardText.match(/loading/) && cardText !== '') {
+                cardMatch = cardText.match(/([0-9,]+)\sgold/i);
+                if (!cardMatch) {
+                    console.log("Could not get value for card with id '" + Id + "'\nText:" + cardText);
+                }
+                else {
+                    cardValue = cardMatch[1].replace(",", "");
+                }
+                var scroll = cardText.match(/([0-9,]+)\s?\/\s?[0-9,]+\sgold/i);
+                if (scroll) { //Scroll has two values, use the first one.
+                    cardValue = scroll[1].replace(",", "");
+                }
+                var log = JSON.parse(localStorage.getItem("battleLog"));
+                log.LootGold += Number(cardValue);
+                log.ItemsSold++;
+                localStorage.setItem("battleLog", JSON.stringify(log));
+                LiveLog("Sold an item for  " + cardValue + " gold.");
+                //Manual ajax call
+                if (makeAjax) {
+                    $.ajax("/sell/" + Id).done(function (data) { $("#drakorWorld").html(data); });
+                }
+                clearInterval(myTimer);
             }
-            var log = JSON.parse(localStorage.getItem("battleLog"));
-            log.LootGold += Number(cardValue);
-            log.ItemsSold++;
-            localStorage.setItem("battleLog", JSON.stringify(log));
-            LiveLog("Sold an item for  " + cardValue + " gold.");
-            //Manual ajax call
-            if (makeAjax) {
-                $.ajax("/sell/" + Id).done(function (data) { $("#drakorWorld").html(data); });
+            else {//wait...
             }
-            clearInterval(myTimer);
         }
-        else {//wait...
+        catch (ex) {
+            console.log("OOOOOH!\n" + ex.message);
+            clearInterval(myTimer);
         }
     }, 100);
 }
@@ -865,7 +883,15 @@ function CheckForDepletedNode() {
 }
 
 function Create_Log_Object() {
-    var logBefore = JSON.parse(localStorage.getItem("battleLog"));
+    var logBefore;
+    var logLoaded = false;
+    try {
+        logBefore = JSON.parse(localStorage.getItem("battleLog"));
+        if (logBefore) {
+            logLoaded = true;
+        }
+    }
+    catch (ex) { }
     var log = {};
     log.Won = 0;
     log.Lost = 0;
@@ -880,7 +906,12 @@ function Create_Log_Object() {
     log.Spell = {};
     log.Augment = {};
     log.Enchant = {};
-    log.LockedItems = logBefore.LockedItems; //Please do NOT overwrite my precious locks :(
+    if (logLoaded) {
+        log.LockedItems = logBefore.LockedItems; //Please do NOT overwrite my precious locks :(
+    }
+    else {
+        log.LockedItems = {};
+    }
     var rarities = ["Common", "Superior", "Rare", "Epic", "Legendary"];
     for (var j = 0; i < rarities.length; j++) {
         log.Spell[rarities[j]] = false;
@@ -888,7 +919,7 @@ function Create_Log_Object() {
         log.Enchant[rarities[j]] = false;
     }
     var diffArray = ["Elite", "Hard", "Medium", "Easy"];
-    var dropArray = { 'Durability Scroll': 0, 'Spell': {}, 'Equipment': {}, 'Item Augment': 0, 'Enchant': {}, 'Food': {} };
+    var dropArray = { 'Durability Scroll': {}, 'Spell': {}, 'Equipment': {}, 'Item Augment': {}, 'Enchant': {}, 'Food': {} };
     var keyArray = ["Gold", "Experience", "Won", "Lost", "Loot", "ConsolationLoot", "WonWithoutLoot", "Common", "Superior", "Rare", "Epic", "Legendary"];
     for (var i = 0; i < diffArray.length; i++) {
         log[diffArray[i]] = {};
@@ -953,109 +984,115 @@ function SetupLog() {
 }
 
 function DisplayStatistics(difficulty) {
-    $("#tableDiv").html("");
-    var totalFights = Number(log[difficulty].Won) + Number(log[difficulty].Lost);
-    var fightLootKeys = ["WonWithoutLoot", "Common", "Superior", "Rare", "Epic", "Legendary"];
-    var fightAverageKeys = ['Gold', 'Experience', 'Loot'];
-    var fightTotalPercentage = ["Won", "Lost"];
-    var table = $(document.createElement("table")).css({ "border": "1px solid white", "width": "100%" });
-    var logObj = log[difficulty];
-    keys = Object.keys(logObj);
-    len = keys.length;
+    try {
+        $("#tableDiv").html("");
+        var log = JSON.parse(localStorage.getItem("battleLog"));
+        var totalFights = Number(log[difficulty].Won) + Number(log[difficulty].Lost);
+        var fightLootKeys = ["WonWithoutLoot", "Common", "Superior", "Rare", "Epic", "Legendary"];
+        var fightAverageKeys = ['Gold', 'Experience', 'Loot'];
+        var fightTotalPercentage = ["Won", "Lost"];
+        var table = $(document.createElement("table")).css({ "border": "1px solid white", "width": "100%" });
+        var logObj = log[difficulty];
+        keys = Object.keys(logObj);
+        len = keys.length;
 
-    keys.sort();
-    var newObj = {};
-    for (i = 0; i < len; i++) {
-        k = keys[i];
-        newObj[k] = logObj[k];
-    }
-    logObj = newObj;
+        keys.sort();
+        var newObj = {};
+        for (i = 0; i < len; i++) {
+            k = keys[i];
+            newObj[k] = logObj[k];
+        }
+        logObj = newObj;
 
-    if (difficulty === "Hard") {
-        log.Hard.Loot += log.Elite.Loot;
-    }
-    for (var j = 0; j < fightTotalPercentage.length; j++) {
-        var tr = CreateTableRow([
-			fightTotalPercentage[j],
-			logObj[fightTotalPercentage[j]] + " (" + (logObj[fightTotalPercentage[j]] / totalFights * 100).toFixed(2) + " %)"
-        ]);
-        tr.appendTo(table);
-    }
-    for (var k = 0; k < fightAverageKeys.length; k++) {
-        var tr = CreateTableRow([
-			fightAverageKeys[k],
-			logObj[fightAverageKeys[k]] + " (" + (logObj[fightAverageKeys[k]] / totalFights).toFixed(2) + " on average)"
-        ]);
-        tr.appendTo(table);
-    }
-    for (var i = 0; i < fightLootKeys.length; i++) {
-        if (logObj[fightLootKeys[i]] === 0 || logObj[fightLootKeys[i]] === undefined) { continue; } //Item Augments/ Dura Scrolls can have this.
-        var tr = CreateTableRow([
-			fightLootKeys[i],
-			logObj[fightLootKeys[i]] + " (" + (logObj[fightLootKeys[i]] / logObj.Loot * 100).toFixed(2) + " %)"
-        ]);
-        tr.appendTo(table);
-    }
-    for (var keys in logObj) {
-        if (keys === "Spell" || keys === "Equipment" || keys === "Food" || keys === "Enchant" || keys === "Item Augment" || keys === "Durability Scroll") {
-            //These keys all have subitems.
-            var totalCounter = 0;
-            var subtable = $(document.createElement("table")).css({ "display": "none", "width": "100%" }).attr({ 'id': 'subtable-' + keys.replace(" ", "_") });
-            var rarities = ['Common', 'Superior', 'Rare', 'Epic', 'Legendary'];
-            var shortRarities = ['C', 'S', 'R', 'E', 'L'];
-            var tr = CreateTableRow(["Type", "Total", shortRarities]);
-            tr.appendTo(subtable);
-            for (var subkeys in logObj[keys]) {
-                var counter = 0;
-                var tempArray = []; //Save the rarities in this temp array
-                for (var l = 0; l < rarities.length; l++) {
-                    if (logObj[keys][subkeys][rarities[l]]) {
-                        tempArray.push(logObj[keys][subkeys][rarities[l]]);
-                        counter += Number(logObj[keys][subkeys][rarities[l]]);
-                    }
-                    else {
-                        tempArray.push("0");
-                    }
-                }
-                var tr = CreateTableRow([
-					subkeys,
-					counter,
-					tempArray
-                ]);
+        if (difficulty === "Hard") {
+            log.Hard.Loot += log.Elite.Loot;
+        }
+        for (var j = 0; j < fightTotalPercentage.length; j++) {
+            var tr = CreateTableRow([
+                fightTotalPercentage[j],
+                logObj[fightTotalPercentage[j]] + " (" + (logObj[fightTotalPercentage[j]] / totalFights * 100).toFixed(2) + " %)"
+            ]);
+            tr.appendTo(table);
+        }
+        for (var k = 0; k < fightAverageKeys.length; k++) {
+            var tr = CreateTableRow([
+                fightAverageKeys[k],
+                logObj[fightAverageKeys[k]] + " (" + (logObj[fightAverageKeys[k]] / totalFights).toFixed(2) + " on average)"
+            ]);
+            tr.appendTo(table);
+        }
+        for (var i = 0; i < fightLootKeys.length; i++) {
+            if (logObj[fightLootKeys[i]] === 0 || logObj[fightLootKeys[i]] === undefined) { continue; } //Item Augments/ Dura Scrolls can have this.
+            var tr = CreateTableRow([
+                fightLootKeys[i],
+                logObj[fightLootKeys[i]] + " (" + (logObj[fightLootKeys[i]] / logObj.Loot * 100).toFixed(2) + " %)"
+            ]);
+            tr.appendTo(table);
+        }
+        for (var keys in logObj) {
+            if (keys === "Spell" || keys === "Equipment" || keys === "Food" || keys === "Enchant" || keys === "Item Augment" || keys === "Durability Scroll") {
+                //These keys all have subitems.
+                var totalCounter = 0;
+                var subtable = $(document.createElement("table")).css({ "display": "none", "width": "100%" }).attr({ 'id': 'subtable-' + keys.replace(" ", "_") });
+                var rarities = ['Common', 'Superior', 'Rare', 'Epic', 'Legendary'];
+                var shortRarities = ['C', 'S', 'R', 'E', 'L'];
+                var tr = CreateTableRow(["Type", "Total", shortRarities]);
                 tr.appendTo(subtable);
-                totalCounter += counter;
-            }
-            if (totalCounter > 0) {
-                subtable.appendTo($("#tableDiv"));
-                subtable.find("td").css("width", "14%");
-                var tr = CreateTableRow([
-					keys,
-					totalCounter + " (" + (totalCounter / logObj.Loot * 100).toFixed(2) + " %)"
-                ]);
-                tr.attr({ 'id': 'tr-subtable-' + keys.replace(" ", "_") });
-                tr.appendTo(table);
+                for (var subkeys in logObj[keys]) {
+                    var counter = 0;
+                    var tempArray = []; //Save the rarities in this temp array
+                    for (var l = 0; l < rarities.length; l++) {
+                        if (logObj[keys][subkeys][rarities[l]]) {
+                            tempArray.push(logObj[keys][subkeys][rarities[l]]);
+                            counter += Number(logObj[keys][subkeys][rarities[l]]);
+                        }
+                        else {
+                            tempArray.push("0");
+                        }
+                    }
+                    var tr = CreateTableRow([
+                        subkeys,
+                        counter,
+                        tempArray
+                    ]);
+                    tr.appendTo(subtable);
+                    totalCounter += counter;
+                }
+                if (totalCounter > 0) {
+                    subtable.appendTo($("#tableDiv"));
+                    subtable.find("td").css("width", "14%");
+                    var tr = CreateTableRow([
+                        keys,
+                        totalCounter + " (" + (totalCounter / logObj.Loot * 100).toFixed(2) + " %)"
+                    ]);
+                    tr.attr({ 'id': 'tr-subtable-' + keys.replace(" ", "_") });
+                    tr.appendTo(table);
+                }
             }
         }
-    }
 
-    table.html(AddCommas(table.html()));
-
-    table.appendTo($("#tableDiv"));
-    $("#tableDiv").find("td").css("border", "1px grey solid");
-    $(function () {
-        $(document).tooltip({
+        table.html(AddCommas(table.html()));
+        console.log(table);
+        table.appendTo($("#tableDiv"));
+        $("#tableDiv").find("td").css("border", "1px grey solid");
+        /* TEMPORARY DISABLED!!!!
+        $(document).tooltip({ //this will fail if bootstrap and jQuery UI are used at the same time.. :(
             items: "tr",
-            content: function () {
-                var element = $(this);
-                if (element.attr('id')) {
-                    if (element.attr('id').match(/^tr-subtable/)) {
+            content: function() {
+                var element = $( this );
+                if ( element.attr('id')){
+                    if(element.attr('id').match(/^tr-subtable/)){
                         return "<table>" + $("#subtable-" + element.attr('id').match(/^tr-subtable-(\w+)/)[1]).html() + "</table>";
                     }
                 }
-                else { }
+                else{}
             }
         });
-    });
+        */
+    }
+    catch (ex) {
+        LiveLog("When trying to display the statistics something really bad happened...<br>" + ex.message);
+    }
 }
 
 function CreateTableRow(tds) {
