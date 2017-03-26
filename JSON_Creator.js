@@ -5,17 +5,19 @@
 
 var BASE = 'http://www.drakor.com';
 var debug = 1;
-
-GetAllDrops();
+var reloadData = 1;
+//GetAllDrops();
 //GetAllPatterns();
-//GetAllItems();6
+GetAllItems();
 function GetAllDrops() {
     var object = {};
+    localStorage.setItem("lastTrade", "");
     $.ajax(BASE + "/manual/drop-tables?show=noheader").success(function (data) {
         var tradeskills = data.match(/manual\/drop-tables\/(.*?)\?/g);
         for (var i = 0; i < tradeskills.length; i++) {
             //Make Ajax call to each tradeskill page
             var trade = tradeskills[i].match(/manual\/drop-tables\/(.*?)\?/)[1];
+            localStorage.setItem("lastTrade", trade);
             $.ajax(BASE + "/manual/drop-tables/" + trade + "?show=noheader").success(function (data) {
                 var levelStart = 0;
                 var levelEnd = 0;
@@ -87,6 +89,7 @@ function GetAllDrops() {
                             //Save the object to localstorage for easier access later
                             localStorage.setItem("drop-table", JSON.stringify(object));
                         }
+                        if (localStorage.getItem("lastTrade") == tradeskill) { localStorage.setItem("dropOK", "done"); }
 
                     }
                 }
@@ -98,6 +101,7 @@ function GetAllDrops() {
 function GetAllPatterns() {
     var object = {};
     var objectByRealId = {};
+    localStorage.setItem("patternOK", "");
     $.ajax(BASE + "/manual/patterns?show=noheader").success(function (data) {
         //console.log(data);
         var trades = data.match(/manual\/patterns\/(.*?)\?/g);
@@ -128,6 +132,7 @@ function GetAllPatterns() {
                         }
                         object[id].cost = Number(cost);
                         object[id].tradeskill = trade;
+                        localStorage.setItem("patternIdMax", id);
                         //Now make an ajax call /show/patternbasic/id
                         $.ajax(BASE + "/show/patternbasic/" + id).success(function (data) {
                             id = $(this)[0].url.match(/patternbasic\/(\d+)/)[1];
@@ -229,6 +234,7 @@ function GetAllPatterns() {
                             }
                             //Save the object to localstorage for easier access later
                             localStorage.setItem("patternObject", JSON.stringify(object));
+                            if (id == localStorage.getItem("patternIdMax")) { localStorage.setItem("patternOK", "done"); }
                         });
                     }
                     else {
@@ -243,34 +249,46 @@ function GetAllPatterns() {
 
 function GetAllItems() {
     //This requires the ids of the items..
-    var patterns = JSON.parse(localStorage.getItem("patternObject"));
-    var drops = JSON.parse(localStorage.getItem("drop-table"));
-    var result = {};
-    for (var p in patterns) {
-        var pattern = patterns[p];
-        for (var r in pattern.result) {
-            var res = pattern.result[r];
-            if (res.realId !== undefined) {
-                result[res.realId] = {};
-                result[res.realId].Tradeskill = pattern.tradeskill;
-                result[res.realId].Rarity = res.rarity;
-                result[res.realId].LevelStart = pattern.levelStart;
-                result[res.realId].LevelEnd = pattern.levelEnd;
-                result[res.realId].PatternID = p;
+    if (reloadData === 1) {
+        GetAllPatterns();
+        GetAllDrops();
+    }
+    var myTimer = setInterval(function () {
+        if (localStorage.getItem("patternOK") == "done" && localStorage.getItem("dropOK") == "done" || reloadData == 0) {
+            console.log("Starting to process the items..");
+            localStorage.setItem("patternOK", undefined);
+            localStorage.setItem("dropOK", undefined);
+            reloadData = 2;
+            clearInterval(myTimer);
+            var patterns = JSON.parse(localStorage.getItem("patternObject"));
+            var drops = JSON.parse(localStorage.getItem("drop-table"));
+            console.log("Loaded patterns and drops..");
+            var result = {};
+            for (var p in patterns) {
+                var pattern = patterns[p];
+                for (var r in pattern.result) {
+                    var res = pattern.result[r];
+                    if (res.realId !== undefined) {
+                        result[res.realId] = {};
+                        result[res.realId].Tradeskill = pattern.tradeskill;
+                        result[res.realId].Rarity = res.rarity;
+                        result[res.realId].LevelStart = pattern.levelStart;
+                        result[res.realId].LevelEnd = pattern.levelEnd;
+                        result[res.realId].PatternID = p;
+                    }
+                }
             }
-        }
-    }
-    for (var d in drops) {
-        var drop = drops[d];
-        result[d] = {};
-        result[d].Tradeskill = drop.tradeskill;
-        result[d].Rarity = drop.rarity;
-        result[d].LevelStart = drop.levelStart;
-        result[d].LevelEnd = drop.levelEnd;
-        result[d].PatternID = "-";
-    }
+            for (var d in drops) {
+                var drop = drops[d];
+                result[d] = {};
+                result[d].Tradeskill = drop.tradeskill;
+                result[d].Rarity = drop.rarity;
+                result[d].LevelStart = drop.levelStart;
+                result[d].LevelEnd = drop.levelEnd;
+                result[d].PatternID = "-";
+            }
 
-    /*
+            /*
 		var logObj = log[difficulty];
 	keys = Object.keys(logObj);
 	len = keys.length;
@@ -283,92 +301,100 @@ function GetAllItems() {
 	}
 	logObj = newObj;
 */
-    var temp = {};
-    keys = Object.keys(result);
-    len = keys.length;
-    keys.sort();
-    for (i = 0; i < len; i++) {
-        k = keys[i];
-        temp[k] = result[k];
-    }
-    result = temp;
-    localStorage.setItem("done", false);
-    //All sorted, let's iterate
-    for (var id in result) {
-        localStorage.setItem("idMAX", id);
-        $.ajax(BASE + "/show/material/" + id).success(function (data) {
-            var id = $(this)[0].url.match(/material\/(\d+)/)[1];
-            console.log("MADE AJAX TO: " + $(this)[0].url);
-            var name = data.match(/\[(.*?)\]/)[1];
-            result[id].Name = name;
-            var vendor = data.match(/Sells to NPC Vendor for <b>([\d,]+)g<\/b> \/each/i);
-            if (vendor) {
-                result[id].Vendor = vendor[1].replace(",", "");
-                console.log("ADDING VENDOR " + result[id].Vendor + " to ID " + id);
+            var temp = {};
+            keys = Object.keys(result);
+            len = keys.length;
+            keys.sort();
+            for (i = 0; i < len; i++) {
+                k = keys[i];
+                temp[k] = result[k];
             }
-            else {
-                result[id].Vendor = "";
-            }
-            result[id].Sold = { Average: "", Quantity: "" };
-            result[id].Available = { Average: "", Quantity: "" };
-            var market = data.match(/<b>([\d,]+)<\/b> (Sold|Available) on Market \(avg price <b>([\d,]+)g<\/b>\)<br>/g);
-            if (market) {
-                for (i = 0; i < market.length; i++) {
-                    var m = market[i];
-                    var match = m.match(/<b>([\d,]+)<\/b> (Sold|Available) on Market \(avg price <b>([\d,]+)g<\/b>\)<br>/i);
-                    if (match) { //Ubersafe
-                        result[id][match[2]].Average = match[3].replace(",", "");
-                        result[id][match[2]].Quantity = match[1].replace(",", "");
-                    }
-                }
-            }
-            if (id === localStorage.getItem("idMAX")) { localStorage.setItem("done", true); }
-        });
-    }
-    var myTimer = setInterval(function () {
-        if (localStorage.getItem("done") === "true") {
-            //Are we done yet? Almost!
-            var outputCSV = '';
-            var headings = ['ID',
-							'Name',
-							'Tradeskill',
-							'Rarity',
-							'PatternID',
-							'LevelStart',
-							'LevelEnd',
-							'Vendor',
-							'SoldQuantity',
-							'SoldAverage',
-							'AvailableQuantity',
-							'AvailableAverage'];
-            outputCSV += headings.join("|") + "\n";
-            console.log("Creating CSV...");
-            //debugger;
-            for (var key in result) {
+            result = temp;
+            localStorage.setItem("done", false);
+            //All sorted, let's iterate
+            for (var id in result) {
+                localStorage.setItem("idMAX", id);
                 try {
-                    var res = result[key];
-                    res.ID = key;
-                    res.SoldQuantity = res.Sold.Quantity;
-                    res.SoldAverage = res.Sold.Average;
-                    res.AvailableQuantity = res.Available.Quantity;
-                    res.AvailableAverage = res.Available.Average;
-                    for (i = 0; i < headings.length; i++) {
-                        outputCSV += res[headings[i]] + "|";
-                    }
-                    outputCSV = outputCSV.replace(/\|$/, "");
-                    outputCSV += "\n";
+                    $.ajax(BASE + "/show/material/" + id).success(function (data) {
+                        var id = $(this)[0].url.match(/material\/(\d+)/)[1];
+                        console.log("MADE AJAX TO: " + $(this)[0].url);
+                        var name = data.match(/\[(.*?)\]/)[1];
+                        result[id].Name = name;
+                        var vendor = data.match(/Sells to NPC Vendor for <b>([\d,]+)g<\/b> \/each/i);
+                        if (vendor) {
+                            result[id].Vendor = vendor[1].replace(",", "");
+                            //console.log("ADDING VENDOR " + result[id].Vendor + " to ID " + id);
+                        }
+                        else {
+                            result[id].Vendor = "";
+                        }
+                        result[id].Sold = { Average: "", Quantity: "" };
+                        result[id].Available = { Average: "", Quantity: "" };
+                        var market = data.match(/<b>([\d,]+)<\/b> (Sold|Available) on Market \(avg price <b>([\d,]+)g<\/b>\)<br>/g);
+                        if (market) {
+                            for (i = 0; i < market.length; i++) {
+                                var m = market[i];
+                                var match = m.match(/<b>([\d,]+)<\/b> (Sold|Available) on Market \(avg price <b>([\d,]+)g<\/b>\)<br>/i);
+                                if (match) { //Ubersafe
+                                    result[id][match[2]].Average = match[3].replace(",", "");
+                                    result[id][match[2]].Quantity = match[1].replace(",", "");
+                                }
+                            }
+                        }
+                        if (id === localStorage.getItem("idMAX")) { localStorage.setItem("done", true); }
+                    });
                 }
                 catch (ex) {
-                    //debugger;
+                    console.log("RIP... " + ex.message);
                 }
             }
-            console.log(outputCSV);
-            localStorage.setItem("CSV", outputCSV);
-            clearInterval(myTimer);
+            var myTimer = setInterval(function () {
+                if (localStorage.getItem("done") === "true") {
+                    //Are we done yet? Almost!
+                    var outputCSV = '';
+                    var headings = ['ID',
+									'Name',
+									'Tradeskill',
+									'Rarity',
+									'PatternID',
+									'LevelStart',
+									'LevelEnd',
+									'Vendor',
+									'SoldQuantity',
+									'SoldAverage',
+									'AvailableQuantity',
+									'AvailableAverage'];
+                    outputCSV += headings.join(",") + "\r\n";
+                    console.log("Creating CSV...");
+                    //debugger;
+                    for (var key in result) {
+                        try {
+                            var res = result[key];
+                            res.ID = key;
+                            res.SoldQuantity = res.Sold.Quantity;
+                            res.SoldAverage = res.Sold.Average;
+                            res.AvailableQuantity = res.Available.Quantity;
+                            res.AvailableAverage = res.Available.Average;
+                            for (i = 0; i < headings.length; i++) {
+                                outputCSV += res[headings[i]] + ",";
+                            }
+                            outputCSV = outputCSV.replace(/\|$/, "");
+                            outputCSV += "\r\n";
+                        }
+                        catch (ex) {
+                            //debugger;
+                        }
+                    }
+                    console.log(outputCSV);
+                    localStorage.setItem("CSV", outputCSV);
+                    clearInterval(myTimer);
+                }
+                else {
+                    console.log("Waiting just a little longer..");
+                }
+            }, 1000, done);
+
         }
-        else {
-            console.log("Waiting just a little longer..");
-        }
-    }, 1000, done);
+    }, 100, myTimer);
 
 }
