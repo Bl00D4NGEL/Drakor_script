@@ -62,7 +62,7 @@ dialog-top => String
 dialog-width => String
 }
 */
-var debug = 0;
+var debug = 1;
 var disableDoubleClickSelling = 0;
 $(document).ready(function () {
     var version = "v1.612";
@@ -326,73 +326,78 @@ $(document).ready(function () {
             });
             $(".drIcon").on("click", function (e) {
                 var myTimer = setInterval(function () {
-                    if (!$("#card" + e.currentTarget.id.slice(4)).text().match(/loading/i)) {
-                        var plainId = e.currentTarget.id.slice(4);
-                        var cardId = "card" + plainId;
-                        //<div id="sell-3102918" class="cardButton linkSell">Sell</div>
-                        $("#sell-" + plainId).on("click", function (e) {
-                            TrackSelling(e.currentTarget.id.slice(5), false);
-                        });
-                        if ($("#lock-" + plainId).length === 0) {
-                            //Create new "lock" button.
-                            var lockButton = $(document.createElement("div")).attr({ 'id': 'lock-' + plainId, 'class': 'cardButton' }).html("Lock");
-                            var toInsert = $("#card" + plainId).find(".cardMenu").children();
-                            lockButton.insertBefore($(toInsert.get(toInsert.length - 1)));
-                            //lockButton.insertBefore($($("#card" + plainId).find(".cardMenu").children().get(3)));
-                            var log = JSON.parse(localStorage.getItem("battleLog"));
-                            if (!log.LockedItems) { //Backwards compatibility
-                                log.LockedItems = {};
-                            }
-                            if (log.LockedItems[plainId]) {
-                                lockButton.html("Un-Lock");
-                            }
-                            localStorage.setItem("battleLog", JSON.stringify(log));
-                            lockButton.on("click", function (e) {
-                                if (e.currentTarget.id) {
-                                    var log = JSON.parse(localStorage.getItem("battleLog"));
-                                    var plainId = e.currentTarget.id.slice(5);
-                                    if (!log.LockedItems) { log.LockedItems = {}; } //Backwards compatbility
-                                    if (log.LockedItems[plainId]) {
-                                        log.LockedItems[plainId] = false;
-                                        $("#icon" + plainId).find(".iconLevel").css("background-color", "black");
-                                        $("#lock-" + plainId).html("Lock");
-                                    }
-                                    else {
-                                        log.LockedItems[plainId] = true;
-                                        $("#icon" + plainId).find(".iconLevel").css("background-color", "green");
-                                        $("#lock-" + plainId).html("Un-Lock");
-                                    }
-                                    localStorage.setItem("battleLog", JSON.stringify(log));
-                                }
+                    try {
+                        if (!$("#card" + e.currentTarget.id.slice(4)).text().match(/loading/i)) {
+                            var plainId = e.currentTarget.id.slice(4);
+                            var cardId = "card" + plainId;
+                            //<div id="sell-3102918" class="cardButton linkSell">Sell</div>
+                            $("#sell-" + plainId).on("click", function (e) {
+                                TrackSelling(e.currentTarget.id.slice(5), false);
                             });
-                        }
-                        if ($("#card" + plainId).find(".cardType")[0].innerHTML.match(/(item :|weapon)/i)) {
-                            if ($("#base-" + plainId).length === 0) {
-                                var baseButton = $(document.createElement("div")).attr({ 'id': 'base-' + plainId, 'class': 'cardButton' }).html("Show Base");
+                            if ($("#lock-" + plainId).length === 0) {
+                                //Create new "lock" button.
+                                var lockButton = $(document.createElement("div")).attr({ 'id': 'lock-' + plainId, 'class': 'cardButton' }).html("Lock");
                                 var toInsert = $("#card" + plainId).find(".cardMenu").children();
-                                baseButton.insertBefore($(toInsert.get(toInsert.length - 1)));
-                                baseButton.on("click", function (e) {
-                                    var id = e.currentTarget.id.slice(5);
-                                    console.log("CHECKING HTML FOR $(\"#base-" + id + "\").html()");
-                                    if ($("#base-" + id).html() == "Show Base") {
-                                        console.log("Getting base stats..");
-                                        GetBaseStats(id);
-                                        $("#base-" + id).html("Show Total");
-                                    }
-                                    else {
-                                        console.log("setting default..");
-                                        $.ajax("/show/viewcard/" + id).success(function (data) {
-                                            var details = data.match(/<div class="cardDetail">(.*?)<\/div>/i)[1];
-                                            $("#card" + id).find(".cardDetail")[0].innerHTML = details;
-                                        });
-                                        $("#base-" + id).html("Show Base");
+                                lockButton.insertBefore($(toInsert.get(toInsert.length - 1)));
+                                //lockButton.insertBefore($($("#card" + plainId).find(".cardMenu").children().get(3)));
+                                var log = JSON.parse(localStorage.getItem("battleLog"));
+                                if (!log.LockedItems) { //Backwards compatibility
+                                    log.LockedItems = {};
+                                }
+                                if (log.LockedItems[plainId]) {
+                                    lockButton.html("Un-Lock");
+                                }
+                                localStorage.setItem("battleLog", JSON.stringify(log));
+                                lockButton.on("click", function (e) {
+                                    if (e.currentTarget.id) {
+                                        var log = JSON.parse(localStorage.getItem("battleLog"));
+                                        var plainId = e.currentTarget.id.slice(5);
+                                        if (!log.LockedItems) { log.LockedItems = {}; } //Backwards compatbility
+                                        if (log.LockedItems[plainId]) {
+                                            log.LockedItems[plainId] = false;
+                                            $("#icon" + plainId).find(".iconLevel").css("background-color", "black");
+                                            $("#lock-" + plainId).html("Lock");
+                                        }
+                                        else {
+                                            log.LockedItems[plainId] = true;
+                                            $("#icon" + plainId).find(".iconLevel").css("background-color", "green");
+                                            $("#lock-" + plainId).html("Un-Lock");
+                                        }
+                                        localStorage.setItem("battleLog", JSON.stringify(log));
                                     }
                                 });
                             }
+                            if ($("#card" + plainId).find(".cardType")[0].innerHTML.match(/(item :|weapon)/i)) {
+                                if ($("#base-" + plainId).length === 0) {
+                                    var baseButton = $(document.createElement("div")).attr({ 'id': 'base-' + plainId, 'class': 'cardButton' }).html("Show Base");
+                                    var toInsert = $("#card" + plainId).find(".cardMenu").children();
+                                    baseButton.insertBefore($(toInsert.get(toInsert.length - 1)));
+                                    baseButton.on("click", function (e) {
+                                        var id = e.currentTarget.id.slice(5);
+                                        console.log("CHECKING HTML FOR $(\"#base-" + id + "\").html()");
+                                        if ($("#base-" + id).html() == "Show Base") {
+                                            console.log("Getting base stats..");
+                                            GetBaseStats(id);
+                                            $("#base-" + id).html("Show Total");
+                                        }
+                                        else {
+                                            console.log("setting default..");
+                                            $.ajax("/show/viewcard/" + id).success(function (data) {
+                                                var details = data.match(/<div class="cardDetail">(.*?)<\/div>/i)[1];
+                                                $("#card" + id).find(".cardDetail")[0].innerHTML = details;
+                                            });
+                                            $("#base-" + id).html("Show Base");
+                                        }
+                                    });
+                                }
+                            }
+                            else {
+                                console.log("This item has been clicked already.. still want to add the base button?");
+                            }
+                            clearInterval(myTimer);
                         }
-                        else {
-                            console.log("This item has been clicked already.. still want to add the base button?");
-                        }
+                    }
+                    catch (ex) {
                         clearInterval(myTimer);
                     }
                 }, 100, e);
@@ -1075,23 +1080,23 @@ function DisplayStatistics(difficulty) {
         console.log(table);
         table.appendTo($("#tableDiv"));
         $("#tableDiv").find("td").css("border", "1px grey solid");
-        /* TEMPORARY DISABLED!!!!
-        $(document).tooltip({ //this will fail if bootstrap and jQuery UI are used at the same time.. :(
+        $(document).uitooltip({ //this will fail if bootstrap and jQuery UI are used at the same time.. :(
             items: "tr",
-            content: function() {
-                var element = $( this );
-                if ( element.attr('id')){
-                    if(element.attr('id').match(/^tr-subtable/)){
+            content: function () {
+                var element = $(this);
+                if (element.attr('id')) {
+                    if (element.attr('id').match(/^tr-subtable/)) {
                         return "<table>" + $("#subtable-" + element.attr('id').match(/^tr-subtable-(\w+)/)[1]).html() + "</table>";
                     }
                 }
-                else{}
+                else { }
             }
         });
-        */
     }
     catch (ex) {
         LiveLog("When trying to display the statistics something really bad happened...<br>" + ex.message);
+        console.log("EXCEPTION:");
+        console.log(ex);
     }
 }
 
@@ -1168,6 +1173,7 @@ function DisenchantSetup() {
     $(table).insertAfter("#slots-remaining");
     $("td").css("vertical-align", "middle");
     if (log.ShowDeingSelects !== true) {
+        i
         log.ShowDeingSelects = false; //Backwards compatibility
         $(hideRow).html("Show Drop-Downs");
         $(".disenchantingSelect").css("display", "none");
