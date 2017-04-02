@@ -62,7 +62,7 @@ dialog-top => String
 dialog-width => String
 }
 */
-var debug = 1;
+var debug = 0;
 var disableDoubleClickSelling = 0;
 $(document).ready(function () {
     var version = "v1.612";
