@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Battle-statistics v1.612
-// @version      1.612
+// @name         Battle-statistics v1.613
+// @version      1.613
 // @description  Tracks statistics of battles (Arena and Node)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com*
@@ -65,7 +65,7 @@ dialog-width => String
 var debug = 1;
 var disableDoubleClickSelling = 0;
 $(document).ready(function () {
-    var version = "v1.612";
+    var version = "v1.613";
     SetupLiveLog(); //Live-log-div setup under chat
     LiveLog("You're currently using Battle Statistics version " + version);
     CheckInventory(); //To load the durability data into the livelog
@@ -123,12 +123,16 @@ $(document).ready(function () {
 			whereis the number after attack is a UNIQUE number (the id of the battle) so I can map the history id to that one.
 			*/
             try {
+                if (xhr.responseText.match(/chick/i)) {
+                    debugger;
+                }
                 var battleId = settings.url.match(/(\d+)/)[1];
-                var difficulty = $(".battleDiff").html().match(/:\s(\w+).*/)[1];
+                var difficulty = $("#drakorWorld").find(".battleDiff").html().match(/:\s(\w+).*/)[1];
                 log = JSON.parse(localStorage.getItem("battleLog"));
                 GenerateHistory(log, battleId, xhr.responseText);
                 AnalyseStats(log, $(".challengerProfile"), $(".opponentProfile"), battleId);
                 if (xhr.responseText.match(/victory/)) {
+                    console.log("RESPONSETEXT:\n" + xhr.responseText);
                     // difficulty = xhr.responseText.match(/<h4>(\w+).*?<\/h4>/i)[1];
                     //Generates the "history" of the battle and returns the log object
                     console.log(difficulty);
@@ -137,21 +141,37 @@ $(document).ready(function () {
                     var loot = xhr.responseText.match(/modLoot\((\d)\)/);
                     if (loot) { //Got loot
                         var realLoot = xhr.responseText.match(/with\s(\d+)\sitem/i);
-                        LiveLog("Victory (" + $($(".roundResult").get(0)).html().match(/(#\d+)/)[1] + ") - Looted " + realLoot[1] + " item" + (Number(realLoot[1]) > 1 ? 's' : '') +
-								" <span class='showHistory' id='span-history-" + battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>", false);
-                        log.TotalLoot += Number(realLoot[1]);
-                        log.CurrentLoot += Number(realLoot[1]);
-                        log[difficulty].Loot += Number(realLoot[1]);
-                        var lootbagText = $("#load-openloot").html().match(/(.*\d+).*/)[1];
-                        var itemsInLootbag = lootbagText.match(/(\d+)/);
-                        if (itemsInLootbag[1] === "1") {
-                            //LiveLog("Loot bag has been opened");
-                            log.CurrentLoot = Number(realLoot[1]);
+                        if (realLoot) {
+                            var round = $($(".roundResult").get(0)).html().match(/(#\d+)/);
+                            if (round) {
+                                round = round[1];
+                            }
+                            else {
+                                round = "#?";
+                            }
+                            LiveLog("Victory (" + round + ") - Looted " + realLoot[1] + " item" + (Number(realLoot[1]) > 1 ? 's' : '') +
+									" <span class='showHistory' id='span-history-" + battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>", false);
+                            log.TotalLoot += Number(realLoot[1]);
+                            log.CurrentLoot += Number(realLoot[1]);
+                            log[difficulty].Loot += Number(realLoot[1]);
+                            var lootbagText = $("#load-openloot").html().match(/(.*\d+).*/)[1];
+                            var itemsInLootbag = lootbagText.match(/(\d+)/);
+                            if (itemsInLootbag[1] === "1") {
+                                //LiveLog("Loot bag has been opened");
+                                log.CurrentLoot = Number(realLoot[1]);
+                            }
+                            $("#load-openloot").html(lootbagText + "(" + log.CurrentLoot + ")");
                         }
-                        $("#load-openloot").html(lootbagText + "(" + log.CurrentLoot + ")");
                     }
                     else {
-                        LiveLog("Victory (" + $($(".roundResult").get(0)).html().match(/(#\d+)/)[1] + ") - Looted 0 items! " +
+                        var round = $($(".roundResult").get(0)).html().match(/(#\d+)/);
+                        if (round) {
+                            round = round[1];
+                        }
+                        else {
+                            round = "#?";
+                        }
+                        LiveLog("Victory (" + round + ") - Looted 0 items! " +
 								"<span class='showHistory' id='span-history-" + battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>", false);
                         log.WonWithoutLoot++;
                         log[difficulty].WonWithoutLoot++;
@@ -175,8 +195,15 @@ $(document).ready(function () {
                     }
                 }
                 else if (xhr.responseText.match(/defeated/) && !xhr.responseText.match(/victory/)) {
-                    LiveLog("Defeat (" + $($(".roundResult").get(0)).html().match(/(#\d+)/)[1] + ") " +
-							"<span class='showHistory' id='span-history-" + battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>", false);
+                    var round = $($(".roundResult").get(0)).html().match(/(#\d+)/);
+                    if (round) {
+                        round = round[1];
+                    }
+                    else {
+                        round = "#?";
+                    }
+                    LiveLog("Defeat (" + round + ") " + "<span class='showHistory' id='span-history-" +
+							battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>", false);
                     log.Lost++;
                     log[difficulty].Lost++;
 
@@ -202,6 +229,7 @@ $(document).ready(function () {
             }
             catch (e) {
                 LiveLog("Oh that's not good..<br/>" + e.message);
+                console.log(e);
             }
         }
         else if (settings.url.match(/\/battle-create\/.*/)) {
@@ -604,45 +632,50 @@ function GenerateHistory(log, battleId, text) {
 }
 
 function AnalyseStats(log, playerObject, enemyObject, battleId) {
-    var stats = ['HP', 'Combat', 'Magic', 'Heal', 'Regen', 'DEF', 'statValue'];
-    var player = {};
-    var enemy = {};
-    var statsMatch = $(playerObject).find(".statRow").get(3).innerHTML.match(/\d+/g);
-    for (var j = 0; j < statsMatch.length; j++) {
-        player[stats[j + 1]] = statsMatch[j];
-    }
-    var statsMatch = $(enemyObject).find(".statRow").get(2).innerHTML.match(/\d+/g);
-    for (var j = 0; j < statsMatch.length; j++) {
-        enemy[stats[j + 1]] = statsMatch[j];
-    }
-    player.HP = $(playerObject).find("#chall_hp").html().match(/\d+ \/ (\d+)/)[1];
-    enemy.HP = $(enemyObject).find("#opp_hp").html().match(/\d+ \/ (\d+)/)[1];
-    player.statValue = Number(player.HP) + Number(player.Combat * 7.5) + Number(player.Magic * 7.5) + Number(player.Heal * 5) + Number(player.Regen * 15) + Number(player.DEF * 2.5);
-    enemy.statValue = Number(enemy.HP) + Number(enemy.Combat * 7.5) + Number(enemy.Magic * 7.5) + Number(enemy.Heal * 5) + Number(enemy.Regen * 15) + Number(enemy.DEF * 2.5);
-
-    //Analyzing done, create table
-    var table = $(document.createElement("table"));
-    var leftRow = ['Who', 'Player', 'Enemy'];
-    for (var column = 0; column < leftRow.length; column++) {
-        var tr = $(document.createElement("tr"));
-        var td = $(document.createElement("td")).html(leftRow[column]).appendTo(tr);
-        for (var k = 0; k < stats.length; k++) {
-            var td = $(document.createElement("td"));
-            if (column === 0) {
-                td.html(stats[k]);
-            }
-            else if (column === 1) {
-                td.html(player[stats[k]]);
-            }
-            else if (column === 2) {
-                td.html(enemy[stats[k]]);
-            }
-            td.appendTo(tr);
+    try {
+        var stats = ['HP', 'Combat', 'Magic', 'Heal', 'Regen', 'DEF', 'statValue'];
+        var player = {};
+        var enemy = {};
+        var statsMatch = $(playerObject).find(".statRow").get(3).innerHTML.match(/\d+/g);
+        for (var j = 0; j < statsMatch.length; j++) {
+            player[stats[j + 1]] = statsMatch[j];
         }
-        tr.appendTo(table);
+        var statsMatch = $(enemyObject).find(".statRow").get(2).innerHTML.match(/\d+/g);
+        for (var j = 0; j < statsMatch.length; j++) {
+            enemy[stats[j + 1]] = statsMatch[j];
+        }
+        player.HP = $(playerObject).find("#chall_hp").html().match(/\d+ \/ (\d+)/)[1];
+        enemy.HP = $(enemyObject).find("#opp_hp").html().match(/\d+ \/ (\d+)/)[1];
+        player.statValue = Number(player.HP) + Number(player.Combat * 7.5) + Number(player.Magic * 7.5) + Number(player.Heal * 5) + Number(player.Regen * 15) + Number(player.DEF * 2.5);
+        enemy.statValue = Number(enemy.HP) + Number(enemy.Combat * 7.5) + Number(enemy.Magic * 7.5) + Number(enemy.Heal * 5) + Number(enemy.Regen * 15) + Number(enemy.DEF * 2.5);
+
+        //Analyzing done, create table
+        var table = $(document.createElement("table"));
+        var leftRow = ['Who', 'Player', 'Enemy'];
+        for (var column = 0; column < leftRow.length; column++) {
+            var tr = $(document.createElement("tr"));
+            var td = $(document.createElement("td")).html(leftRow[column]).appendTo(tr);
+            for (var k = 0; k < stats.length; k++) {
+                var td = $(document.createElement("td"));
+                if (column === 0) {
+                    td.html(stats[k]);
+                }
+                else if (column === 1) {
+                    td.html(player[stats[k]]);
+                }
+                else if (column === 2) {
+                    td.html(enemy[stats[k]]);
+                }
+                td.appendTo(tr);
+            }
+            tr.appendTo(table);
+        }
+        log['stats-' + battleId] = table.html();
+        localStorage.setItem("battleLog", JSON.stringify(log));
     }
-    log['stats-' + battleId] = table.html();
-    localStorage.setItem("battleLog", JSON.stringify(log));
+    catch (ex) {
+        LiveLog("AnalyseStats had an error..\n" + ex.message);
+    }
 }
 
 function DisplayHistory(spanObject) {
@@ -1014,23 +1047,23 @@ function DisplayStatistics(difficulty) {
         }
         for (var j = 0; j < fightTotalPercentage.length; j++) {
             var tr = CreateTableRow([
-                fightTotalPercentage[j],
-                logObj[fightTotalPercentage[j]] + " (" + (logObj[fightTotalPercentage[j]] / totalFights * 100).toFixed(2) + " %)"
+				fightTotalPercentage[j],
+				logObj[fightTotalPercentage[j]] + " (" + (logObj[fightTotalPercentage[j]] / totalFights * 100).toFixed(2) + " %)"
             ]);
             tr.appendTo(table);
         }
         for (var k = 0; k < fightAverageKeys.length; k++) {
             var tr = CreateTableRow([
-                fightAverageKeys[k],
-                logObj[fightAverageKeys[k]] + " (" + (logObj[fightAverageKeys[k]] / totalFights).toFixed(2) + " on average)"
+				fightAverageKeys[k],
+				logObj[fightAverageKeys[k]] + " (" + (logObj[fightAverageKeys[k]] / totalFights).toFixed(2) + " on average)"
             ]);
             tr.appendTo(table);
         }
         for (var i = 0; i < fightLootKeys.length; i++) {
             if (logObj[fightLootKeys[i]] === 0 || logObj[fightLootKeys[i]] === undefined) { continue; } //Item Augments/ Dura Scrolls can have this.
             var tr = CreateTableRow([
-                fightLootKeys[i],
-                logObj[fightLootKeys[i]] + " (" + (logObj[fightLootKeys[i]] / logObj.Loot * 100).toFixed(2) + " %)"
+				fightLootKeys[i],
+				logObj[fightLootKeys[i]] + " (" + (logObj[fightLootKeys[i]] / logObj.Loot * 100).toFixed(2) + " %)"
             ]);
             tr.appendTo(table);
         }
@@ -1056,9 +1089,9 @@ function DisplayStatistics(difficulty) {
                         }
                     }
                     var tr = CreateTableRow([
-                        subkeys,
-                        counter,
-                        tempArray
+						subkeys,
+						counter,
+						tempArray
                     ]);
                     tr.appendTo(subtable);
                     totalCounter += counter;
@@ -1067,8 +1100,8 @@ function DisplayStatistics(difficulty) {
                     subtable.appendTo($("#tableDiv"));
                     subtable.find("td").css("width", "14%");
                     var tr = CreateTableRow([
-                        keys,
-                        totalCounter + " (" + (totalCounter / logObj.Loot * 100).toFixed(2) + " %)"
+						keys,
+						totalCounter + " (" + (totalCounter / logObj.Loot * 100).toFixed(2) + " %)"
                     ]);
                     tr.attr({ 'id': 'tr-subtable-' + keys.replace(" ", "_") });
                     tr.appendTo(table);
@@ -1173,7 +1206,6 @@ function DisenchantSetup() {
     $(table).insertAfter("#slots-remaining");
     $("td").css("vertical-align", "middle");
     if (log.ShowDeingSelects !== true) {
-        i
         log.ShowDeingSelects = false; //Backwards compatibility
         $(hideRow).html("Show Drop-Downs");
         $(".disenchantingSelect").css("display", "none");
