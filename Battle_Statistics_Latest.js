@@ -123,9 +123,6 @@ $(document).ready(function () {
 			whereis the number after attack is a UNIQUE number (the id of the battle) so I can map the history id to that one.
 			*/
             try {
-                if (xhr.responseText.match(/chick/i)) {
-                    debugger;
-                }
                 var battleId = settings.url.match(/(\d+)/)[1];
                 var difficulty = $("#drakorWorld").find(".battleDiff").html().match(/:\s(\w+).*/)[1];
                 log = JSON.parse(localStorage.getItem("battleLog"));
@@ -149,16 +146,16 @@ $(document).ready(function () {
                             else {
                                 round = "#?";
                             }
-                            LiveLog("Victory (" + round + ") - Looted " + realLoot[1] + " item" + (Number(realLoot[1]) > 1 ? 's' : '') +
+                            LiveLog("Victory (" + round + ") - Looted " + realLoot[1] + " item" + (parseInt(realLoot[1]) > 1 ? 's' : '') +
 									" <span class='showHistory' id='span-history-" + battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>", false);
-                            log.TotalLoot += Number(realLoot[1]);
-                            log.CurrentLoot += Number(realLoot[1]);
-                            log[difficulty].Loot += Number(realLoot[1]);
+                            log.TotalLoot += parseInt(realLoot[1]);
+                            log.CurrentLoot += parseInt(realLoot[1]);
+                            log[difficulty].Loot += parseInt(realLoot[1]);
                             var lootbagText = $("#load-openloot").html().match(/(.*\d+).*/)[1];
                             var itemsInLootbag = lootbagText.match(/(\d+)/);
                             if (itemsInLootbag[1] === "1") {
                                 //LiveLog("Loot bag has been opened");
-                                log.CurrentLoot = Number(realLoot[1]);
+                                log.CurrentLoot = parseInt(realLoot[1]);
                             }
                             $("#load-openloot").html(lootbagText + "(" + log.CurrentLoot + ")");
                         }
@@ -177,12 +174,12 @@ $(document).ready(function () {
                         log[difficulty].WonWithoutLoot++;
                     }
                     var exp = xhr.responseText.match(/([0-9,]+)\s?\w*\s?exp/i);
-                    log.Experience += Number(exp[1].replace(",", ""));
-                    log[difficulty].Experience += Number(exp[1].replace(",", ""));
+                    log.Experience += parseInt(exp[1].replace(",", ""));
+                    log[difficulty].Experience += parseInt(exp[1].replace(",", ""));
                     var gold = xhr.responseText.match(/>([0-9,]+)\sgold/i);
                     if (gold) {
-                        log.Gold += Number(gold[1].replace(",", ""));
-                        log[difficulty].Gold += Number(gold[1].replace(",", ""));
+                        log.Gold += parseInt(gold[1].replace(",", ""));
+                        log[difficulty].Gold += parseInt(gold[1].replace(",", ""));
                     }
                     if ($(".menuFighting").length) {
                         AddEnterShortcut($(".menuFighting"));
@@ -241,8 +238,8 @@ $(document).ready(function () {
                 var goldEarned = xhr.responseText.match(/areaname\">([0-9,]+)\sg/i)[1].replace(",", "");
                 var itemsSold = $("#drakorWorld").find(".drIcon").length;
                 LiveLog("Sell all: Sold " + itemsSold + " items for " + goldEarned + " gold.");
-                log.LootGold += Number(goldEarned);
-                log.ItemsSold += Number(itemsSold);
+                log.LootGold += parseInt(goldEarned);
+                log.ItemsSold += parseInt(itemsSold);
                 localStorage.setItem("battleLog", JSON.stringify(log));
             }
         }
@@ -486,7 +483,7 @@ function SubstractBaseStats(data, base_stats) {
             var val = stats[i].match(/\+(\d+)/)[1];
             var stat = stats[i].match(/\+\d+ ([\s\w]+) /)[1];
             stat = stat.replace(/\s$/, "");
-            base_stats[stat] -= Number(val);
+            base_stats[stat] -= parseInt(val);
         }
         return base_stats;
     }
@@ -515,7 +512,7 @@ function GetBaseStats(itemId) {
             var val = stats[i].match(/\+(\d+)/)[1];
             var stat = stats[i].match(/\+\d+ ([\s\w]+) /)[1];
             stat = stat.replace(/\s$/, "");
-            base_stats[stat] = Number(val);
+            base_stats[stat] = parseInt(val);
             order.push(stat);
         }
         if (augmentId) {
@@ -578,7 +575,7 @@ function TrackSelling(Id, makeAjax) {
                     cardValue = scroll[1].replace(",", "");
                 }
                 var log = JSON.parse(localStorage.getItem("battleLog"));
-                log.LootGold += Number(cardValue);
+                log.LootGold += parseInt(cardValue);
                 log.ItemsSold++;
                 localStorage.setItem("battleLog", JSON.stringify(log));
                 LiveLog("Sold an item for  " + cardValue + " gold.");
@@ -646,8 +643,8 @@ function AnalyseStats(log, playerObject, enemyObject, battleId) {
         }
         player.HP = $(playerObject).find("#chall_hp").html().match(/\d+ \/ (\d+)/)[1];
         enemy.HP = $(enemyObject).find("#opp_hp").html().match(/\d+ \/ (\d+)/)[1];
-        player.statValue = Number(player.HP) + Number(player.Combat * 7.5) + Number(player.Magic * 7.5) + Number(player.Heal * 5) + Number(player.Regen * 15) + Number(player.DEF * 2.5);
-        enemy.statValue = Number(enemy.HP) + Number(enemy.Combat * 7.5) + Number(enemy.Magic * 7.5) + Number(enemy.Heal * 5) + Number(enemy.Regen * 15) + Number(enemy.DEF * 2.5);
+        player.statValue = parseInt(player.HP) + Number(player.Combat * 7.5) + Number(player.Magic * 7.5) + Number(player.Heal * 5) + Number(player.Regen * 15) + Number(player.DEF * 2.5);
+        enemy.statValue = parseInt(enemy.HP) + Number(enemy.Combat * 7.5) + Number(enemy.Magic * 7.5) + Number(enemy.Heal * 5) + Number(enemy.Regen * 15) + Number(enemy.DEF * 2.5);
 
         //Analyzing done, create table
         var table = $(document.createElement("table"));
@@ -786,7 +783,7 @@ function SetupLiveLog() {
 	                //.dialog( "option", "width", 500 );
 	                $($("#battleLogDialog").parents().get(0)).css(vals[i], log['dialog-' + vals[i]]);
 	            }
-	            $("#battleLogDialog").css("height", (Number(log['dialog-height'].replace("px", "")) - 50) + "px");
+	            $("#battleLogDialog").css("height", (parseInt(log['dialog-height'].replace("px", "")) - 50) + "px");
 	        }, 600);
 	        $(baseDiv).dialog("open");
 	    }
@@ -847,7 +844,7 @@ function CheckInventory() {
         if (spellArea.match(/nodurability/i)) {
             alert("One or more spells do not have enough durability");
         }
-        var inventorySpaces = Number(data.match(/<div\sid=\"char_inventory".*?><div.*?b>([0-9,]+).*?<\/b>/)[1].replace(",", ""));
+        var inventorySpaces = parseInt(data.match(/<div\sid=\"char_inventory".*?><div.*?b>([0-9,]+).*?<\/b>/)[1].replace(",", ""));
         var log = JSON.parse(localStorage.getItem("battleLog"));
         if (debug > 0) {
             console.log("Inventory-spaces: " + inventorySpaces + "\nlog.CurrentLoot: " + log.CurrentLoot);
@@ -890,13 +887,13 @@ function CheckForDepletedNode() {
                     var waitTime = 0;
                     var minutes = html.match(/(\d+)\s*m/i);
                     if (minutes) {
-                        date.setMinutes(date.getMinutes() + Number(minutes[1]));
-                        waitTime += (Number(minutes[1]) * 60);
+                        date.setMinutes(date.getMinutes() + parseInt(minutes[1]));
+                        waitTime += (parseInt(minutes[1]) * 60);
                     }
                     var seconds = html.match(/(\d+)\s*s/i);
                     if (seconds) {
-                        date.setSeconds(date.getSeconds() + Number(seconds[1]));
-                        waitTime += Number(seconds[1]);
+                        date.setSeconds(date.getSeconds() + parseInt(seconds[1]));
+                        waitTime += parseInt(seconds[1]);
                     }
                     waitTime = waitTime * 1000 + 1000; //Wait 1 second longer to reset
                     var resultDate = date.toJSON();
@@ -974,10 +971,10 @@ function Create_Log_Object() {
 
 function GetAttemptsToNextLevel(invText) {
     var log = JSON.parse(localStorage.getItem("battleLog"));
-    var totalFights = Number(log.Lost) + Number(log.Won);
+    var totalFights = parseInt(log.Lost) + Number(log.Won);
     var averageExperience = Math.floor(log.Experience / totalFights);
-    var currentExp = Number(invText.match(/statexp\".*?>([0-9,]+)/i)[1].replace(",", ""));
-    var currentLevel = Number(invText.match(/<div class="avatarLevel">Level (\d+)/i)[1]);
+    var currentExp = parseInt(invText.match(/statexp\".*?>([0-9,]+)/i)[1].replace(",", ""));
+    var currentLevel = parseInt(invText.match(/<div class="avatarLevel">Level (\d+)/i)[1]);
     var neededExp = currentLevel * currentLevel * 100;
     var neededAttempts = Math.round((neededExp - currentExp) / averageExperience);
     return neededAttempts;
@@ -994,8 +991,8 @@ function SetupLog() {
 		log.LootGold + " gold.<br/>You did not receive loot for a won battle " + log.WonWithoutLoot +
 		" times. (" + (log.WonWithoutLoot / log.Won * 100).toFixed(2) + " %)<br/>You made a total of " + log.Experience + " Experience (" + averageExperience +
 		" on average) and made a total of " + log.Gold + " gold ( " + averageGold +
-		" on average)<br/>You won " + Number(log.Won) + " times (" + (log.Won / totalFights * 100).toFixed(2) +
-		"%) and lost " + Number(log.Lost) + " times (" + (log.Lost / totalFights * 100).toFixed(2) + "%).<br/>";
+		" on average)<br/>You won " + parseInt(log.Won) + " times (" + (log.Won / totalFights * 100).toFixed(2) +
+		"%) and lost " + parseInt(log.Lost) + " times (" + (log.Lost / totalFights * 100).toFixed(2) + "%).<br/>";
     divHTML = AddCommas(divHTML);
     var displayDiv = $(".arenaContainer").get(2);
     displayDiv.innerHTML = divHTML;
@@ -1025,7 +1022,7 @@ function DisplayStatistics(difficulty) {
     try {
         $("#tableDiv").html("");
         var log = JSON.parse(localStorage.getItem("battleLog"));
-        var totalFights = Number(log[difficulty].Won) + Number(log[difficulty].Lost);
+        var totalFights = parseInt(log[difficulty].Won) + Number(log[difficulty].Lost);
         var fightLootKeys = ["WonWithoutLoot", "Common", "Superior", "Rare", "Epic", "Legendary"];
         var fightAverageKeys = ['Gold', 'Experience', 'Loot'];
         var fightTotalPercentage = ["Won", "Lost"];
@@ -1082,7 +1079,7 @@ function DisplayStatistics(difficulty) {
                     for (var l = 0; l < rarities.length; l++) {
                         if (logObj[keys][subkeys][rarities[l]]) {
                             tempArray.push(logObj[keys][subkeys][rarities[l]]);
-                            counter += Number(logObj[keys][subkeys][rarities[l]]);
+                            counter += parseInt(logObj[keys][subkeys][rarities[l]]);
                         }
                         else {
                             tempArray.push("0");
