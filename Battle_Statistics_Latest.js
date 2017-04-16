@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Battle-statistics v1.613
-// @version      1.613
+// @name         Battle-statistics v1.614
+// @version      1.614
 // @description  Tracks statistics of battles (Arena and Node)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com*
@@ -419,6 +419,16 @@ $(document).ready(function () {
                             else {
                                 console.log("This item has been clicked already.. still want to add the base button?");
                             }
+                            $(".linkDisenchant").on("click", function (e) {
+                                e.preventDefault();
+                                var log = JSON.parse(localStorage.getItem("battleLog"));
+                                var id = $(this).attr("id").match(/load-world-disenchanting-(\d+)/i)[1];
+                                if (log.LockedItems[id]) {
+                                    alert("You locked this item.. Please unlock in order to disenchant this");
+                                    setTimeout(function () { $("#load-inventory").click(); }, 2000);
+                                    return;
+                                }
+                            });
                             clearInterval(myTimer);
                         }
                     }
@@ -445,7 +455,6 @@ $(document).ready(function () {
             });
             var output = '';
             for (var type in counter) {
-                console.log("TYPE: " + type + " CLASS LENGTH: " + $(".en-" + type).length);
                 if ($(".en-" + type).length > 1) {
                     output += "There are " + $(".en-" + type).length + " " + type + " Enchants in your inventory<br>";
                     $(".en-" + type).css("background-color", "blue");
@@ -1211,28 +1220,50 @@ function DisenchantSetup() {
 }
 
 function SelectItemToDisenchant() {
+    var log = JSON.parse(localStorage.getItem("battleLog"));
     var rarities = ["Common", "Superior", "Rare", "Epic", "Legendary"];
     var possibleItems = $(".roundResult.areaName").find(".cLink");
     var itemToDE = undefined; // Set variable to undefined to reset the item this var contains
     for (var i = 0; i < possibleItems.length; i++) {
+        console.log($(possibleItems[i]));
+        var id = $(possibleItems[i]).attr("id").match(/(\d+)/)[1];
+        console.log("ID: " + id + " | LOCKED? " + log.LockedItems[id]);
+        if (log.LockedItems[id]) {
+            console.log("LOCKED ID: " + id);
+            continue;
+        }
         var item = possibleItems[i];
         var type = item.innerText.match(/(battle|enchant|augment)/i)[1];
         if (type === "Battle") { type = "Spell"; } //Remapping
         var rarity = item.className.match(/card(\w+)/i)[1];
         if ($("#" + type + "-" + rarity).prop('checked')) { //New change
-            console.log("Item can be DE'd..");
-            console.log($(item));
             itemToDE = item;
             i = possibleItems.length;
         }
     }
 
-    AddEnterShortcut($(itemToDE).parents().children().get(0));
+    $(".roundResult.areaName").each(function (index, obj) {
+        var deingLink = $($(obj).children().get(0));
+        if (deingLink.attr("id") === undefined) { return; }
+        var id = deingLink.attr("id").match(/load-world-disenchanting-(\d+)/i);
+        if (id) { id = id[1]; }
+        else { return; }
+        if (log.LockedItems[id]) {
+            deingLink.on("click", function () {
+                alert("You locked this item.. Please unlock in order to disenchant this");
+                setTimeout(function () { $("#load-inventory").click(); }, 2000);
+                return;
+            });
+            deingLink.css("color", "orange");
+        }
+    });
+
     var span = $(document.createElement("span")).insertAfter($("#disenchantingTable"));
     if (itemToDE === undefined) {
         $(span).html("<br/>There is no item to be disenchanted");
     }
     else {
+        AddEnterShortcut($(itemToDE).parents().children().get(0));
         $(span).html("<br>This is will be disenchanted: ");
         $(itemToDE).clone().appendTo(span);
     }
