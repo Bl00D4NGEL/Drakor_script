@@ -17,7 +17,7 @@ String.prototype.paddingLeft = function (paddingValue) {
 var debug = 1;
 var debugId = "#debugDiv";
 var version = "v1.841";
-var last_change = "2017-04-23";
+var last_change = "2017-04-26";
 
 $(document).ready(function () {
     SetupLog();
@@ -187,6 +187,30 @@ $(document).ready(function () {
                         Error("Localstorage is full");
                     }
                 }
+            }
+            else if (settings.url.match(/workers\/collectworker/)) {
+                var material = xhr.responseText.match(/\[(.*?)\]/)[1];
+                HandleOfflineWorker("delete", material);
+            }
+            else if (settings.url.match(/workers/i)) {
+                var text = xhr.responseText;
+                var items = text.match(/(<div>Worker collecting.*?<\/div><\/div>)/ig);
+                if (!items) { return; }
+                for (var i = 0; i < items.length; i++) {
+                    var material = items[i].match(/\[(.*?)\]/);
+                    var time = items[i].match(/Collect <b>\d+<\/b> in (.*?)<\/div>/);
+                    if (!time) { HandleOfflineWorker("delete", material[1]); }
+                    else {
+                        var seconds = ConvertStringIntoSeconds(time[1]);
+                        var utc = new Date(new Date().getTime() + parseInt(seconds) * 1000).getTime();
+                        var param = {
+                            "Material": material[1],
+                            "Time": utc
+                        };
+                        HandleOfflineWorker("check", param);
+                    }
+                }
+                DisplayData(JSON.parse(localStorage.getItem("localLog")));
             }
         }
     });
@@ -525,6 +549,10 @@ function DisplayData(log) {
     materialDiv.html("");
     var nodeDiv = $("#nodeDiv");
     nodeDiv.html("");
+
+    if (Object.keys(log.Misc.OfflineWorker).length > 0) {
+        CreateOfflineWorkerPanel(log);
+    }
     var misc = $(document.createElement("p")).html("Total Experience gained: " + log.Misc.TotalExp + " (" + averageExperience + " on average)<br>" +
 												   "Total Gold gained: " + log.Misc.Gold + " (" + averageGold + " on average)<br>" +
 												   "Total Collection/Creation attempts: " + totalAttempts + "<br>" +
@@ -639,6 +667,76 @@ function DisplayData(log) {
     $(".nodeTable").find("td").css("border", "1px solid black");
 }
 
+function CreateOfflineWorkerPanel(log) {
+    var offDiv = $(document.createElement("div")).css({ "border": "1px solid black", "padding": "20px", "margin-bottom": "10px" }).appendTo("#miscDiv");
+    $(document.createElement("h1")).html("Offline worker").appendTo(offDiv);
+    var off = log.Misc.OfflineWorker;
+    var mailList = [];
+    for (material in off) {
+        Debug("MATERIAL: " + material + " VALUE: " + off[material]);
+        var p = $(document.createElemient("p")).appendTo(offDiv);
+        //We save the UTC milliseconds in off[material]
+        if (off[material] == "done") {
+            p.html(material + " --> DONE (Mail sent)");
+        }
+        else {
+            var diff = off[material] - new Date().getTime();
+            Debug("MS: " + off[material]);
+            if (diff <= 0) {
+                p.html(material + " --> DONE (Sending Mail)");
+                mailList.push(material);
+                off[material] = "done";
+                localStorage.setItem("localLog", JSON.stringify(log));
+            }
+            else if (diff <= 300000) { // Also send mail to items that are done witin 5 minutes
+                mailList.push(material);
+                off[material] = "done";
+                localStorage.setItem("localLog", JSON.stringify(log));
+            }
+            else {
+                var serverOffset = 3; //In hours
+                var date = new Date(parseInt(off[material]));
+                date.setUTCHours(date.getUTCHours() - serverOffset);
+                var d = date.toJSON();
+                d = d.replace(/T/, " ");
+                d = d.replace(/\..*?$/, "");
+                p.html(material + " done at " + d + " (" + ConvertIntoSmallerTimeFormat(diff) + ")");
+            }
+        }
+    }
+    if (mailList.length > 0) {
+        Info("Sending mail..");
+        var mailUrl = 'https://www.drakor.com/mail/create';
+        var playerId;
+
+        //Find out player ID..
+        $(".bv_top_btn1").each(function (index, obj) {
+            if ($(obj).attr("href") === undefined) { return; }
+            var id = $(obj).attr("href").match(/profile\/(\d+)/);
+            if (id) { playerId = id[1]; }
+        });
+        if (!playerId) {
+            Error("Cannot determine player id!");
+            return;
+        }
+        var form = $(document.createElement("form"));
+        var fields = ["sendfrom", "sendto"];
+        for (var i = 0; i < fields.length; i++) {
+            $(document.createElement("input")).attr({ "type": "text", "name": fields[i], "id": fields[i] }).val(playerId).appendTo(form);
+        }
+        $(document.createElement("input")).attr({ "type": "text", "name": "subject", "id": "subject" }).val("Offline Worker").appendTo(form);
+        var text = "Your offline workers for:<br>";
+        for (var j = 0; j < mailList.length; j++) {
+            text += "- " + mailList[j] + "<br>";
+            log.Misc.OfflineWorker[mailList[j]] = "done";
+        }
+        localStorage.setItem("localLog", JSON.stringify(log));
+        text += "<br>are almost or already done.<br>Head to any Offline worker and collect them.<br><strong>Service provided by Just Statistics.</strong>";
+        $(document.createElement("input")).attr({ "type": "text", "name": "mail_message", "id": "mail_message" }).val(text).appendTo(form);
+        $.post(mailUrl, $(form).serialize());
+    }
+}
+
 /*
 timeInMs gets calculated down to hours, minutes and seconds and gets output as a string
 example ConvertIntoSmallerTimeFormat(3600000) [1 hour in milliseconds]
@@ -674,6 +772,56 @@ function ConvertIntoSmallerTimeFormat(timeInMs) {
     }
     output += Math.floor(seconds) + " seconds";
     return output;
+}
+
+
+/*
+seconds => s
+minutes => m
+hours => h
+day => d
+week => w
+*/
+function ConvertStringIntoSeconds(string) {
+    var out = 0;
+    var second = string.match(/(\d+)\s*?s/i);
+    if (second) { out += parseInt(second[1]); }
+
+    var minute = string.match(/(\d+)\s*?m/i);
+    if (minute) { out += (parseInt(minute[1]) * 60); }
+
+    var hour = string.match(/(\d+)\s*?h/i);
+    if (hour) { out += (parseInt(hour[1]) * 60 * 60); }
+
+    var day = string.match(/(\d+)\s*?d/i);
+    if (day) { out += (parseInt(day[1]) * 60 * 60 * 24); }
+
+    var week = string.match(/(\d+)\s*?w/i);
+    if (week) { out += (parseInt(day[1]) * 60 * 60 * 24 * 7); }
+
+    return out;
+}
+
+function HandleOfflineWorker(command, param) {
+    var log = JSON.parse(localStorage.getItem("localLog"));
+    if (!log.Misc.OfflineWorker) { Info("Creating Offline-Worker Object"); log.Misc.OfflineWorker = {}; }
+    if (command == "delete") {
+        Info("Removing '" + param + "' from the list");
+        log.Misc.OfflineWorker[param] = undefined;
+        localStorage.setItem("localLog", JSON.stringify(log));
+        DisplayData(log);
+    }
+    else if (command == "check") {
+        if (!log.Misc.OfflineWorker[param.Material]) {
+            HandleOfflineWorker("add", param);
+            return;
+        }
+    }
+    else if (command == "add") {
+        Info("Adding '" + param.Material + "' to the list with UTC " + param.Time);
+        log.Misc.OfflineWorker[param.Material] = param.Time;
+    }
+    localStorage.setItem("localLog", JSON.stringify(log));
 }
 
 /*
@@ -1129,25 +1277,32 @@ function typeOf(obj) {
 }
 
 function Debug(text, level, html) {
-    if (debug < 1) { return; }
-    if (level === undefined) { level = 1; }
-    if (html === undefined) { html = true; }
-    var font = {
-        "0": ["p", { "background-color": "black", "color": "green" }],
-        "1": ["p", { "background-color": "black", "color": "white" }],
-        "2": ["p", { "background-color": "black", "color": "red" }],
-        "3": ["p", { "background-color": "black", "color": "orange" }]
-    };
-    if (font[level] === undefined) {
-        level = 1;
+    try {
+        if (debug < 1) { return; }
+        if (level === undefined) { level = 1; }
+        if (html === undefined) { html = true; }
+        if (text === undefined) { text = ""; }
+        var font = {
+            "0": ["p", { "background-color": "black", "color": "green" }],
+            "1": ["p", { "background-color": "black", "color": "white" }],
+            "2": ["p", { "background-color": "black", "color": "red" }],
+            "3": ["p", { "background-color": "black", "color": "orange", "margin": "0px" }]
+        };
+        if (font[level] === undefined) {
+            level = 1;
+        }
+        if (html) {
+            text = text.replace("\n", "<br>");
+            $(document.createElement(font[level][0])).css(font[level][1]).html(text).prependTo($(debugId));
+        }
+        else {
+            console.log("TEXT: \n" + text)
+            //text = text.replace(/<\/?br\/?>/g, "\n")
+            $(document.createElement(font[level[0]])).css(font[level[1]]).text(text).prependTo($(debugId));
+        }
     }
-    if (html) {
-        text = text.replace("\n", "<br>");
-        $(document.createElement(font[level][0])).css(font[level][1]).html(text).prependTo($(debugId));
-    }
-    else {
-        text = text.replace(/<\/?br\/?>/g, "\n");
-        $(debugId).text(text + $("#debugDiv").text());
+    catch (e) {
+        Error(e.message);
     }
 }
 
