@@ -10,14 +10,14 @@
 /*
 New feature (Node data) still need to be tested on pattern skills (e.g. ring crafting) and Treasure Hunting
 */
-String.prototype.paddingLeft = function (paddingValue) {
+String.prototype.paddingLeft = function(paddingValue){
     return String(paddingValue + this).slice(-paddingValue.length);
 };
 
 var debug = 1;
 var debugId = "#debugDiv";
 var version = "v1.841";
-var last_change = "2017-04-26";
+var last_change = "2017-04-29";
 
 $(document).ready(function () {
     SetupLog();
@@ -40,11 +40,11 @@ $(document).ready(function () {
     }
     //Load the Graph script EVEN IF the site is https.
     //Can load the chart stuff because it is https.. yay
-    try {
+    try{
         $("head").append("<script src='https://rawgit.com/softwarefx/jChartFX/master/js/jchartfx.system.js'><\/script>");
         $("head").append("<script src='https://rawgit.com/softwarefx/jChartFX/master/js/jchartfx.coreBasic.js'><\/script>");
     }
-    catch (ex) {
+    catch(ex){
         Error("Cannot load Graph-Library: " + ex.message);
     }
     //Add the "button" to the menu bar
@@ -52,23 +52,23 @@ $(document).ready(function () {
         $(logDiv).dialog("open");
     }).appendTo("#gs_topmenu");
 
-    $(".menuItem").on("click", function () {
-        if ($(this).attr('class').match(/menuFighting/i)) { return; } //Don't do this for combat nodes..
-        else {
+    $(".menuItem").on("click", function(){
+        if($(this).attr('class').match(/menuFighting/i)){return;} //Don't do this for combat nodes..
+        else{
             GetAndSetRank();
         }
     });
     $(document).ajaxComplete(function (event, xhr, settings) {
         if (xhr.status === 200) { //Check if ajax is OK
-            if (settings.url === "/adventure" || settings.url.match(/travel/)) {
-                $(".menuItem").on("click", function () {
-                    if ($(this).attr('class').match(/menuFighting/i)) { return; } //Don't do this for combat nodes..
-                    else {
+            if(settings.url === "/adventure" || settings.url.match(/travel/)){
+                $(".menuItem").on("click", function(){
+                    if($(this).attr('class').match(/menuFighting/i)){return;} //Don't do this for combat nodes..
+                    else{
                         GetAndSetRank();
                     }
                 });
             }
-            else if (settings.url.match(/combinepattern/) && !settings.url.match(/action/)) {
+            else if(settings.url.match(/combinepattern/) && !settings.url.match(/action/)){
                 GetAndSetRank();
             }
             else if (settings.url.match(/\/world\/action_/)) { //Look if the ajax is a tradeskill action
@@ -94,11 +94,11 @@ $(document).ready(function () {
                     log[tradeskill].Experience = 0;
                     $(document.createElement("option")).attr({ name: tradeskill, value: tradeskill }).text(tradeskill).appendTo($("#tradeSelect"));
                     $(document.createElement("option"))
-						.attr({ name: tradeskill, value: tradeskill })
+						.attr({ name: tradeskill, value: tradeskill})
 						.text(tradeskill).appendTo($("#tradeSelectRarityChart")); //If a new tradeskill is there, add it to the select
                 } //If tradeskill is not present in log create it
                 if (!xhr.responseText.match(/depleted/i)) {
-                    try {
+                    try{
                         // var regex = /<div class="roundResult areaName">(.*?exp\)?<\/span><\/div>)/gi;
                         // var result = regex.exec(xhr.responseText); //Basic regex to get only the necessary data.
                         var result = xhr.responseText.match(/<div class="roundResult areaName">.*?(?:exp|beginner)\s*\)?<\/span.*?><\/div>/gi);
@@ -106,17 +106,17 @@ $(document).ready(function () {
                         if (result) { //This will always say true UNLESS you worked in another window thus the result will be empty -> no log entry will be made
                             var nodeName = $(".locationTitle").text();
                             //Attention! If the node is a settlement node, the level-range can be adjusted. Same goes for TH => adjust node level range to currently selected level range
-                            if (nodeName.match(/settlement|treasure/i)) {
+                            if(nodeName.match(/settlement|treasure/i)){
                                 Debug("You're working on a Settlement node or a TH node!");
                                 nodeName = nodeName.match(/(.*?)\(/)[1]; //Only the text is what we want for the log.
                                 var selectLevelFrom = $("#minRange").val();
                                 var selectLevelTo = $("#maxRange").val();
-                                nodeName += "(Node Level " + selectLevelFrom + " - " + selectLevelTo + ")";
+                                nodeName += "(Node Level "  + selectLevelFrom + " - " + selectLevelTo + ")";
                                 Debug("Changed node-name to: " + nodeName);
                             }
                             var temp = result[0].match(/^<div.*?>(.*?(?:exp|beginner)\s*\)?<\/span.*?>)<\/div>/gi);
                             if (result.length === 1) {
-                                if (result[0].match(/^<div class="roundResult areaName">Your combines are complete./)) {
+                                if(result[0].match(/^<div class="roundResult areaName">Your combines are complete./)){
                                     titleData = "Creation done!";
                                     actionStatus = 'alert';
                                 }
@@ -127,7 +127,7 @@ $(document).ready(function () {
                             }
                             else {
                                 for (var i = 0; i < result.length; i++) {
-                                    if (result[i].match(/^<div class="roundResult areaName">Your combines are complete./)) {
+                                    if(result[i].match(/^<div class="roundResult areaName">Your combines are complete./)){
                                         titleData = "Creation done!";
                                         actionStatus = 'alert';
                                     }
@@ -157,7 +157,7 @@ $(document).ready(function () {
                             //Titlechanging data
                             var buffrarity = xhr.responseText.match(/dricon\scard(\w+)\sslot_default/i);
                             if (buffrarity[1] !== 'None') { buffActive = true; }
-                            if (titleData !== 'Creation done!') {
+                            if(titleData !== 'Creation done!'){
                                 if (xhr.responseText.match(/\d+%\sof/gi)) {
                                     titleData = xhr.responseText.match(/(\d+)%\sof/i)[1] + "% of Node left";
                                 }
@@ -168,7 +168,7 @@ $(document).ready(function () {
                             DisplayData(log);//Rarity-, Multi- and Materialoverview
                         }
                     }
-                    catch (e) {
+                    catch(e){
                         Error("Handling Responsetext: " + e.message);
                     }
                 }
@@ -176,7 +176,6 @@ $(document).ready(function () {
                     titleData = "Node depleted!";
                     actionStatus = "alert";
                 }
-                ChangeTitle(titleData, buffActive, actionStatus);   //Change the title according to current status
                 try { //If the localstorage space is used up, this won't work
                     localStorage.setItem("localLog", JSON.stringify(log));
                     $(showLog).text("Show Log");
@@ -188,24 +187,24 @@ $(document).ready(function () {
                     }
                 }
             }
-            else if (settings.url.match(/workers\/collectworker/)) {
+            else if (settings.url.match(/workers\/collectworker/)){
                 var material = xhr.responseText.match(/\[(.*?)\]/)[1];
                 HandleOfflineWorker("delete", material);
             }
-            else if (settings.url.match(/workers/i)) {
+            else if (settings.url.match(/workers/i)){
                 var text = xhr.responseText;
                 var items = text.match(/(<div>Worker collecting.*?<\/div><\/div>)/ig);
-                if (!items) { return; }
-                for (var i = 0; i < items.length; i++) {
+                if(!items){return;}
+                for(var i=0;i<items.length;i++){
                     var material = items[i].match(/\[(.*?)\]/);
                     var time = items[i].match(/Collect <b>\d+<\/b> in (.*?)<\/div>/);
-                    if (!time) { HandleOfflineWorker("delete", material[1]); }
-                    else {
+                    if(!time){HandleOfflineWorker("delete", material[1]);}
+                    else{
                         var seconds = ConvertStringIntoSeconds(time[1]);
                         var utc = new Date(new Date().getTime() + parseInt(seconds) * 1000).getTime();
                         var param = {
-                            "Material": material[1],
-                            "Time": utc
+                            "Material" : material[1],
+                            "Time":  utc
                         };
                         HandleOfflineWorker("check", param);
                     }
@@ -216,7 +215,7 @@ $(document).ready(function () {
     });
 });
 
-function GetAndSetRank() {
+function GetAndSetRank(){
 
     return;
     // TEMPORARY disable this
@@ -224,28 +223,28 @@ function GetAndSetRank() {
 
 
     var log = JSON.parse(localStorage.getItem("localLog"));
-    if (log.profileId === undefined) {
-        $.ajax("/profile").success(function (data) {
+    if(log.profileId === undefined){
+        $.ajax("/profile").success(function(data){
             var profId = data.match(/<a href="\/armory\/profile\/(\d+)\?show=noheader/);
-            if (profId) {
+            if(profId){
                 var log = JSON.parse(localStorage.getItem("localLog"));
                 log.profileId = profId[1];
                 localStorage.setItem("localLog", JSON.stringify(log));
             }
         });
     }
-    else {
-        $.ajax("/armory/profile/" + log.profileId + "?show=noheader").success(function (data) {
+    else{
+        $.ajax("/armory/profile/" + log.profileId + "?show=noheader").success(function(data){
             var trades = data.match(/<div class="tradeskillBox".*?>.*?<\/div><\/div>/gi);
             var titleText = $(".skillTitle").html();
             titleText = titleText.replace(/<.*?>/g, "");
             var current_trade = titleText.match(/^([\w\s]+)\s/)[1];
-            for (var i = 0; i < trades.length; i++) {
+            for(var i=0;i<trades.length;i++){
                 var trade = trades[i];
                 var tradeskill = trade.match(/<span class="tradeLabel">(.*?\))<\/span>/)[1];
                 tradeskill = tradeskill.replace(/<.*?>/g, "");
                 var real_trade = tradeskill.match(/^([\w\s]+)\s/)[1];
-                if (real_trade === current_trade) {
+                if(real_trade === current_trade){
                     //console.log("TRADESKILL: " + real_trade);
                     var level = trade.match(/<div class="tradeLevel">(\d+)<\/div>/)[1];
                     //console.log("LEVEL: " + level);
@@ -259,7 +258,7 @@ function GetAndSetRank() {
     }
 }
 
-function addCommas(x) {
+function addCommas(x){
     return x.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
 }
 
@@ -278,7 +277,7 @@ function ProcessData(log, responseText, history, tradeskill, nodeName) {
             if (!exp) { //If this still fails for whatever reason, just default to 0 exp
                 exp = 0;
                 //Okay one last time since you might just not have enough inventory spaces
-                if (history.match(/get more space/)) {
+                if(history.match(/get more space/)){
                     Error("Out of inventory space!");
                 }
                 //Log the error in the history (The last resort for this).
@@ -309,14 +308,14 @@ function ProcessData(log, responseText, history, tradeskill, nodeName) {
             log[tradeskill][key].Experience = 0;
             log[tradeskill][key].Attempts = 0;
         }
-        if (!log[tradeskill].Node) { log[tradeskill].Node = {}; } //For older versions
-        if (!log[tradeskill].Node[nodeName]) {
+        if(!log[tradeskill].Node){log[tradeskill].Node = {};} //For older versions
+        if(!log[tradeskill].Node[nodeName]){
             Info("NEW NODE: '" + nodeName + "'");
             log[tradeskill].Node[nodeName] = {};
             log[tradeskill].Node[nodeName].Items = {};
             log[tradeskill].Node[nodeName].Rarity = {};
             var rarities = ['Nothing', 'Common', 'Superior', 'Rare', 'Epic', 'Legendary'];
-            for (var i = 0; i < rarities.length; i++) { log[tradeskill].Node[nodeName].Rarity[rarities[i]] = 0; }
+            for(var i=0;i<rarities.length;i++){log[tradeskill].Node[nodeName].Rarity[rarities[i]] = 0;}
             log[tradeskill].Node[nodeName].Misc = {};
             log[tradeskill].Node[nodeName].Misc.Experience = 0;
             log[tradeskill].Node[nodeName].Misc.Attempts = 0;
@@ -391,23 +390,23 @@ function ProcessData(log, responseText, history, tradeskill, nodeName) {
             }
             Info("Item: " + item + " - Amount: " + amount + " - Total: " + log[tradeskill].Items[item].Amount);
         }
-        if (!log[tradeskill].Items[item].Rarity) { //If rarity hasn't been set yet (Older versions did not have this)
+        if(!log[tradeskill].Items[item].Rarity){ //If rarity hasn't been set yet (Older versions did not have this)
             log[tradeskill].Items[item].Rarity = rarity; //This will take the last-generated rarity on this function (Pattern that create different rarities *will* bug on this.
         }
-        if (!log[tradeskill].Node[nodeName].Items[item]) {
+        if(!log[tradeskill].Node[nodeName].Items[item]){
             log[tradeskill].Node[nodeName].Items[item] = {};
             log[tradeskill].Node[nodeName].Items[item].Attempts = 1;
             log[tradeskill].Node[nodeName].Items[item].Rarity = rarity; //This will take the last-generated rarity on this function (Pattern that create different rarities *will* bug on this.
 
         }
-        else {
+        else{
             log[tradeskill].Node[nodeName].Items[item].Attempts++;
         }
         gold = history.match(/\(\+([0-9,]+)\s*gold/i);
         if (!gold) { gold = 0; }
         else {
             gold = gold[1].replace(",", "");
-            if ($("#history").prop("checked")) {
+            if($("#history").prop("checked")){
                 log.Misc.GoldIndexes += log.Misc.Index + "|";
             }
         }
@@ -440,46 +439,54 @@ function Create_Log_Object() {
     return log;
 }
 
-function ChangeTitle(titleText, buffActive, actionStatus) {
-    var foodBuffInfo = "[NBA] ";
-    var log = JSON.parse(localStorage.getItem("localLog"));
-    if (buffActive) { foodBuffInfo = "[BA] "; }
-    if (actionStatus === "alert") {
-        try {
-            if (log.Misc.Alert) {
-                Info("Creation completed/Node depleted!", true);
-            }
-        }
-        catch (e) {
-            Error("ChangeTitle: " + e.message);
-        }
+function MakePieChart(data){
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    $(document.createElement("h1")).text("Rarities for " + data[0]).appendTo($("#graph_div"));
+
+    $(svg).attr({
+        "viewBox": "-1 -1 2 2",
+    })
+		.css({"transform": "rotate(-0.25turn)", "height" : "200px"})
+		//.append(circle)
+		.appendTo($("#graph_div"));
+
+    var temp = 0;
+    for(var i=1;i<data.length;i++){
+        var d = data[i];
+        if(d.Percent <= 0){continue;}
+        var [x,y] = GetCoordinatesForPercent(temp);
+        temp += Number(d.Percent);
+        var [x_2, y_2] = GetCoordinatesForPercent(temp);
+
+        var large = d.Percent > .5 ? 1 : 0;
+        var pathData = [
+			'M ' + x + ' ' + y, //Move
+			'A 1 1 0 ' + large + ' 1 ' + x_2 + " " + y_2, //Arc
+			'L 0 0' //Line
+        ].join(" ");
+
+        var path = $(document.createElementNS('http://www.w3.org/2000/svg', 'path')).attr({"d": pathData, "fill": d.Color}).appendTo(svg);
+        var title = $(document.createElement("title")).text(d.Title + " (" + (d.Percent * 100).toFixed(2) + "%)").appendTo(path);
     }
-    $("title").text((foodBuffInfo + titleText));
+    $("#graph_div").html($("#graph_div").html());
 }
-//Chart/Graph building
-function DrawChart(json_string, title_text, chart_type) {
-    try { //Sometimes this fails if jchartfx could not be loaded..
-        var chart1 = new cfx.Chart();
-        if (chart_type.match(/pie/i)) {
-            chart1.setGallery(cfx.Gallery.Pie);
+
+function MakeBarChart(data){
+    //To be implemented
+}
+
+function MakePolyChart(data){
+    for(var type in data){ //Multiple lines, yay!
+        for(var i=0;i<data[type].length; i++){
+            //Implement here
         }
-        else if (chart_type.match(/bar/i)) {
-            chart1.setGallery(cfx.Gallery.Bar);
-        }
-        else if (chart_type.match(/(lines|graph)/i)) {
-            chart1.setGallery(cfx.Gallery.Lines);
-        }
-        $("#graph_div").html("");
-        chart1.create('graph_div');
-        chart1.setDataSource(json_string);
-        var titles = chart1.getTitles();
-        var title = new cfx.TitleDockable();
-        title.setText(title_text);
-        titles.add(title);
     }
-    catch (e) {
-        $("#graph_div").html("Something went wrong when creating the Graph..<br/>Error Message: '" + e.message + "'");
-    }
+}
+
+function GetCoordinatesForPercent(percent) {
+    var x = Math.cos(2 * Math.PI * percent);
+    var y = Math.sin(2 * Math.PI * percent);
+    return [x, y];
 }
 
 function GetDate() {
@@ -521,8 +528,8 @@ function ExportDataWithoutHistory() {
     return log;
 }
 
-function GetPercent(val1, val2) {
-    return (val1 / val2 * 100).toFixed(2);
+function GetPercent(val1, val2){
+    return (val1/val2*100).toFixed(2);
 }
 
 function DisplayData(log) {
@@ -550,7 +557,7 @@ function DisplayData(log) {
     var nodeDiv = $("#nodeDiv");
     nodeDiv.html("");
 
-    if (Object.keys(log.Misc.OfflineWorker).length > 0) {
+    if(Object.keys(log.Misc.OfflineWorker).length > 0){
         CreateOfflineWorkerPanel(log);
     }
     var misc = $(document.createElement("p")).html("Total Experience gained: " + log.Misc.TotalExp + " (" + averageExperience + " on average)<br>" +
@@ -565,13 +572,13 @@ function DisplayData(log) {
             var tradeskillTitle = $(document.createElement("h2")).css("padding", "5px").html("Tradeskill: " + tradeskill);
             tradeskillTitle.clone().appendTo($(".statisticDiv"));
             var tradeData = $(document.createElement("p"))
-			.html("Total Experience: " + log[tradeskill].Experience + " (" + Math.floor(log[tradeskill].Experience / log[tradeskill].Attempts) +
+			.html("Total Experience: " + log[tradeskill].Experience +  " (" + Math.floor(log[tradeskill].Experience / log[tradeskill].Attempts) +
 				  " on average)<br>Total Attempts: " + log[tradeskill].Attempts).appendTo(miscDiv);
             tradeData.html(addCommas(tradeData.html()));
-            var materialTable = $(document.createElement("table")).css({ "width": "100%" }).attr({ "class": "materialTable" }).appendTo(materialDiv);
+            var materialTable = $(document.createElement("table")).css({"width": "100%"}).attr({"class": "materialTable"}).appendTo(materialDiv);
             var tr = $(document.createElement("tr")).css("font-weight", "bold").appendTo(materialTable);
-            var titles = ["Material", "Amount", "Average", "Gotten/Total"];
-            for (var i = 0; i < titles.length; i++) {
+            var titles = ["Material", "Amount", "Average" , "Gotten/Total"];
+            for(var i=0;i<titles.length;i++){
                 var td = $(document.createElement("td")).html(titles[i]).appendTo(tr);
             }
             for (var item in log[tradeskill].Items) { //Iterate over dropped items
@@ -580,80 +587,80 @@ function DisplayData(log) {
 							  (log[tradeskill].Items[item].Amount / log[tradeskill].Items[item].Drop).toFixed(2),
 							  log[tradeskill].Items[item].Drop + "/" + log[tradeskill].Attempts + " (" +
 							  GetPercent(log[tradeskill].Items[item].Drop, log[tradeskill].Attempts) + " %)"];
-                for (var j = 0; j < values.length; j++) {
+                for(var j=0;j<values.length;j++){
                     var td = $(document.createElement("td")).html(values[j]).appendTo(tr);
                 }
             }
 
-            var multiTable = $(document.createElement("table")).css({ "width": "100%" }).attr({ "class": "multiTable" }).appendTo(multiDiv);
+            var multiTable = $(document.createElement("table")).css({"width": "100%"}).attr({"class": "multiTable"}).appendTo(multiDiv);
             var tr = $(document.createElement("tr")).css("font-weight", "bold").appendTo(multiTable);
             var titles = ["Multi", "Gotten/Total"];
-            for (var i = 0; i < titles.length; i++) {
+            for(var i=0;i<titles.length;i++){
                 var td = $(document.createElement("td")).html(titles[i]).appendTo(tr);
             }
             for (var multi in log[tradeskill].Multi) { //Iterate over multis
                 var tr = $(document.createElement("tr")).appendTo(multiTable);
-                var values = [multi, log[tradeskill].Multi[multi].Amount + "/" + log[tradeskill].Attempts + " ("
+                var values = [multi, log[tradeskill].Multi[multi].Amount + "/" +  log[tradeskill].Attempts + " ("
 							  + GetPercent(log[tradeskill].Multi[multi].Amount, log[tradeskill].Attempts) + "%)"];
-                for (var j = 0; j < values.length; j++) {
+                for(var j=0;j<values.length;j++){
                     var td = $(document.createElement("td")).html(values[j]).appendTo(tr);
                 }
             }
 
-            var rarityTable = $(document.createElement("table")).css({ "width": "100%" }).attr({ "class": "rarityTable" }).appendTo(rarityDiv);
+            var rarityTable = $(document.createElement("table")).css({"width": "100%"}).attr({"class": "rarityTable"}).appendTo(rarityDiv);
             var tr = $(document.createElement("tr")).css("font-weight", "bold").appendTo(rarityTable);
             var titles = ["Rarity", "Gotten/Total"];
-            for (var i = 0; i < titles.length; i++) {
+            for(var i=0;i<titles.length;i++){
                 var td = $(document.createElement("td")).html(titles[i]).appendTo(tr);
             }
             for (var rarity in colorDict) {
                 if (log[tradeskill].Rarity[rarity]) {
                     var tr = $(document.createElement("tr")).css("color", colorDict[rarity]).appendTo(rarityTable);
-                    var values = [rarity, log[tradeskill].Rarity[rarity] + "/" + log[tradeskill].Attempts + " ("
+                    var values = [rarity, log[tradeskill].Rarity[rarity] + "/" +  log[tradeskill].Attempts + " ("
 								  + GetPercent(log[tradeskill].Rarity[rarity], log[tradeskill].Attempts) + "%)"];
-                    for (var j = 0; j < values.length; j++) {
+                    for(var j=0;j<values.length;j++){
                         var td = $(document.createElement("td")).html(values[j]).appendTo(tr);
                     }
                 }
             }
 
-            for (var node in log[tradeskill].Node) {
+            for(var node in log[tradeskill].Node){
                 var nodeHeading = $(document.createElement("h2")).html("Node: " + node).appendTo(nodeDiv);
                 var nodeDescription = $(document.createElement("h5"))
 				.html("Gained experience: " + log[tradeskill].Node[node].Misc.Experience + "<br>Attempts/Creations done: " +
 					  log[tradeskill].Node[node].Misc.Attempts).appendTo(nodeDiv);
                 nodeDescription.html(addCommas(nodeDescription.html()));
-                var nodeTable = $(document.createElement("table")).css({ "width": "100%" }).attr({ "class": "nodeTable" }).appendTo(nodeDiv);
+                var nodeTable = $(document.createElement("table")).css({"width": "100%"}).attr({"class": "nodeTable"}).appendTo(nodeDiv);
 
                 $(document.createElement("tr"))
-					.css({ "font-weight": "bold", "text-align": "center" }).html("<td colspan='2'>Items</td>").appendTo(nodeTable);
+					.css({"font-weight": "bold", "text-align": "center"}).html("<td colspan='2'>Items</td>").appendTo(nodeTable);
                 var tr = $(document.createElement("tr")).css("font-weight", "bold").appendTo(nodeTable);
                 var titles = ["Item", "Gotten/Total"];
-                for (var i = 0; i < titles.length; i++) {
+                for(var i=0;i<titles.length;i++){
                     var td = $(document.createElement("td")).html(titles[i]).appendTo(tr);
                 }
-                for (var item in log[tradeskill].Node[node].Items) {
+                for(var item in log[tradeskill].Node[node].Items){
                     var values = [item, log[tradeskill].Node[node].Items[item].Attempts + "/" + log[tradeskill].Node[node].Misc.Attempts + " (" +
 								  GetPercent(log[tradeskill].Node[node].Items[item].Attempts, log[tradeskill].Node[node].Misc.Attempts) + "%)"];
                     var tr = $(document.createElement("tr")).css("color", colorDict[log[tradeskill].Node[node].Items[item].Rarity]).appendTo(nodeTable);
-                    for (var j = 0; j < values.length; j++) {
+                    for(var j=0;j<values.length;j++){
                         var td = $(document.createElement("td")).html(values[j]).appendTo(tr);
                     }
                 }
 
                 $(document.createElement("tr"))
-					.css({ "font-weight": "bold", "text-align": "center" }).html("<td colspan='2'>Rarity</td>").appendTo(nodeTable);
+					.css({"font-weight": "bold", "text-align": "center"}).html("<td colspan='2'>Rarity</td>").appendTo(nodeTable);
                 var tr = $(document.createElement("tr")).css("font-weight", "bold").appendTo(nodeTable);
                 var titles = ["Rarity", "Gotten/Total"];
-                for (var i = 0; i < titles.length; i++) {
+                for(var i=0;i<titles.length;i++){
                     var td = $(document.createElement("td")).html(titles[i]).appendTo(tr);
                 }
-                for (var rarity in log[tradeskill].Node[node].Rarity) {
-                    if (log[tradeskill].Node[node].Rarity[rarity]) {
+                for(var rarity in log[tradeskill].Node[node].Rarity){
+                    if(log[tradeskill].Node[node].Rarity[rarity]){
                         var values = [rarity, log[tradeskill].Node[node].Rarity[rarity] + "/" + log[tradeskill].Node[node].Misc.Attempts + " (" +
 									  GetPercent(log[tradeskill].Node[node].Rarity[rarity], log[tradeskill].Node[node].Misc.Attempts) + "%)"];
                         var tr = $(document.createElement("tr")).css("color", colorDict[rarity]).appendTo(nodeTable);
-                        for (var j = 0; j < values.length; j++) {
+                        for(var j=0;j<values.length;j++){
                             var td = $(document.createElement("td")).html(values[j]).appendTo(tr);
                         }
                     }
@@ -667,33 +674,33 @@ function DisplayData(log) {
     $(".nodeTable").find("td").css("border", "1px solid black");
 }
 
-function CreateOfflineWorkerPanel(log) {
-    var offDiv = $(document.createElement("div")).css({ "border": "1px solid black", "padding": "20px", "margin-bottom": "10px" }).appendTo("#miscDiv");
+function CreateOfflineWorkerPanel(log){
+    var offDiv = $(document.createElement("div")).css({"border": "1px solid black", "padding": "20px", "margin-bottom": "10px"}).appendTo("#miscDiv");
     $(document.createElement("h1")).html("Offline worker").appendTo(offDiv);
     var off = log.Misc.OfflineWorker;
     var mailList = [];
-    for (material in off) {
+    for(material in off){
         Debug("MATERIAL: " + material + " VALUE: " + off[material]);
-        var p = $(document.createElemient("p")).appendTo(offDiv);
+        var p = $(document.createElement("p")).appendTo(offDiv);
         //We save the UTC milliseconds in off[material]
-        if (off[material] == "done") {
+        if(off[material] == "done"){
             p.html(material + " --> DONE (Mail sent)");
         }
-        else {
+        else{
             var diff = off[material] - new Date().getTime();
             Debug("MS: " + off[material]);
-            if (diff <= 0) {
+            if(diff <= 0){
                 p.html(material + " --> DONE (Sending Mail)");
                 mailList.push(material);
                 off[material] = "done";
                 localStorage.setItem("localLog", JSON.stringify(log));
             }
-            else if (diff <= 300000) { // Also send mail to items that are done witin 5 minutes
+            else if(diff <= 300000){ // Also send mail to items that are done witin 5 minutes
                 mailList.push(material);
                 off[material] = "done";
                 localStorage.setItem("localLog", JSON.stringify(log));
             }
-            else {
+            else{
                 var serverOffset = 3; //In hours
                 var date = new Date(parseInt(off[material]));
                 date.setUTCHours(date.getUTCHours() - serverOffset);
@@ -704,35 +711,35 @@ function CreateOfflineWorkerPanel(log) {
             }
         }
     }
-    if (mailList.length > 0) {
+    if(mailList.length > 0){
         Info("Sending mail..");
         var mailUrl = 'https://www.drakor.com/mail/create';
         var playerId;
 
         //Find out player ID..
-        $(".bv_top_btn1").each(function (index, obj) {
-            if ($(obj).attr("href") === undefined) { return; }
+        $(".bv_top_btn1").each(function(index, obj){
+            if($(obj).attr("href") === undefined){return;}
             var id = $(obj).attr("href").match(/profile\/(\d+)/);
-            if (id) { playerId = id[1]; }
+            if(id){playerId = id[1];}
         });
-        if (!playerId) {
+        if(!playerId){
             Error("Cannot determine player id!");
             return;
         }
         var form = $(document.createElement("form"));
         var fields = ["sendfrom", "sendto"];
-        for (var i = 0; i < fields.length; i++) {
-            $(document.createElement("input")).attr({ "type": "text", "name": fields[i], "id": fields[i] }).val(playerId).appendTo(form);
+        for(var i=0;i<fields.length;i++){
+            $(document.createElement("input")).attr({"type": "text", "name": fields[i], "id": fields[i]}).val(playerId).appendTo(form);
         }
-        $(document.createElement("input")).attr({ "type": "text", "name": "subject", "id": "subject" }).val("Offline Worker").appendTo(form);
+        $(document.createElement("input")).attr({"type": "text", "name": "subject", "id": "subject"}).val("Offline Worker").appendTo(form);
         var text = "Your offline workers for:<br>";
-        for (var j = 0; j < mailList.length; j++) {
+        for(var j=0;j<mailList.length;j++){
             text += "- " + mailList[j] + "<br>";
             log.Misc.OfflineWorker[mailList[j]] = "done";
         }
         localStorage.setItem("localLog", JSON.stringify(log));
         text += "<br>are almost or already done.<br>Head to any Offline worker and collect them.<br><strong>Service provided by Just Statistics.</strong>";
-        $(document.createElement("input")).attr({ "type": "text", "name": "mail_message", "id": "mail_message" }).val(text).appendTo(form);
+        $(document.createElement("input")).attr({"type": "text", "name": "mail_message", "id": "mail_message"}).val(text).appendTo(form);
         $.post(mailUrl, $(form).serialize());
     }
 }
@@ -782,42 +789,42 @@ hours => h
 day => d
 week => w
 */
-function ConvertStringIntoSeconds(string) {
+function ConvertStringIntoSeconds(string){
     var out = 0;
     var second = string.match(/(\d+)\s*?s/i);
-    if (second) { out += parseInt(second[1]); }
+    if(second){ out += parseInt(second[1]);}
 
     var minute = string.match(/(\d+)\s*?m/i);
-    if (minute) { out += (parseInt(minute[1]) * 60); }
+    if(minute){ out += (parseInt(minute[1]) * 60);}
 
     var hour = string.match(/(\d+)\s*?h/i);
-    if (hour) { out += (parseInt(hour[1]) * 60 * 60); }
+    if(hour){ out += (parseInt(hour[1]) * 60 * 60);}
 
     var day = string.match(/(\d+)\s*?d/i);
-    if (day) { out += (parseInt(day[1]) * 60 * 60 * 24); }
+    if(day){ out += (parseInt(day[1]) * 60 * 60 * 24);}
 
     var week = string.match(/(\d+)\s*?w/i);
-    if (week) { out += (parseInt(day[1]) * 60 * 60 * 24 * 7); }
+    if(week){ out += (parseInt(day[1]) * 60 * 60 * 24 * 7);}
 
     return out;
 }
 
-function HandleOfflineWorker(command, param) {
+function HandleOfflineWorker(command, param){
     var log = JSON.parse(localStorage.getItem("localLog"));
-    if (!log.Misc.OfflineWorker) { Info("Creating Offline-Worker Object"); log.Misc.OfflineWorker = {}; }
-    if (command == "delete") {
+    if(!log.Misc.OfflineWorker){Info("Creating Offline-Worker Object");log.Misc.OfflineWorker = {};}
+    if(command == "delete"){
         Info("Removing '" + param + "' from the list");
         log.Misc.OfflineWorker[param] = undefined;
         localStorage.setItem("localLog", JSON.stringify(log));
         DisplayData(log);
     }
-    else if (command == "check") {
-        if (!log.Misc.OfflineWorker[param.Material]) {
+    else if(command == "check"){
+        if(!log.Misc.OfflineWorker[param.Material]){
             HandleOfflineWorker("add", param);
             return;
         }
     }
-    else if (command == "add") {
+    else if(command == "add"){
         Info("Adding '" + param.Material + "' to the list with UTC " + param.Time);
         log.Misc.OfflineWorker[param.Material] = param.Time;
     }
@@ -830,61 +837,88 @@ thingsToLookFor is an Array of the keys (Amount, Attempts, Experience)
 timeFrom will be the date to start at
 timeTo will be the date to stop at (will stop at the current date)
 */
-function CollectDataForChart(logObject, thingsToLookFor, timeFrom, timeTo) {
-    var returnArray = [];
-    var date = new Date();
-    date.setTime(date.getTime() + (-3 + date.getTimezoneOffset() / 60) * 60 * 60 * 1000);
-    var month = date.getMonth();
-    var day = date.getDate();
-    var hour = date.getHours();
-    var currentDate = date.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day + (hour < 10 ? '0' : '') + hour;
-    if (parseInt(timeTo) > parseInt(currentDate)) {
-        Debug("User entered a date in the future..");
-        timeTo = currentDate;
+function CollectDataForChart(log, trade) {
+    /* new implementation */
+    //Percent
+    //Color
+    //Title
+    var data = [
+		trade,
+    ];
+    var colorDict = {
+        "Nothing": "#0aa",
+        "Common": "#999",
+        "Superior": "#48c730",
+        "Rare": "#2f84c7",
+        "Epic": "#bd33de",
+        "Legendary": "#f14c02"
+    };
+    for(var rarity in log[trade].Rarity){
+        var temp = {};
+        temp.Color = colorDict[rarity];
+        temp.Percent = (log[trade].Rarity[rarity] / log[trade].Attempts).toFixed(4);
+        temp.Title = rarity[0].toUpperCase() + rarity.substring(1);
+        data.push(temp);
     }
-    var toYear = timeTo.substring(0, 4);
-    var toMonth = timeTo[4] + timeTo[5];
-    var toDay = timeTo[6] + timeTo[7];
-    var toHour = timeTo[8] + timeTo[9];
-    date.setFullYear(toYear);
-    date.setMonth(toMonth);
-    date.setDate(toDay);
-    date.setHours(toHour);
-    var fromDate = new Date();
-    var fromYear = timeFrom.substring(0, 4);
-    var fromMonth = timeFrom[4] + timeFrom[5];
-    var fromDay = timeFrom[6] + timeFrom[7];
-    var fromHour = timeFrom[8] + timeFrom[9];
-    fromDate.setFullYear(fromYear);
-    fromDate.setMonth(fromMonth);
-    fromDate.setDate(fromDay);
-    fromDate.setHours(fromHour);
-    var diffHours = Math.round((date - fromDate) / 3600000);
-    Info("Diffhours: " + diffHours);
-    for (var i = 0; i < diffHours; i++) {
-        fromDate.setHours(fromDate.getHours() + 1);
-        month = fromDate.getMonth() + 1;
-        day = fromDate.getDate();
-        hour = fromDate.getHours();
-        var key = fromDate.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day + (hour < 10 ? '0' : '') + hour;
-        // console.log(key);
-        var dummy = {};
-        for (var j = 0; j < thingsToLookFor.length; j++) {
-            dummy.Date = key;
-            if (logObject[key]) {
-                dummy[thingsToLookFor[j]] = logObject[key][thingsToLookFor[j]];
-            }
-            else if (returnArray.length > 1) {
-                dummy[thingsToLookFor[j]] = 0;
-            }
-        }
-        // console.log(dummy);
-        if (!logObject[key] && returnArray.length === 0) { continue; }
-        returnArray.push(dummy);
-        // console.log(fromDate);
-    }
-    // console.log(returnArray);
-    return returnArray;
+    Dump(data, "data");
+    MakePieChart(data);
+    /*
+
+	var returnArray = [];
+	var date = new Date();
+	date.setTime(date.getTime() + (-3 + date.getTimezoneOffset() / 60) * 60 * 60 * 1000);
+	var month = date.getMonth();
+	var day = date.getDate();
+	var hour = date.getHours();
+	var currentDate = date.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day + (hour < 10 ? '0' : '') + hour;
+	if (parseInt(timeTo) > parseInt(currentDate)) {
+		Debug("User entered a date in the future..");
+		timeTo = currentDate;
+	}
+	var toYear = timeTo.substring(0, 4);
+	var toMonth = timeTo[4] + timeTo[5];
+	var toDay = timeTo[6] + timeTo[7];
+	var toHour = timeTo[8] + timeTo[9];
+	date.setFullYear(toYear);
+	date.setMonth(toMonth);
+	date.setDate(toDay);
+	date.setHours(toHour);
+	var fromDate = new Date();
+	var fromYear = timeFrom.substring(0, 4);
+	var fromMonth = timeFrom[4] + timeFrom[5];
+	var fromDay = timeFrom[6] + timeFrom[7];
+	var fromHour = timeFrom[8] + timeFrom[9];
+	fromDate.setFullYear(fromYear);
+	fromDate.setMonth(fromMonth);
+	fromDate.setDate(fromDay);
+	fromDate.setHours(fromHour);
+	var diffHours = Math.round((date - fromDate) / 3600000);
+	Info("Diffhours: " + diffHours);
+	for (var i = 0; i < diffHours; i++) {
+		fromDate.setHours(fromDate.getHours() + 1);
+		month = fromDate.getMonth() + 1;
+		day = fromDate.getDate();
+		hour = fromDate.getHours();
+		var key = fromDate.getFullYear() + '' + (month < 10 ? '0' : '') + month + '' + (day < 10 ? '0' : '') + day + (hour < 10 ? '0' : '') + hour;
+		// console.log(key);
+		var dummy = {};
+		for (var j = 0; j < thingsToLookFor.length; j++) {
+			dummy.Date = key;
+			if (logObject[key]) {
+				dummy[thingsToLookFor[j]] = logObject[key][thingsToLookFor[j]];
+			}
+			else if (returnArray.length > 1) {
+				dummy[thingsToLookFor[j]] = 0;
+			}
+		}
+		// console.log(dummy);
+		if (!logObject[key] && returnArray.length === 0) { continue; }
+		returnArray.push(dummy);
+		// console.log(fromDate);
+	}
+	// console.log(returnArray);
+	return returnArray;
+	*/
 }
 
 function DisplayHistory(logObject) {
@@ -911,12 +945,12 @@ function DisplayHistory(logObject) {
     var text = "";
     var start = 0;
     var end = indexes.length - 2;
-    if (end < 0) { end = 0; }
+    if(end < 0){end = 0;}
     if (indexes.length > 1000 && !$("#reverseCheckbox").prop('checked')) {
         start = indexes.length - 1000;
         end = indexes.length;
     }
-    else if (indexes.length > 1000 && $("#reverseCheckbox").prop("checked")) {
+    else if(indexes.length > 1000 && $("#reverseCheckbox").prop("checked")){
         start = 0;
         end = 1000;
     }
@@ -962,7 +996,7 @@ function SetupLog() {
     // $(document.createElement("label")).attr({"id": "multiDivText"}).css({"text-align":"left", "display": "inherit"}).appendTo(multiDiv);
     var miscDiv = $(document.createElement("div")).attr({ "id": "miscDiv", "class": "statisticDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("miscDivText")).appendTo(logDiv);
     var rarityDiv = $(document.createElement("div")).attr({ "id": "rarityDiv", "class": "statisticDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("rarityDivText")).appendTo(logDiv);
-    var nodeDiv = $(document.createElement("div")).attr({ "id": "nodeDiv" }).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("nodeDivText")).appendTo(logDiv);
+    var nodeDiv = $(document.createElement("div")).attr({"id": "nodeDiv"}).css({ "text-align": "left", "display": "inherit" }).html(localStorage.getItem("nodeDivText")).appendTo(logDiv);
     var optionsDiv = $(document.createElement("div")).attr({ "id": "optionDiv" }).css({ "text-align": "left", "display": "inherit" }).appendTo(logDiv);
     var displayArea = $(document.createElement("textarea")).attr({ id: "displayArea", autocomplete: "off", spellcheck: "false" }).css({ "width": "750px", "height": "200px", "display": "none" }).appendTo(optionsDiv);
     var helpDiv = $(document.createElement("div")).attr({ "id": "helpDiv" }).css({ "text-align": "left", "display": "inherit" })
@@ -991,79 +1025,76 @@ function SetupLog() {
         $(document.createElement("span")).text("Select a tradeskill").insertBefore(formDiv);
         var graphForm = $(document.createElement("form")).on("submit", function (e) { e.preventDefault(); }).appendTo(formDiv);
         var tradeskillSelect = $(document.createElement("select")).insertBefore(formDiv);
-        var rarityButton = $(document.createElement("button")).attr({ id: "rarityButton" }).css("display", "none").html("Rarities").on("click", function () {
-            var jsonArray = [];
-            for (var rarity in log[$(tradeskillSelect).val()].Rarity) {
-                var json = {};
-                json.Amount = log[$(tradeskillSelect).val()].Rarity[rarity];
-                json.Rarity = rarity;
-                jsonArray.push(json);
-            }
-            DrawChart(jsonArray, "Rarities", "Pie");
+        var rarityButton = $(document.createElement("button")).attr({ id: "rarityButton" }).html("Rarities").on("click", function () {
+            CollectDataForChart(log, $(tradeskillSelect).val());
         }).insertBefore(formDiv);
         for (var tradeskill in log) {
             if (tradeskill === "Misc") { continue; }
             $(document.createElement("option")).attr({ value: tradeskill }).text(tradeskill).appendTo(tradeskillSelect);
         }
-        $(document.createElement("span")).html("Select the details you want to display<br/>").appendTo(graphForm);
-        var details = ["Amount", "Attempts", "Experience"];
-        for (var i = 0; i < details.length; i++) {
-            $(document.createElement("input")).attr({ type: "checkbox", class: "checkbox-graph", id: "graph-" + details[i] }).appendTo(graphForm);
-            $(document.createElement("span")).text(details[i]).on("click", function () { $("#graph-" + $(this).text()).click(); }).appendTo(graphForm);
-        }
-        var fromToArray = ["from", "to"]; //For id-mapping
-        var selectArray = ["Year", "Month", "Day", "Hour"]; //For select-id-
-        for (var j = 0; j < fromToArray.length; j++) {
-            $(document.createElement("span")).html("<br/>Select data " + fromToArray[j] + " (Format: Year/Month/Day/Hour)<br/>").appendTo(graphForm);
-            for (var element = 0; element < selectArray.length; element++) {
-                var isCurrent = false;
-                var d = new Date();
-                d.setTime(d.getTime() + (-3 + d.getTimezoneOffset() / 60) * 60 * 60 * 1000);
-                var select = $(document.createElement("select")).attr({ id: fromToArray[j] + "-" + selectArray[element] }).appendTo(graphForm);
-                if (selectArray[element] === "Year") {
-                    for (var year = 2016; year <= d.getFullYear() ; year++) {
-                        $(document.createElement("option")).attr({ value: year }).text(year).appendTo(select);
-                    }
-                }
-                else if (selectArray[element] === "Month") {
-                    var monthArray = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-                    for (var month = 0; month < monthArray.length; month++) {
-                        if (d.getMonth() === month) { isCurrent = true; } else { isCurrent = false; }
-                        $(document.createElement("option")).attr({ value: (month < 10 ? '0' : '') + month, selected: isCurrent }).text(monthArray[month]).appendTo(select);
-                    }
-                }
-                else if (selectArray[element] === "Day") {
-                    for (var day = 1; day < 32; day++) {
-                        if (parseInt(d.getDate()) - 1 === day && fromToArray[j] === "from") { isCurrent = true; }
-                        else if (parseInt(d.getDate()) === day && fromToArray[j] === "to") { isCurrent = true; }
-                        else { isCurrent = false; }
-                        $(document.createElement("option")).attr({ value: (day < 10 ? '0' : '') + day, selected: isCurrent }).text(day).appendTo(select);
-                    }
-                }
-                else {
-                    for (var hour = 0; hour < 24; hour++) {
-                        if (d.getHours() === hour) { isCurrent = true; } else { isCurrent = false; }
-                        $(document.createElement("option")).attr({ value: (hour < 10 ? '0' : '') + hour, selected: isCurrent }).text(hour).appendTo(select);
-                    }
-                }
-            }
+        formDiv.append("More Statistics comming soon™!");
+        /*
+		$(document.createElement("span")).html("Select the details you want to display<br/>").appendTo(graphForm);
+		var details = ["Amount", "Attempts", "Experience"];
+		for (var i = 0; i < details.length; i++) {
+			$(document.createElement("input")).attr({ type: "checkbox", class: "checkbox-graph", id: "graph-" + details[i] }).appendTo(graphForm);
+			$(document.createElement("span")).text(details[i]).on("click", function () { $("#graph-" + $(this).text()).click(); }).appendTo(graphForm);
+		}
+		var fromToArray = ["from", "to"]; //For id-mapping
+		var selectArray = ["Year", "Month", "Day", "Hour"]; //For select-id-
+		for (var j = 0; j < fromToArray.length; j++) {
+			$(document.createElement("span")).html("<br/>Select data " + fromToArray[j] + " (Format: Year/Month/Day/Hour)<br/>").appendTo(graphForm);
+			for (var element = 0; element < selectArray.length; element++) {
+				var isCurrent = false;
+				var d = new Date();
+				d.setTime(d.getTime() + (-3 + d.getTimezoneOffset() / 60) * 60 * 60 * 1000);
+				var select = $(document.createElement("select")).attr({ id: fromToArray[j] + "-" + selectArray[element] }).appendTo(graphForm);
+				if (selectArray[element] === "Year") {
+					for (var year = 2016; year <= d.getFullYear() ; year++) {
+						$(document.createElement("option")).attr({ value: year }).text(year).appendTo(select);
+					}
+				}
+				else if (selectArray[element] === "Month") {
+					var monthArray = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+					for (var month = 0; month < monthArray.length; month++) {
+						if (d.getMonth() === month) { isCurrent = true; } else { isCurrent = false; }
+						$(document.createElement("option")).attr({ value: (month < 10 ? '0' : '') + month, selected: isCurrent }).text(monthArray[month]).appendTo(select);
+					}
+				}
+				else if (selectArray[element] === "Day") {
+					for (var day = 1; day < 32; day++) {
+						if (parseInt(d.getDate()) - 1 === day && fromToArray[j] === "from") { isCurrent = true; }
+						else if (parseInt(d.getDate()) === day && fromToArray[j] === "to") { isCurrent = true; }
+						else { isCurrent = false; }
+						$(document.createElement("option")).attr({ value: (day < 10 ? '0' : '') + day, selected: isCurrent }).text(day).appendTo(select);
+					}
+				}
+				else {
+					for (var hour = 0; hour < 24; hour++) {
+						if (d.getHours() === hour) { isCurrent = true; } else { isCurrent = false; }
+						$(document.createElement("option")).attr({ value: (hour < 10 ? '0' : '') + hour, selected: isCurrent }).text(hour).appendTo(select);
+					}
+				}
+			}
 
-        }
-        $(document.createElement("button")).attr({ type: "submit" }).text("Show graph").on("click", function () {
-            var graphArray = [];
-            var checkboxes = $(".checkbox-graph");
-            for (var i = 0; i < checkboxes.length; i++) {
-                if ($(checkboxes[i]).prop('checked')) {
-                    graphArray.push($(checkboxes[i]).attr('id').substring(6));
-                }
-            }
-            if (graphArray.length === 0) { alert("You need to at least select one of the three details to display.."); return; }
-            var timeFrom = $("#from-Year").val() + $("#from-Month").val() + $("#from-Day").val() + $("#from-Hour").val();
-            var timeTo = $("#to-Year").val() + $("#to-Month").val() + $("#to-Day").val() + $("#to-Hour").val();
-            if (parseInt(timeFrom) > parseInt(timeTo)) { alert("Your date range is not correct, check again!"); return; }
-            var jsonArray = CollectDataForChart(log[$(tradeskillSelect).val()], graphArray, timeFrom, timeTo);
-            DrawChart(jsonArray, "", "graph");
-        }).appendTo(graphForm);
+		}
+		/*
+		$(document.createElement("button")).attr({ type: "submit", "disabled": "disabled" }).text("Show graph").on("click", function () {
+			var graphArray = [];
+			var checkboxes = $(".checkbox-graph");
+			for (var i = 0; i < checkboxes.length; i++) {
+				if ($(checkboxes[i]).prop('checked')) {
+					graphArray.push($(checkboxes[i]).attr('id').substring(6));
+				}
+			}
+			if (graphArray.length === 0) { alert("You need to at least select one of the three details to display.."); return; }
+			var timeFrom = $("#from-Year").val() + $("#from-Month").val() + $("#from-Day").val() + $("#from-Hour").val();
+			var timeTo = $("#to-Year").val() + $("#to-Month").val() + $("#to-Day").val() + $("#to-Hour").val();
+			if (parseInt(timeFrom) > parseInt(timeTo)) { alert("Your date range is not correct, check again!"); return; }
+			var jsonArray = CollectDataForChart(log[$(tradeskillSelect).val()], graphArray, timeFrom, timeTo);
+			DrawChart(jsonArray, "", "graph");
+		}).appendTo(graphForm);
+		*/
     }
     else {
         $(graph_div).html("Sorry, but the graphs cannot be loaded in the HTTPS version of Drakor.");
@@ -1113,11 +1144,11 @@ function SetupLog() {
         $(importButton).text("Import data").val("import_1");
         // console.log(ExportDataWithoutHistory());
     }).insertBefore(displayArea);
-    var getNewestCodeButton = $(document.createElement("button")).attr({ id: "codeButton" }).html("Get newest code of this script").css({ "width": "auto", "height": "auto" }).on("click", function () {
+    var getNewestCodeButton = $(document.createElement("button")).attr({id: "codeButton"}).html("Get newest code of this script").css({ "width": "auto", "height": "auto" }).on("click", function(){
         var codeUrl = 'https://rawgit.com/Bl00D4NGEL/Drakor_script/master/Just_Statistics_Beta.js';
         $.ajax(codeUrl, {
             dataType: 'text', //To stop auto-executing the script that gets sent back
-            success: function (response) {
+            success: function(response){
                 $(displayArea).css("display", "block").val(response);
             }
         });
@@ -1151,11 +1182,11 @@ function SetupLog() {
         }
     }).insertBefore(tradeLog);
     var goldButton = $(document.createElement("button")).attr({ id: "goldButton" }).text("Display gold history").css({ "width": "auto", "height": "auto" }).on("click", function () {
-        if ($(this).html().match(/display/i)) {
+        if($(this).html().match(/display/i)){
             $(this).html("Hide gold history");
             DisplayHistory(log.Misc.GoldIndexes);
         }
-        else {
+        else{
             $(this).html("Display gold history");
             $("#log").html("");
         }
@@ -1163,13 +1194,13 @@ function SetupLog() {
     var reverseCheckbox = $(document.createElement("input")).attr({ id: "reverseCheckbox", type: "checkbox" }).on("change", function () {
         try {
             var log = JSON.parse(localStorage.getItem("localLog"));
-            if ($("#tradeSelect").val() !== "" && $("#materialSelect").val() !== "" && $("#goldButton").html().match(/display/i)) {
+            if($("#tradeSelect").val() !== "" && $("#materialSelect").val() !== "" && $("#goldButton").html().match(/display/i)){
                 DisplayHistory(log[$("#tradeSelect").val()].Items[$("#materialSelect").val()]);
             }
-            else if ($("#tradeSelect").val() !== "" && $("#materialSelect").val() === "" && $("#goldButton").html().match(/display/i)) {
+            else if($("#tradeSelect").val() !== "" && $("#materialSelect").val() === "" && $("#goldButton").html().match(/display/i)){
                 DisplayHistory(log[$("#tradeSelect").val()]);
             }
-            else if ($("#goldButton").html().match(/hide/i)) {
+            else if($("#goldButton").html().match(/hide/i)){
                 DisplayHistory(log.Misc.GoldIndexes);
             }
         }
@@ -1201,107 +1232,107 @@ function SetupLog() {
     DisplayData(log); //Reload the logtexts
 }
 
-function Error(errorText) {
+function Error(errorText){
     Debug(errorText, 2);
 }
 
-function Info(infoText, sendAlert) {
-    if (sendAlert === undefined) { sendAlert = false; }
-    if (sendAlert) { alert(infoText); }
+function Info(infoText, sendAlert){
+    if(sendAlert === undefined){sendAlert = false;}
+    if(sendAlert){alert(infoText);}
     Debug(infoText, 0);
 }
 
-function Dump(variable, other, indent) {
-    if (debug < 1) { return; }
-    if (other === undefined) { other = ''; }
-    if (indent === undefined) { indent = 0; }
+function Dump(variable, other, indent){
+    if(debug < 1){return;}
+    if(other === undefined){other = '';}
+    if(indent === undefined){indent = 0;}
     var padding = "<span style='padding-left:" + parseInt(indent * 25) + "px'>";
     var type = typeOf(variable);
-    if (type == "string" || type == "number" || type == "boolean") {
+    if(type == "string" || type == "number" || type == "boolean"){
         var desc = other;
         var test1 = desc.match(/\{([^\}]+)\}$/);
         var test2 = desc.match(/\[([^\]]+)\]$/);
-        if (test1) {
+        if(test1){
             desc = test1[1];
         }
-        else if (test2) {
+        else if(test2){
             desc = test2[1];
         }
         Debug(padding + "'" + desc + "' => '" + variable + "'</span>", 3);
     }
-    else if (type == "array") {
-        for (var i = variable.length - 1; i >= 0; i--) {
-            Dump(variable[i], other + "[" + i + "]", indent + 1);
+    else if(type == "array"){
+        for(var i=variable.length - 1;i>=0;i--){
+            Dump(variable[i], other + "[" + i + "]", indent+1);
         }
         Debug(padding + "'" + other + "' =></span>", 3);
     }
-    else if (type == "object") {
-        for (var thing in variable) {
-            Dump(variable[thing], other + "{" + thing + "}", indent + 1);
+    else if(type == "object"){
+        for(var thing in variable){
+            Dump(variable[thing], other + "{" + thing + "}", indent+1);
         }
         Debug(padding + "'" + other + "' =></span>", 3);
     }
-    else if (type == "undefined") {
+    else if(type == "undefined"){
         Error(other + " = undefined");
     }
-    else {
+    else{
         Debug("DUMP => Unkown type '" + type + "'", 2);
     }
 }
 
-function DumpHTMLElement(object, other) {
+function DumpHTMLElement(object, other){
     var out = [];
     var kids = object.children();
-    for (var i = kids.length - 1; i >= 0; i--) {
+    for(var i=kids.length - 1;i>=0;i--){
         var id = $(kids[i]).attr("id");
-        if (id === undefined) { id = ""; }
-        else { id = "#" + id; }
-        var eleClass = $(kids[i]).attr("class");
-        if (eleClass === undefined) { eleClass = ""; }
-        else { eleClass = "(." + eleClass.replace(" ", ".") + ")"; }
+        if(id === undefined){id = "";}
+        else{id = "#" + id;}
+        var eleClass =  $(kids[i]).attr("class");
+        if(eleClass === undefined){eleClass = "";}
+        else{eleClass = "(." + eleClass.replace(" ", ".") + ")";}
         var type = "[" + kids[i].localName + "]";
         //Debug(other + type + "->" + id + eleClass);
-        if ($(kids[i]).children().length > 0) {
+        if($(kids[i]).children().length > 0){
             out.push(DumpHTMLElement($(kids[i]), other + type + "->" + id + eleClass));
             //out.push(other + type + "->" + id + eleClass);
         }
-        else {
+        else{
             out.push(other + " = " + object.text());
         }
     }
     return out;
 }
 
-function typeOf(obj) {
+function typeOf (obj) {
     return {}.toString.call(obj).split(' ')[1].slice(0, -1).toLowerCase();
 }
 
-function Debug(text, level, html) {
-    try {
-        if (debug < 1) { return; }
-        if (level === undefined) { level = 1; }
-        if (html === undefined) { html = true; }
-        if (text === undefined) { text = ""; }
+function Debug(text, level, html){
+    try{
+        if(debug < 1){return;}
+        if(level === undefined){level = 1;}
+        if(html === undefined){html = true;}
+        if(text === undefined){text = "";}
         var font = {
-            "0": ["p", { "background-color": "black", "color": "green" }],
-            "1": ["p", { "background-color": "black", "color": "white" }],
-            "2": ["p", { "background-color": "black", "color": "red" }],
-            "3": ["p", { "background-color": "black", "color": "orange", "margin": "0px" }]
+            "0": ["p", {"background-color": "black", "color": "green"}],
+            "1": ["p", {"background-color": "black", "color": "white"}],
+            "2": ["p", {"background-color": "black", "color": "red"}],
+            "3": ["p", {"background-color": "black", "color": "orange", "margin": "0px"}]
         };
-        if (font[level] === undefined) {
+        if(font[level] === undefined){
             level = 1;
         }
-        if (html) {
+        if(html){
             text = text.replace("\n", "<br>");
             $(document.createElement(font[level][0])).css(font[level][1]).html(text).prependTo($(debugId));
         }
-        else {
-            console.log("TEXT: \n" + text)
+        else{
+            console.log("TEXT: \n" + text);
             //text = text.replace(/<\/?br\/?>/g, "\n")
-            $(document.createElement(font[level[0]])).css(font[level[1]]).text(text).prependTo($(debugId));
+            //$(document.createElement(font[level[0]])).css(font[level[1]]).text(text).prependTo($(debugId));
         }
     }
-    catch (e) {
+    catch(e){
         Error(e.message);
     }
 }
