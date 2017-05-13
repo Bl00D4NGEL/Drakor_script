@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Mastery-Scanner
-// @version      1.3
+// @name         Mastery-Scanner 1.31
+// @version      1.31
 // @description  Click on all items in the mastery page and finally print out the result in the console
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        https://*.drakor.com/masteries
@@ -59,13 +59,19 @@ function Analyse() {
                 for (var mastery in globObj[trade]) {
                     var items = globObj[trade][mastery].split("|");
                     for (var i = 0; i < items.length; i++) {
-                        var tr_2 = $(document.createElement("tr")).css("width", "50%").appendTo(table);
+                        var tr_2 = $(document.createElement("tr")).attr("class", "sub-" + trade).css({ "width": "50%", "display": "none" }).appendTo(table);
                         var td_2 = $(document.createElement("td")).html(items[i]).appendTo(tr_2);
                         td_2.clone().html(mastery).appendTo(tr_2);
                         total += parseInt(mastery.match(/^([\d,]+)/)[1].replace(",", ""));
                     }
                 }
-                var tr = $(document.createElement("tr")).appendTo(table);
+                var tr = $(document.createElement("tr")).on("click", function () {
+                    console.log("Display before: " + $(".sub-" + trade).css("display"));
+                    var trade = $(this).attr("id").split("-")[1];
+                    if ($(".sub-" + trade).css("display") == "none") { $(".sub-" + trade).css("display", "table-row"); }
+                    else { $(".sub-" + trade).css("display", "none"); }
+                    console.log("Display after: " + $(".sub-" + trade).css("display"));
+                }).attr("id", "total-" + trade).appendTo(table);
                 var td = $(document.createElement("td")).html("Total").appendTo(tr);
                 td.clone().html(addCommas(total)).appendTo(tr);
                 $(table).find("td").css("border", "1px solid white");
