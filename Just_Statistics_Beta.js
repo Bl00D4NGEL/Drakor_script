@@ -298,7 +298,7 @@ function ProcessData(log, responseText, history, tradeskill, nodeName) {
 				rarity = history.match(/class=\"(\w+)\s?viewmat\">/mi)[1];
 				log[tradeskill].Rarity[rarity]++;
 				log[tradeskill].Node[nodeName].Rarity[rarity]++;
-				item = history.match(/\[.*?\].*\[(.*?)\]/)[1];
+				item = history.match(/\[(.*?)\]/)[1];
 				amount = history.match(/<\/span>\s*x(\d+)/)[1];
 			}
 			multi = amount;
