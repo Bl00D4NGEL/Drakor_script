@@ -4,6 +4,7 @@
 // @description  Scan Armory for stats and print them out in the console
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com/armory/profile/*
+// @match        https://*.drakor.com/armory/profile/*
 // ==/UserScript==
 
 var cards = ["feet", "primary", "legs", "secondary", "hands", "head", "arms", "chest"];
