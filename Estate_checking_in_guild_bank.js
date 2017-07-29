@@ -4,6 +4,7 @@
 // @description  Scan guild bank materials to check if any kind of estate can be built
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com/guild*
+// @match        https://*.drakor.com/guild*
 // ==/UserScript==
 
 var btnShack = document.createElement("BUTTON");
