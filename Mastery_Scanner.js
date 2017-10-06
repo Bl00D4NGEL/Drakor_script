@@ -1,41 +1,84 @@
 // ==UserScript==
-// @name         Mastery-Scanner
-// @version      1.21
+// @name         Mastery-Scanner 1.31
+// @version      1.31
 // @description  Click on all items in the mastery page and finally print out the result in the console
 // @author       Dominik "Bl00D4NGEL" Peters
-// @match        http://*.drakor.com/masteries
 // @match        https://*.drakor.com/masteries
 // ==/UserScript==
+
+var BASE = 'https://www.drakor.com';
+
 $(document).ready(function () {
-    $(".tradeMat").click();
-    var mats = $(".tradeMat");
-    var masteries = {};
-    setTimeout(function () {
-        for (var i = 0; i < mats.length; i++) {
-            if (!mats[i].className.match(/small/)) {
-                var tradeskill = mats[i].className.match(/\s(\w+)/i)[1];
-                if (!masteries[tradeskill]) {
-                    masteries[tradeskill] = {};
-                }
-                var id = $(mats[i]).attr('id').replace("-", "");
-                var masteryText = $("#" + id).text();
-                var item = masteryText.match(/\[(.*?)\]/)[1];
-                var masteryAmount = masteryText.match(/([0-9,]+\s*\/\s*[0-9,]+.*?\(\d+%\))/)[1];
-                masteries[tradeskill][item] = masteryAmount;
-            }
-        }
-        for (var trade in masteries) {
-            var table = "<table style='float: right;width: 33%'>";
-            table += "<tr style='background-color: grey'><td>Tradeskill</td><td>" + trade + "</td></tr>";
-            var total = 0;
-            for (var mastery in masteries[trade]) {
-                table += "<tr><td>" + mastery + "</td><td>" + masteries[trade][mastery] + "</td></tr>";
-                var currentProgress = masteries[trade][mastery].match(/^([0-9,]+)/)[1].replace(",", "");
-                total += Number(currentProgress);
-            }
-            table += "<tr><td>TOTAL</td><td>" + total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') + "</td></tr>";
-            table += "</table>";
-            $("body").html(table + $("body").html());
-        }
-    }, 7500);
+    var h2 = $(document.createElement("h2")).attr("id", "analyse-mastery").html(" (Analyse)").on("click", function () {
+        $(this).html("Analysing..");
+        Analyse();
+    }).appendTo("h2");
 });
+
+function addCommas(x) {
+    return x.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
+}
+
+function Analyse() {
+    var globObj = {};
+    $(".tradeMat").each(function (index, obj) {
+        obj = $(obj);
+        var html = obj.html();
+        var id = obj.attr("id");
+        if (id === undefined) { return; }
+        id = id.match(/mat-(\d+)/)[1];
+        try {
+            $.ajax(BASE + "/show/material/" + id).success(function (data) {
+                var id = $(this)[0].url.match(/material\/(\d+)/)[1];
+                console.log("MADE AJAX TO: " + $(this)[0].url);
+                var trade = data.match(/Drops from ([\w\s]+) Node/i);
+                if (trade) { trade = trade[1]; }
+                else { trade = "Disenchanting"; }
+                if (globObj[trade] === undefined) { globObj[trade] = {}; }
+                var name = data.match(/\[(.*?)\]/)[1];
+                var mastery = data.match(/<div class="masteryBar".*?> ([\d,]+ \/ [\d,]+ \([\d,\.]+%\))</);
+                if (mastery) { mastery = mastery[1]; }
+                if (globObj[trade][mastery] === undefined) { globObj[trade][mastery] = name; }
+                else { globObj[trade][mastery] += "|" + name; }
+            });
+        }
+        catch (ex) {
+            console.log("RIP... " + ex.message);
+        }
+    });
+
+    var myTimer = setInterval(function () {
+        if ($.active === 0) {
+            console.log(globObj);
+            var table = $(document.createElement("table")).css({ "float": "right", "text-align": "center", "width": "100%" }).prependTo($("body"));
+            for (var trade in globObj) {
+                var tr = $(document.createElement("tr")).appendTo(table);
+                var td = $(document.createElement("th")).css("text-align", "center").attr("colspan", "2").html("Tradeskill: " + trade).appendTo(tr);
+                //td.clone().html(trade).appendTo(tr);
+                var total = 0;
+                for (var mastery in globObj[trade]) {
+                    var items = globObj[trade][mastery].split("|");
+                    for (var i = 0; i < items.length; i++) {
+                        var tr_2 = $(document.createElement("tr")).attr("class", "sub-" + trade).css({ "width": "50%", "display": "none" }).appendTo(table);
+                        var td_2 = $(document.createElement("td")).html(items[i]).appendTo(tr_2);
+                        td_2.clone().html(mastery).appendTo(tr_2);
+                        total += parseInt(mastery.match(/^([\d,]+)/)[1].replace(",", ""));
+                    }
+                }
+                var tr = $(document.createElement("tr")).on("click", function () {
+                    console.log("Display before: " + $(".sub-" + trade).css("display"));
+                    var trade = $(this).attr("id").split("-")[1];
+                    if ($(".sub-" + trade).css("display") == "none") { $(".sub-" + trade).css("display", "table-row"); }
+                    else { $(".sub-" + trade).css("display", "none"); }
+                    console.log("Display after: " + $(".sub-" + trade).css("display"));
+                }).attr("id", "total-" + trade).appendTo(table);
+                var td = $(document.createElement("td")).html("Total").appendTo(tr);
+                td.clone().html(addCommas(total)).appendTo(tr);
+                $(table).find("td").css("border", "1px solid white");
+            }
+            $("#analyse-mastery").html(" (Analyze)");
+            clearInterval(myTimer);
+        }
+        else { console.log("Waiting.."); }
+    }, 100);
+}
