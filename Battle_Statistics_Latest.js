@@ -800,7 +800,7 @@ function CheckForDepletedNode() {
             for (var i = 0; i < nodes.length; i++) {
                 if ($(nodes[i]).html().match(/depleted/i)) {
                     var date = new Date();
-                    date.setTime(date.getTime() + (-1 + date.getTimezoneOffset() / 60) * 60 * 60 * 1000);
+                    date.setTime(date.getTime() + (-3 + date.getTimezoneOffset() / 60) * 60 * 60 * 1000);
                     var html = $(nodes[i]).html();
                     var waitTime = 0;
                     var minutes = html.match(/(\d+)\s*m/i);
@@ -924,114 +924,116 @@ function SetupLog() {
         DisplayStatistics($(this).val());
         localStorage.setItem("BS_select", $(this).val());
     });
-    $("#diffSelect").val(localStorage.getItem("BS_select"));
-    DisplayStatistics(localStorage.getItem("BS_select"));
+    var diff = localStorage.getItem("BS_select") || "Easy";
+    $("#diffSelect").val(diff);
+    DisplayStatistics(diff);
 }
 
 function DisplayStatistics(difficulty) {
     try {
         $("#tableDiv").html("");
-        var LOG = JSON.parse(localStorage.getItem("battleLog"));
-        var totalFights = parseInt(LOG[difficulty].Won) + Number(LOG[difficulty].Lost);
-        var fightLootKeys = ["WonWithoutLoot", "Common", "Superior", "Rare", "Epic", "Legendary"];
-        var fightAverageKeys = ['Gold', 'Experience', 'Loot'];
-        var fightTotalPercentage = ["Won", "Lost"];
-        var table = $(document.createElement("table")).css({ "border": "1px solid white", "width": "100%" });
-        var LOGObj = LOG[difficulty];
-        keys = Object.keys(LOGObj);
-        len = keys.length;
+        if (LOG[difficulty]) {
+            var totalFights = parseInt(LOG[difficulty].Won) + Number(LOG[difficulty].Lost);
+            var fightLootKeys = ["WonWithoutLoot", "Common", "Superior", "Rare", "Epic", "Legendary"];
+            var fightAverageKeys = ['Gold', 'Experience', 'Loot'];
+            var fightTotalPercentage = ["Won", "Lost"];
+            var table = $(document.createElement("table")).css({ "border": "1px solid white", "width": "100%" });
+            var LOGObj = LOG[difficulty];
+            keys = Object.keys(LOGObj);
+            len = keys.length;
 
-        keys.sort();
-        var newObj = {};
-        for (i = 0; i < len; i++) {
-            k = keys[i];
-            newObj[k] = LOGObj[k];
-        }
-        LOGObj = newObj;
-
-        if (difficulty === "Hard") {
-            LOG.Hard.Loot += LOG.Elite.Loot;
-        }
-        for (var j = 0; j < fightTotalPercentage.length; j++) {
-            var tr = CreateTableRow([
-				fightTotalPercentage[j],
-				LOGObj[fightTotalPercentage[j]] + " (" + (LOGObj[fightTotalPercentage[j]] / totalFights * 100).toFixed(2) + " %)"
-            ]);
-            tr.appendTo(table);
-        }
-        for (var k = 0; k < fightAverageKeys.length; k++) {
-            var tr = CreateTableRow([
-				fightAverageKeys[k],
-				LOGObj[fightAverageKeys[k]] + " (" + (LOGObj[fightAverageKeys[k]] / totalFights).toFixed(2) + " on average)"
-            ]);
-            tr.appendTo(table);
-        }
-        for (var i = 0; i < fightLootKeys.length; i++) {
-            if (LOGObj[fightLootKeys[i]] === 0 || LOGObj[fightLootKeys[i]] === undefined) { continue; } //Item Augments/ Dura Scrolls can have this.
-            var tr = CreateTableRow([
-				fightLootKeys[i],
-				LOGObj[fightLootKeys[i]] + " (" + (LOGObj[fightLootKeys[i]] / LOGObj.Loot * 100).toFixed(2) + " %)"
-            ]);
-            tr.appendTo(table);
-        }
-        for (var keys in LOGObj) {
-            if (keys === "Spell" || keys === "Equipment" || keys === "Food" || keys === "Enchant" || keys === "Item Augment" || keys === "Durability Scroll") {
-                //These keys all have subitems.
-                var totalCounter = 0;
-                var subtable = $(document.createElement("table")).css({ "display": "none", "width": "100%" }).attr({ 'id': 'subtable-' + keys.replace(" ", "_") });
-                var rarities = ['Common', 'Superior', 'Rare', 'Epic', 'Legendary'];
-                var shortRarities = ['C', 'S', 'R', 'E', 'L'];
-                var tr = CreateTableRow(["Type", "Total", shortRarities]);
-                tr.appendTo(subtable);
-                for (var subkeys in LOGObj[keys]) {
-                    var counter = 0;
-                    var tempArray = []; //Save the rarities in this temp array
-                    for (var l = 0; l < rarities.length; l++) {
-                        if (LOGObj[keys][subkeys][rarities[l]]) {
-                            tempArray.push(LOGObj[keys][subkeys][rarities[l]]);
-                            counter += parseInt(LOGObj[keys][subkeys][rarities[l]]);
-                        }
-                        else {
-                            tempArray.push("0");
-                        }
-                    }
-                    var tr = CreateTableRow([
-						subkeys,
-						counter,
-						tempArray
-                    ]);
+            keys.sort();
+            var newObj = {};
+            for (i = 0; i < len; i++) {
+                k = keys[i];
+                newObj[k] = LOGObj[k];
+            }
+            LOGObj = newObj;
+            console.log("LOGOBJ", LOGObj);
+            if (difficulty === "Hard") {
+                LOG.Hard.Loot += LOG.Elite.Loot;
+            }
+            for (var j = 0; j < fightTotalPercentage.length; j++) {
+                var tr = CreateTableRow([
+                    fightTotalPercentage[j],
+                    LOGObj[fightTotalPercentage[j]] + " (" + (LOGObj[fightTotalPercentage[j]] / totalFights * 100).toFixed(2) + " %)"
+                ]);
+                tr.appendTo(table);
+            }
+            for (var k = 0; k < fightAverageKeys.length; k++) {
+                var tr = CreateTableRow([
+                    fightAverageKeys[k],
+                    LOGObj[fightAverageKeys[k]] + " (" + (LOGObj[fightAverageKeys[k]] / totalFights).toFixed(2) + " on average)"
+                ]);
+                tr.appendTo(table);
+            }
+            for (var i = 0; i < fightLootKeys.length; i++) {
+                if (LOGObj[fightLootKeys[i]] === 0 || LOGObj[fightLootKeys[i]] === undefined) { continue; } //Item Augments/ Dura Scrolls can have this.
+                var tr = CreateTableRow([
+                    fightLootKeys[i],
+                    LOGObj[fightLootKeys[i]] + " (" + (LOGObj[fightLootKeys[i]] / LOGObj.Loot * 100).toFixed(2) + " %)"
+                ]);
+                tr.appendTo(table);
+            }
+            for (var keys in LOGObj) {
+                if (keys === "Spell" || keys === "Equipment" || keys === "Food" || keys === "Enchant" || keys === "Item Augment" || keys === "Durability Scroll") {
+                    //These keys all have subitems.
+                    var totalCounter = 0;
+                    var subtable = $(document.createElement("table")).css({ "display": "none", "width": "100%" }).attr({ 'id': 'subtable-' + keys.replace(" ", "_") });
+                    var rarities = ['Common', 'Superior', 'Rare', 'Epic', 'Legendary'];
+                    var shortRarities = ['C', 'S', 'R', 'E', 'L'];
+                    var tr = CreateTableRow(["Type", "Total", shortRarities]);
                     tr.appendTo(subtable);
-                    totalCounter += counter;
-                }
-                if (totalCounter > 0) {
-                    subtable.appendTo($("#tableDiv"));
-                    subtable.find("td").css("width", "14%");
-                    var tr = CreateTableRow([
-						keys,
-						totalCounter + " (" + (totalCounter / LOGObj.Loot * 100).toFixed(2) + " %)"
-                    ]);
-                    tr.attr({ 'id': 'tr-subtable-' + keys.replace(" ", "_") });
-                    tr.appendTo(table);
-                }
-            }
-        }
-
-        table.html(AddCommas(table.html()));
-        console.log(table);
-        table.appendTo($("#tableDiv"));
-        $("#tableDiv").find("td").css("border", "1px grey solid");
-        $(document).uitooltip({ //this will fail if bootstrap and jQuery UI are used at the same time.. :(
-            items: "tr",
-            content: function () {
-                var element = $(this);
-                if (element.attr('id')) {
-                    if (element.attr('id').match(/^tr-subtable/)) {
-                        return "<table>" + $("#subtable-" + element.attr('id').match(/^tr-subtable-(\w+)/)[1]).html() + "</table>";
+                    for (var subkeys in LOGObj[keys]) {
+                        var counter = 0;
+                        var tempArray = []; //Save the rarities in this temp array
+                        for (var l = 0; l < rarities.length; l++) {
+                            if (LOGObj[keys][subkeys][rarities[l]]) {
+                                tempArray.push(LOGObj[keys][subkeys][rarities[l]]);
+                                counter += parseInt(LOGObj[keys][subkeys][rarities[l]]);
+                            }
+                            else {
+                                tempArray.push("0");
+                            }
+                        }
+                        var tr = CreateTableRow([
+                            subkeys,
+                            counter,
+                            tempArray
+                        ]);
+                        tr.appendTo(subtable);
+                        totalCounter += counter;
+                    }
+                    if (totalCounter > 0) {
+                        subtable.appendTo($("#tableDiv"));
+                        subtable.find("td").css("width", "14%");
+                        var tr = CreateTableRow([
+                            keys,
+                            totalCounter + " (" + (totalCounter / LOGObj.Loot * 100).toFixed(2) + " %)"
+                        ]);
+                        tr.attr({ 'id': 'tr-subtable-' + keys.replace(" ", "_") });
+                        tr.appendTo(table);
                     }
                 }
-                else { }
             }
-        });
+
+            table.html(AddCommas(table.html()));
+            console.log(table);
+            table.appendTo($("#tableDiv"));
+            $("#tableDiv").find("td").css("border", "1px grey solid");
+            $(document).uitooltip({ //this will fail if bootstrap and jQuery UI are used at the same time.. :(
+                items: "tr",
+                content: function () {
+                    var element = $(this);
+                    if (element.attr('id')) {
+                        if (element.attr('id').match(/^tr-subtable/)) {
+                            return "<table>" + $("#subtable-" + element.attr('id').match(/^tr-subtable-(\w+)/)[1]).html() + "</table>";
+                        }
+                    }
+                    else { }
+                }
+            });
+        }
     }
     catch (ex) {
         LiveLog("When trying to display the statistics something really bad happened...<br>" + ex.message);
@@ -1069,7 +1071,6 @@ function DisenchantSetup() {
         for (var j = 0; j < rarities.length; j++) {
             if (LOG[selects[i]][rarities[j]] === undefined) { LOG[selects[i]][rarities[j]] = false; } // for older version compatibility
             var checkbox = $(document.createElement("input")).attr({ 'id': selects[i] + "-" + rarities[j], 'type': 'checkbox' }).on("change", function () {
-                var LOG = JSON.parse(localStorage.getItem("battleLog"));
                 var temp = $(this).attr('id').split("-");
                 var type = temp[0];
                 var rarity = temp[1];
@@ -1111,7 +1112,7 @@ function DisenchantSetup() {
         }
         localStorage.setItem("battleLog", JSON.stringify(LOG));
     }).appendTo(table);
-    $(table).insertAfter("#slots-remaining");
+    $(table).insertAfter("#exp-disenchanting");
     $("td").css("vertical-align", "middle");
     if (LOG.ShowDeingSelects !== true) {
         LOG.ShowDeingSelects = false; //Backwards compatibility
