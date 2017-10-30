@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         Battle-statistics v1.7
-// @version      1.7
+// @name         Battle-statistics v1.71
+// @version      1.71
 // @description  Tracks statistics of battles (Arena and Node)
 // @author       Dominik "Bl00D4NGEL" Peters
 // @match        http://*.drakor.com*
@@ -61,11 +61,12 @@ dialog-top => String
 dialog-width => String
 }
 */
-var debug = 1;
+var debug = 0;
 var disableDoubleClickSelling = 0;
 var LOG;
+var debugId = "LiveLog";
 $(document).ready(function () {
-    var version = "v1.7";
+    var version = "v1.71";
     SetupLiveLog(); //Live-log-div
     LiveLog("You're currently using Battle Statistics version " + version);
     CheckInventory(); //To load the durability data into the livelog
@@ -231,10 +232,13 @@ $(document).ready(function () {
         }
         else if (settings.url.match(/\/battle-create\/.*/)) {
             AddEnterToSpecificClass("navButton", "Start Battle!");
+            //This should add enter to go to the world map once the node is depleted -- not sure if this is the right place -- gotta check
+            // XXX TODO
+            AddEnterToSpecificClass("navButton", "Back to Adventure");
         }
         else if (settings.url === "/sell/sellall") {
             if (xhr.responseText.match(/areaname\">([0-9,]+)\sg/i)) {
-                var goldEarned = xhr.responseText.match(/areaname\">([0-9,]+)\sg/i)[1].replace(",", "");
+                var goldEarned = xhr.responseText.match(/areaname\">([0-9,]+)\sg/i)[1].replace(/,/g, "");
                 var itemsSold = $("#drakorWorld").find(".drIcon").length;
                 LiveLog("Sell all: Sold " + itemsSold + " items for " + goldEarned + " gold.");
                 LOG.LootGold += parseInt(goldEarned);
@@ -249,19 +253,40 @@ $(document).ready(function () {
             for (var i = 0; i < lootbags.length; i++) {
                 try {
                     var lootbag = lootbags[i];
-                    var diff = lootbag.match(/\((\w+)\)/)[1];
+                    var diff = lootbag.match(/\((\w+)\)/);
+                    if (diff) {
+                        diff = diff[1];
+                    }
+                    else {
+                        LiveLog("Skipping consolation item..");
+                        lootItems++;
+                        continue;
+                    }
                     var items = lootbag.match(/<div class="cardContainer.*?<\/b>\s*<\/div>\s*<\/div>/g);
                     for (var j = 0; j < items.length; j++) {
-                        lootItems++;
-                        var item = items[j];
-                        var rarity = item.match(/cardquality\">(\w+)</i)[1];
-                        LOG[diff][rarity]++;
-                        var image = item.match(/<img.*?\/images\/(\w+)\/[\d\w]+\.png/);
-                        var type = item.match(/<span class=\"cardType\">([\w\s\d:?]+)</i)[1];
-                        type = type.replace("Item : ", "Equipment : ");
-                        type = type.replace("Battle", "Spell");
-                        if (type === "Weapon") {
-                            type = "Equipment : Weapon";
+                        var rarity, image, type, rarity;
+                        try {
+                            lootItems++;
+                            var item = items[j];
+                            rarity = item.match(/cardquality\">(\w+)</i)[1];
+                            LOG[diff][rarity]++;
+                            image = item.match(/<img.*?\/images\/(\w+)\/[\d\w]+\.png/);
+                            type = item.match(/<span class=\"cardType\">([\w\s\d:?]+)</i);
+                            if (type) {
+                                type = type[1];
+                            }
+                            else {
+                                LiveLog("Cannot determine type of item: " + item);
+                                continue;
+                            }
+                            type = type.replace("Item : ", "Equipment : ");
+                            type = type.replace("Battle", "Spell");
+                            if (type === "Weapon") {
+                                type = "Equipment : Weapon";
+                            }
+                        }
+                        catch (ex) {
+                            LiveLog("Cannot process item because: " + ex.message + " | ITEM: " + items[j]);
                         }
                         /*
 					Food
@@ -276,30 +301,41 @@ $(document).ready(function () {
                             var otherItem = type.match(/(spell|equipment|food|enchant) \: ([\w\s\d]+)/i);
                             if (type === "Item Augment" || type === "Durability Scroll") {
                                 try {
-                                    LOG[diff][type][type][rarity] = LOG[diff][type][type][rarity] + 1 || 1;
                                     console.log("LOOT: " + diff + " => " + type + " => " + type + " => " + rarity);
+                                    LOG[diff][type][type][rarity] = LOG[diff][type][type][rarity] + 1 || 1;
                                 }
                                 catch (ex) {
                                     //older versions did not have this -> add it now
                                     try { //try again
+                                        console.log("NEW LOOT: " + diff + " => " + type + " => " + type + " => " + rarity);
                                         LOG[diff][type] = {};
                                         LOG[diff][type][type] = {};
                                         LOG[diff][type][type][rarity] = 1;
-                                        console.log("NEW LOOT: " + diff + " => " + type + " => " + type + " => " + rarity);
                                     }
                                     catch (ex) {
                                         console.log("Come on..");
                                     }
                                 }
                             }
-                            else if (otherItem) {
-                                LOG[diff][otherItem[1]] = LOG[diff][otherItem[1]] || {};
-                                LOG[diff][otherItem[1]][otherItem[2]] = LOG[diff][otherItem[1]][otherItem[2]] || {};
-                                LOG[diff][otherItem[1]][otherItem[2]][rarity] = LOG[diff][otherItem[1]][otherItem[2]][rarity] + 1 || 1;
-                                console.log("LOOT: " + diff + " => " + otherItem[1] + " => " + otherItem[2] + " => " + rarity);
+                            else if (otherItem && otherItem[1] !== '' && otherItem[2] !== '') {
+                                try {
+                                    console.log("LOOT: " + diff + " => " + otherItem[1] + " => " + otherItem[2] + " => " + rarity);
+                                    LOG[diff][otherItem[1]] = LOG[diff][otherItem[1]] || {};
+                                    LOG[diff][otherItem[1]][otherItem[2]] = LOG[diff][otherItem[1]][otherItem[2]] || {};
+                                    LOG[diff][otherItem[1]][otherItem[2]][rarity] = LOG[diff][otherItem[1]][otherItem[2]][rarity] + 1 || 1;
+                                }
+                                catch (ex) {
+                                    LiveLog("Cannot add loot with the following attribute: " + diff + " => " + otherItem[1] + " => " + otherItem[2] + " => " + rarity + " because: " + ex.message);
+                                }
                             }
                             else {
-                                LiveLog("Cannot determine type..<br>TYPE: '" + type + "'");
+                                if (otherItem) {
+                                    LiveLog("Something went wrong when trying to access variable otherItem. Dump: ");
+                                    Dump(otherItem, "otherItem");
+                                }
+                                else {
+                                    LiveLog("Cannot determine type..<br>TYPE: '" + type + "'");
+                                }
                             }
                         }
                         catch (ex) {
@@ -308,7 +344,7 @@ $(document).ready(function () {
                     }
                 }
                 catch (ex) {
-                    LiveLog("When trying to process a loot item this happened: " + ex.message);
+                    LiveLog("When trying to process a loot item this happened: " + ex.message + "<br>Lootbag:" + lootbags[i]);
                 }
             }
             //Okay let's try something here, shall we?
@@ -323,6 +359,14 @@ $(document).ready(function () {
             $(".drIcon").on("dblclick", function (e) {
                 if (e.currentTarget.id) {
                     var plainId = e.currentTarget.id.slice(4);
+                    // Only sell Dura Scrolls / Runes if their durability is 0, otherwise warn the user and cancel this operation
+                    if ($("#" + e.currentTarget.id).find(".iconTitle").text().match(/(Durability|Rune)/i)) {
+                        if (!$("#" + e.currentTarget.id).attr("title").match(/: 0$/)) {
+                            HandleSpellRepair(plainId);
+                            return;
+                        }
+                        //Otherwise sell the item
+                    }
                     setTimeout(TrackSelling(plainId), 1000); // We need a timeout here because the card actually needs to load.
                 }
             });
@@ -336,6 +380,7 @@ $(document).ready(function () {
                             $("#sell-" + plainId).on("click", function (e) {
                                 TrackSelling(e.currentTarget.id.slice(5), false);
                             });
+                            // Base Stats button
                             if ($("#card" + plainId).find(".cardType")[0].innerHTML.match(/(item :|weapon)/i)) {
                                 if ($("#base-" + plainId).length === 0) {
                                     var baseButton = $(document.createElement("div")).attr({ 'id': 'base-' + plainId, 'class': 'cardButton' }).html("Show Base");
@@ -390,7 +435,24 @@ $(document).ready(function () {
         }
         else if (settings.url.match(/\/world\/disenchanting/i)) { DisenchantSetup(); } //Setup of the selects
         else if (settings.url.match(/\/world\/action_disenchanting/i)) { LiveLog("You disenchanted an item"); SelectItemToDisenchant(); } //Auto de on enter press
-        else if (settings.url.match(/\/use\/\d+\/confirm/i) && xhr.responseText.match(/durability/i && xhr.responseText.match(/rune|scroll/i))) { LiveLog("You repaired an item with a Durability Scroll/ Rune"); }
+        else if (settings.url.match(/\/use\/\d+/i) && xhr.responseText.match(/<select id="inv_card" name="inv_card">/i)) {
+            // Repairing an item with a scroll (rune?)
+            // Add 1-9 as a selector for the spells
+            AddEnterToSpecificClass("navButton", "Refill Item's Durability");
+            $(document).on("keydown", function (e) {
+                if ((e.keyCode > 47 && e.keyCode < 58) || (e.keyCode > 95 && e.keyCode < 106)) {
+                    // Normal 1-9 // Numpad 1-9
+                    var keyValue = e.keyCode % 48;
+                    var select = $("#inv_card");
+                    // Pressed number higher than options -> Skip
+                    if (select.children().length < keyValue) { return; }
+                    $("#inv_card").val($($("#inv_card").children()[keyValue]).val());
+                }
+            });
+        }
+        else if (settings.url.match(/\/use\/\d+\/confirm/i) && xhr.responseText.match(/durability/i && xhr.responseText.match(/rune|scroll/i))) {
+            LiveLog("You repaired an item with a Durability Scroll/ Rune");
+        }
         else if (settings.url.match(/gen_action\/shuffleitem\/\d+\/confirm/)) {
             LiveLog("You tinkered an item");
         }
@@ -409,6 +471,31 @@ $(document).ready(function () {
 
     });
 });
+
+function HandleSpellRepair(plainId) {
+    var myTimer = setInterval(function () {
+        try {
+            var cardId = "div#card" + plainId;
+            var cardText = $(cardId).html();
+            var cardValue = 0;
+            if (!cardText.match(/loading/) && cardText !== '') {
+                if ($("#load-use-" + plainId).length > 0) {
+                    $.ajax("/use/" + plainId).done(function (data) { $("#drakorWorld").html(data); });
+                }
+                else {
+                    LiveLog("It looks like this scroll doesn't have a use option?");
+                }
+                clearInterval(myTimer);
+            }
+            else {//wait...
+            }
+        }
+        catch (ex) {
+            console.log("OOOOOH!\n" + ex.message);
+            clearInterval(myTimer);
+        }
+    }, 100);
+}
 
 function SubstractBaseStats(data, base_stats) {
     try {
@@ -733,6 +820,7 @@ function LiveLog(logText, addBR) {
     var minutes = date.getMinutes();
     var seconds = date.getSeconds();
     $(logDiv).html((hours < 10 ? '0' : '') + hours + ":" + (minutes < 10 ? '0' : '') + minutes + ":" + (seconds < 10 ? '0' : '') + seconds + " " + logText + $(logDiv).html());
+    console.log((hours < 10 ? '0' : '') + hours + ":" + (minutes < 10 ? '0' : '') + minutes + ":" + (seconds < 10 ? '0' : '') + seconds + " " + logText + $(logDiv).html());
 }
 
 function AddCommas(x) {
@@ -907,7 +995,7 @@ function SetupLog() {
     var displayDiv = $(".arenaContainer").get(2);
     displayDiv.innerHTML = divHTML;
     var resetButton = $(document.createElement("button")).text("Reset Statistics").attr({ class: "bv_button bv_small_font" }).css({ width: "auto", height: "auto" }).on("click", function () {
-        Create_Log_Object();
+        LOG = Create_Log_Object();
         SetupLog();
     }).appendTo(displayDiv);
     var detailDiv = $($(".arenaContainer").get(3));
@@ -955,23 +1043,23 @@ function DisplayStatistics(difficulty) {
             }
             for (var j = 0; j < fightTotalPercentage.length; j++) {
                 var tr = CreateTableRow([
-                    fightTotalPercentage[j],
-                    LOGObj[fightTotalPercentage[j]] + " (" + (LOGObj[fightTotalPercentage[j]] / totalFights * 100).toFixed(2) + " %)"
+					fightTotalPercentage[j],
+					LOGObj[fightTotalPercentage[j]] + " (" + (LOGObj[fightTotalPercentage[j]] / totalFights * 100).toFixed(2) + " %)"
                 ]);
                 tr.appendTo(table);
             }
             for (var k = 0; k < fightAverageKeys.length; k++) {
                 var tr = CreateTableRow([
-                    fightAverageKeys[k],
-                    LOGObj[fightAverageKeys[k]] + " (" + (LOGObj[fightAverageKeys[k]] / totalFights).toFixed(2) + " on average)"
+					fightAverageKeys[k],
+					LOGObj[fightAverageKeys[k]] + " (" + (LOGObj[fightAverageKeys[k]] / totalFights).toFixed(2) + " on average)"
                 ]);
                 tr.appendTo(table);
             }
             for (var i = 0; i < fightLootKeys.length; i++) {
                 if (LOGObj[fightLootKeys[i]] === 0 || LOGObj[fightLootKeys[i]] === undefined) { continue; } //Item Augments/ Dura Scrolls can have this.
                 var tr = CreateTableRow([
-                    fightLootKeys[i],
-                    LOGObj[fightLootKeys[i]] + " (" + (LOGObj[fightLootKeys[i]] / LOGObj.Loot * 100).toFixed(2) + " %)"
+					fightLootKeys[i],
+					LOGObj[fightLootKeys[i]] + " (" + (LOGObj[fightLootKeys[i]] / LOGObj.Loot * 100).toFixed(2) + " %)"
                 ]);
                 tr.appendTo(table);
             }
@@ -997,9 +1085,9 @@ function DisplayStatistics(difficulty) {
                             }
                         }
                         var tr = CreateTableRow([
-                            subkeys,
-                            counter,
-                            tempArray
+							subkeys,
+							counter,
+							tempArray
                         ]);
                         tr.appendTo(subtable);
                         totalCounter += counter;
@@ -1008,8 +1096,8 @@ function DisplayStatistics(difficulty) {
                         subtable.appendTo($("#tableDiv"));
                         subtable.find("td").css("width", "14%");
                         var tr = CreateTableRow([
-                            keys,
-                            totalCounter + " (" + (totalCounter / LOGObj.Loot * 100).toFixed(2) + " %)"
+							keys,
+							totalCounter + " (" + (totalCounter / LOGObj.Loot * 100).toFixed(2) + " %)"
                         ]);
                         tr.attr({ 'id': 'tr-subtable-' + keys.replace(" ", "_") });
                         tr.appendTo(table);
@@ -1157,5 +1245,111 @@ function SelectItemToDisenchant() {
         AddEnterShortcut($(itemToDE).parents().children().get(0));
         $(span).html("<br>This is will be disenchanted: ");
         $(itemToDE).clone().appendTo(span);
+    }
+}
+
+
+function Error(errorText) {
+    Debug(errorText, 2);
+}
+
+function Info(infoText, sendAlert) {
+    if (sendAlert === undefined) { sendAlert = false; }
+    if (sendAlert) { alert(infoText); }
+    Debug(infoText, 0);
+}
+
+function Dump(variable, other, indent) {
+    if (debug < 1) { return; }
+    if (other === undefined) { other = ''; }
+    if (indent === undefined) { indent = 0; }
+    var padding = "<span style='padding-left:" + parseInt(indent * 25) + "px'>";
+    var type = typeOf(variable);
+    if (type == "string" || type == "number" || type == "boolean") {
+        var desc = other;
+        var test1 = desc.match(/\{([^\}]+)\}$/);
+        var test2 = desc.match(/\[([^\]]+)\]$/);
+        if (test1) {
+            desc = test1[1];
+        }
+        else if (test2) {
+            desc = test2[1];
+        }
+        Debug(padding + "'" + desc + "' => '" + variable + "'</span>", 3);
+    }
+    else if (type == "array") {
+        for (var i = variable.length - 1; i >= 0; i--) {
+            Dump(variable[i], other + "[" + i + "]", indent + 1);
+        }
+        Debug(padding + "'" + other + "' =></span>", 3);
+    }
+    else if (type == "object") {
+        for (var thing in variable) {
+            Dump(variable[thing], other + "{" + thing + "}", indent + 1);
+        }
+        Debug(padding + "'" + other + "' =></span>", 3);
+    }
+    else if (type == "undefined") {
+        Error(other + " = undefined");
+    }
+    else {
+        Debug("DUMP => Unkown type '" + type + "'", 2);
+    }
+}
+
+function DumpHTMLElement(object, other) { //Experimental
+    var out = [];
+    var kids = object.children();
+    for (var i = kids.length - 1; i >= 0; i--) {
+        var id = $(kids[i]).attr("id");
+        if (id === undefined) { id = ""; }
+        else { id = "#" + id; }
+        var eleClass = $(kids[i]).attr("class");
+        if (eleClass === undefined) { eleClass = ""; }
+        else { eleClass = "(." + eleClass.replace(" ", ".") + ")"; }
+        var type = "[" + kids[i].localName + "]";
+        //Debug(other + type + "->" + id + eleClass);
+        if ($(kids[i]).children().length > 0) {
+            out.push(DumpHTMLElement($(kids[i]), other + type + "->" + id + eleClass));
+            //out.push(other + type + "->" + id + eleClass);
+        }
+        else {
+            out.push(other + " = " + object.text());
+        }
+    }
+    return out;
+}
+
+function typeOf(obj) {
+    return {}.toString.call(obj).split(' ')[1].slice(0, -1).toLowerCase();
+}
+
+function Debug(text, level, html) {
+    try {
+        if (debug < 1) { return; }
+        if (level === undefined) { level = 1; }
+        if (html === undefined) { html = true; }
+        if (text === undefined) { text = ""; }
+        var font = {
+            "0": ["p", { "background-color": "black", "color": "green" }],
+            "1": ["p", { "background-color": "black", "color": "white" }],
+            "2": ["p", { "background-color": "black", "color": "red" }],
+            "3": ["p", { "background-color": "black", "color": "orange", "margin": "0px" }]
+        };
+        if (font[level] === undefined) {
+            level = 1;
+        }
+        if (html) {
+            text = text.replace("\n", "<br>");
+            $(document.createElement(font[level][0])).css(font[level][1]).html(text).prependTo($(debugId));
+        }
+        else {
+            console.log("TEXT: \n" + text);
+            //text = text.replace(/<\/?br\/?>/g, "\n")
+            //$(document.createElement(font[level[0]])).css(font[level[1]]).text(text).prependTo($(debugId));
+        }
+    }
+    catch (e) {
+        Error(e.message);
     }
 }
