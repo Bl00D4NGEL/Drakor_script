@@ -7,7 +7,9 @@
 // @match        https://*.drakor.com*
 // ==/UserScript==
 
-
+var outputAsCSV = false;
+// CSV OUTPUT IS AS FOLLOWS:
+// Win/ Lose;Round fight ended;Difficulty;Experience;Gold;LootedItems
 
 /*
 Armory function
@@ -134,6 +136,16 @@ $(document).ready(function () {
                     // difficulty = xhr.responseText.match(/<h4>(\w+).*?<\/h4>/i)[1];
                     //Generates the "history" of the battle and returns the log object
                     console.log("DIFFICULTY: ", difficulty);
+                    var exp = xhr.responseText.match(/([0-9,]+)\s?\w*\s?exp/i);
+                    LOG.Experience += parseInt(exp[1].replace(",", ""));
+                    LOG[difficulty].Experience += parseInt(exp[1].replace(",", ""));
+                    var gold = xhr.responseText.match(/>([0-9,]+)\sgold/i);
+                    if (gold) {
+                        LOG.Gold += parseInt(gold[1].replace(",", ""));
+                        LOG[difficulty].Gold += parseInt(gold[1].replace(",", ""));
+                    }
+					else{ gold = 0; }
+                    var enemyLevel = $(".opponentProfile").find(".avatarLevel").text().match(/Level (\d+)/)[1];
                     LOG.Won++;
                     LOG[difficulty].Won++;
                     var loot = xhr.responseText.match(/modLoot\((\d)\)/);
@@ -147,8 +159,13 @@ $(document).ready(function () {
                             else {
                                 round = "#?";
                             }
-                            LiveLog("Victory (" + round + ") - Looted " + realLoot[1] + " item" + (parseInt(realLoot[1]) > 1 ? 's' : '') +
-									" <span class='showHistory' id='span-history-" + battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>", false);
+                            var logMessage = "Victory (" + round + ") - Looted " + realLoot[1] + " item" + (parseInt(realLoot[1]) > 1 ? 's' : '') +
+                            " as well as " + (gold > 0 ? gold + " gold and " : "") + parseInt(exp[1].replace(",", ""))  +
+							" experience <span class='showHistory' id='span-history-" + battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>";
+                            if(outputAsCSV){
+                                logMessage = "Win;" + round + ";" + difficulty + ";" + parseInt(exp[1].replace(",", "")) + ";" + gold + ";" + realLoot[1] + "<br>";
+                            }
+                            LiveLog(logMessage, false);
                             LOG.TotalLoot += parseInt(realLoot[1]);
                             LOG.CurrentLoot += parseInt(realLoot[1]);
                             LOG[difficulty].Loot += parseInt(realLoot[1]);
@@ -169,18 +186,16 @@ $(document).ready(function () {
                         else {
                             round = "#?";
                         }
-                        LiveLog("Victory (" + round + ") - Looted 0 items! " +
-								"<span class='showHistory' id='span-history-" + battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>", false);
+                        var logMessage = "Victory (" + round + ") - Looted 0 items" +
+                        " as well as " + (gold > 0 ? gold + " gold and " : "") + parseInt(exp[1].replace(",", ""))  +
+						" experience <span class='showHistory' id='span-history-" + battleId +
+						"' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>";
+                        if(outputAsCSV){
+                            logMessage = "Win;" + round + ";" + difficulty + ";" + parseInt(exp[1].replace(",", "")) + ";" + gold + ";0<br>";
+                        }
+                        LiveLog(logMessage, false);
                         LOG.WonWithoutLoot++;
                         LOG[difficulty].WonWithoutLoot++;
-                    }
-                    var exp = xhr.responseText.match(/([0-9,]+)\s?\w*\s?exp/i);
-                    LOG.Experience += parseInt(exp[1].replace(",", ""));
-                    LOG[difficulty].Experience += parseInt(exp[1].replace(",", ""));
-                    var gold = xhr.responseText.match(/>([0-9,]+)\sgold/i);
-                    if (gold) {
-                        LOG.Gold += parseInt(gold[1].replace(",", ""));
-                        LOG[difficulty].Gold += parseInt(gold[1].replace(",", ""));
                     }
                     if ($(".menuFighting").length) {
                         AddEnterShortcut($(".menuFighting"));
@@ -200,11 +215,10 @@ $(document).ready(function () {
                     else {
                         round = "#?";
                     }
-                    LiveLog("Defeat (" + round + ") " + "<span class='showHistory' id='span-history-" +
-							battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>", false);
                     LOG.Lost++;
                     LOG[difficulty].Lost++;
 
+                    var gotConsolationLoot = false;
                     if (xhr.responseText.match(/modloot/i)) {
                         LOG.ConsolationLoot++;
                         LOG[difficulty].ConsolationLoot++;
@@ -215,9 +229,16 @@ $(document).ready(function () {
                             //LiveLog("Loot bag has been opened");
                             LOG.CurrentLoot = 1;
                         }
+                        gotConsolationLoot = true;
                         $("#load-openloot").html(bagText + "(" + LOG.CurrentLoot + ")");
 
                     }
+                    var logMessage = "Defeat (" + round + ") " + "<span class='showHistory' id='span-history-" +
+                    battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>";
+                    if(outputAsCSV){
+                        logMessage = "Lose;" + round + ";" + difficulty + ";0;0;" + (gotConsolationLoot ? 1 : 0) + "<br>";
+                    }
+                    LiveLog(logMessage, false);
 
                     AddEnterToSpecificClass("navButton", "Back to Adventure");
                     AddEnterToSpecificClass("navButton", "Back to Arena");
