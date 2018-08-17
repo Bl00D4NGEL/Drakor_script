@@ -7,7 +7,7 @@
 // @match        https://*.drakor.com*
 // ==/UserScript==
 
-var outputAsCSV = true;
+var outputAsCSV = false;
 // CSV OUTPUT IS AS FOLLOWS:
 // Win/ Lose;Round fight ended;Difficulty;Experience;Gold;LootedItems
 
