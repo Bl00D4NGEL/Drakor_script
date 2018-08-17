@@ -7,7 +7,7 @@
 // @match        https://*.drakor.com*
 // ==/UserScript==
 
-var outputAsCSV = false;
+var outputAsCSV = true;
 // CSV OUTPUT IS AS FOLLOWS:
 // Win/ Lose;Round fight ended;Difficulty;Experience;Gold;LootedItems
 
@@ -160,10 +160,10 @@ $(document).ready(function () {
                                 round = "#?";
                             }
                             var logMessage = "Victory (" + round + ") - Looted " + realLoot[1] + " item" + (parseInt(realLoot[1]) > 1 ? 's' : '') +
-                            " as well as " + (gold > 0 ? gold + " gold and " : "") + parseInt(exp[1].replace(",", ""))  +
+                            " as well as " + (parseInt(gold[1].replace(",", "")) > 0 ? parseInt(gold[1].replace(",", "")) + " gold and " : "") + parseInt(exp[1].replace(",", ""))  +
 							" experience <span class='showHistory' id='span-history-" + battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>";
                             if(outputAsCSV){
-                                logMessage = "Win;" + round + ";" + difficulty + ";" + parseInt(exp[1].replace(",", "")) + ";" + gold + ";" + realLoot[1] + "<br>";
+                                logMessage = "Win;" + round + ";" + difficulty + ";" + parseInt(exp[1].replace(",", "")) + ";" + parseInt(gold[1].replace(",", "")) + ";" + realLoot[1] + "<br>";
                             }
                             LiveLog(logMessage, false);
                             LOG.TotalLoot += parseInt(realLoot[1]);
@@ -187,11 +187,11 @@ $(document).ready(function () {
                             round = "#?";
                         }
                         var logMessage = "Victory (" + round + ") - Looted 0 items" +
-                        " as well as " + (gold > 0 ? gold + " gold and " : "") + parseInt(exp[1].replace(",", ""))  +
+                        " as well as " + (parseInt(gold[1].replace(",", "")) > 0 ? parseInt(gold[1].replace(",", "")) + " gold and " : "") + parseInt(exp[1].replace(",", ""))  +
 						" experience <span class='showHistory' id='span-history-" + battleId +
 						"' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>";
                         if(outputAsCSV){
-                            logMessage = "Win;" + round + ";" + difficulty + ";" + parseInt(exp[1].replace(",", "")) + ";" + gold + ";0<br>";
+                            logMessage = "Win;" + round + ";" + difficulty + ";" + parseInt(exp[1].replace(",", "")) + ";" + parseInt(gold[1].replace(",", "")) + ";0<br>";
                         }
                         LiveLog(logMessage, false);
                         LOG.WonWithoutLoot++;
