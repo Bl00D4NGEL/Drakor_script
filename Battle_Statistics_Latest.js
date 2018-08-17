@@ -9,7 +9,7 @@
 
 var outputAsCSV = false;
 // CSV OUTPUT IS AS FOLLOWS:
-// Win/ Lose;Round fight ended;Difficulty;Experience;Gold;LootedItems
+// Win/ Lose;Enemy Level;Round fight ended;Difficulty;Experience;Gold;LootedItems
 
 /*
 Armory function
@@ -163,7 +163,7 @@ $(document).ready(function () {
                             " as well as " + (parseInt(gold[1].replace(",", "")) > 0 ? parseInt(gold[1].replace(",", "")) + " gold and " : "") + parseInt(exp[1].replace(",", ""))  +
 							" experience <span class='showHistory' id='span-history-" + battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>";
                             if(outputAsCSV){
-                                logMessage = "Win;" + round + ";" + difficulty + ";" + parseInt(exp[1].replace(",", "")) + ";" + parseInt(gold[1].replace(",", "")) + ";" + realLoot[1] + "<br>";
+                                logMessage = "Win;" + enemyLevel + ";" + round + ";" + difficulty + ";" + parseInt(exp[1].replace(",", "")) + ";" + parseInt(gold[1].replace(",", "")) + ";" + realLoot[1] + "<br>";
                             }
                             LiveLog(logMessage, false);
                             LOG.TotalLoot += parseInt(realLoot[1]);
@@ -191,7 +191,7 @@ $(document).ready(function () {
 						" experience <span class='showHistory' id='span-history-" + battleId +
 						"' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>";
                         if(outputAsCSV){
-                            logMessage = "Win;" + round + ";" + difficulty + ";" + parseInt(exp[1].replace(",", "")) + ";" + parseInt(gold[1].replace(",", "")) + ";0<br>";
+                            logMessage = "Win;" + enemyLevel + ";" + round + ";" + difficulty + ";" + parseInt(exp[1].replace(",", "")) + ";" + parseInt(gold[1].replace(",", "")) + ";0<br>";
                         }
                         LiveLog(logMessage, false);
                         LOG.WonWithoutLoot++;
@@ -236,7 +236,7 @@ $(document).ready(function () {
                     var logMessage = "Defeat (" + round + ") " + "<span class='showHistory' id='span-history-" +
                     battleId + "' style='text-decoration: underline;'>History</span><br><div  style='display:none' id='div-history-" + battleId + "'></div>";
                     if(outputAsCSV){
-                        logMessage = "Lose;" + round + ";" + difficulty + ";0;0;" + (gotConsolationLoot ? 1 : 0) + "<br>";
+                        logMessage = "Lose;" + enemyLevel + ";" + round + ";" + difficulty + ";0;0;" + (gotConsolationLoot ? 1 : 0) + "<br>";
                     }
                     LiveLog(logMessage, false);
 
