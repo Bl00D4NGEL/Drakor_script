@@ -1200,8 +1200,8 @@ function DisenchantSetup() {
             }).prop("checked", LOG[selects[i]][rarities[j]]).appendTo(td);
             var span = $(document.createElement("span")).html(rarities[j].match(/(^\w)/)[1]).appendTo(td);
         }
-        $(td).appendTo(row);
 
+        $(td).appendTo(row);
         // Default values for min/max
         if(LOG[selects[i]].MinLevel === undefined){
             LOG[selects[i]].MinLevel = 1;
@@ -1223,9 +1223,13 @@ function DisenchantSetup() {
 
         for(var j=1;j<=MAX_LEVEL;j++){
             var opt = $(document.createElement("option")).attr({'value': j}).text(j);
-                if(j == LOG[selects[i]].MinLevel){
+            if(j == LOG[selects[i]].MinLevel){
                 var opt_2 = $(opt).clone();
                 opt.prop("selected", "selected");
+                if(j == LOG[selects[i]].MinLevel){
+                    // Min = Max
+                    opt_2.prop("selected", "selected");
+                }
                 $(opt).appendTo(min_select);
                 $(opt_2).appendTo(max_select);
             }
@@ -1241,10 +1245,15 @@ function DisenchantSetup() {
                 $(opt_2).appendTo(min_select);
             }
         }
-        var span = $(document.createElement("span")).css({"padding-left": "5px", "padding-right": "5px"}).html("Min Level").appendTo(td);
-        $(min_select).appendTo(td);
-        var span = $(document.createElement("span")).css({"padding-left": "5px", "padding-right": "5px"}).html("Max Level").appendTo(td);
-        $(max_select).appendTo(td);
+        var min_td = $(document.createElement("td"));
+        var span = $(document.createElement("span")).css({"padding-left": "5px", "padding-right": "5px"}).html("Min Level").appendTo(min_td);
+        $(min_select).appendTo(min_td);
+        $(min_td).appendTo(row);
+        $(min_td).appendTo(row);
+        var max_td = $(document.createElement("td"));
+        var span = $(document.createElement("span")).css({"padding-left": "5px", "padding-right": "5px"}).html("Max Level").appendTo(max_td);
+        $(max_select).appendTo(max_td);
+        $(max_td).appendTo(row);
     }
     if (debug > 0) {
         LiveLog("D: Showing selects: " + LOG.ShowDeingSelects);
@@ -1289,7 +1298,8 @@ function SelectItemToDisenchant() {
         var type = item.innerText.match(/(battle|enchant|augment)/i)[1];
         if (type === "Battle") { type = "Spell"; } //Remapping
         var rarity = item.className.match(/card(\w+)/i)[1];
-        if ($("#" + type + "-" + rarity).prop('checked')) { //New change
+        var level = item.innerText.match(/^(\d+)/)[1];
+        if ($("#" + type + "-" + rarity).prop('checked') && level >= LOG[type].MinLevel && level <= LOG[type].MaxLevel) { //New change
             itemToDE = item;
             i = possibleItems.length;
         }
