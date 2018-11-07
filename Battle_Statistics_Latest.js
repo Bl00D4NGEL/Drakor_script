@@ -64,6 +64,7 @@ dialog-width => String
 }
 */
 var debug = 0;
+var MAX_LEVEL = 100;
 var disableDoubleClickSelling = 0;
 var LOG;
 var debugId = "LiveLog";
@@ -1200,6 +1201,50 @@ function DisenchantSetup() {
             var span = $(document.createElement("span")).html(rarities[j].match(/(^\w)/)[1]).appendTo(td);
         }
         $(td).appendTo(row);
+
+        // Default values for min/max
+        if(LOG[selects[i]].MinLevel === undefined){
+            LOG[selects[i]].MinLevel = 1;
+        }
+        
+        if(LOG[selects[i]].MaxLevel === undefined){
+            LOG[selects[i]].MaxLevel = MAX_LEVEL;
+        }
+
+        var min_select = $(document.createElement("select")).attr({'id': selects[i] + "-min-level"}).on("change", function(){
+            LOG[$(this).attr('id').split("-")[0]].MinLevel = $(this).val();
+            localStorage.setItem("battleLog", JSON.stringify(LOG));
+        });
+        
+        var max_select = $(document.createElement("select")).attr({'id': selects[i] + "-max-level"}).on("change", function(){
+            LOG[$(this).attr('id').split("-")[0]].MaxLevel = $(this).val();
+            localStorage.setItem("battleLog", JSON.stringify(LOG));
+        });
+
+        for(var j=1;j<=MAX_LEVEL;j++){
+            var opt = $(document.createElement("option")).attr({'value': j}).text(j);
+                if(j == LOG[selects[i]].MinLevel){
+                var opt_2 = $(opt).clone();
+                opt.prop("selected", "selected");
+                $(opt).appendTo(min_select);
+                $(opt_2).appendTo(max_select);
+            }
+            else if(j == LOG[selects[i]].MaxLevel){
+                var opt_2 = $(opt).clone();
+                opt.prop("selected", "selected");
+                $(opt).appendTo(max_select);
+                $(opt_2).appendTo(min_select);
+            }
+            else{
+                var opt_2 = $(opt).clone();
+                $(opt).appendTo(max_select);
+                $(opt_2).appendTo(min_select);
+            }
+        }
+        var span = $(document.createElement("span")).css({"padding-left": "5px", "padding-right": "5px"}).html("Min Level").appendTo(td);
+        $(min_select).appendTo(td);
+        var span = $(document.createElement("span")).css({"padding-left": "5px", "padding-right": "5px"}).html("Max Level").appendTo(td);
+        $(max_select).appendTo(td);
     }
     if (debug > 0) {
         LiveLog("D: Showing selects: " + LOG.ShowDeingSelects);
