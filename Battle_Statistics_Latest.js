@@ -1298,7 +1298,7 @@ function SelectItemToDisenchant() {
         var type = item.innerText.match(/(battle|enchant|augment)/i)[1];
         if (type === "Battle") { type = "Spell"; } //Remapping
         var rarity = item.className.match(/card(\w+)/i)[1];
-        var level = item.innerText.match(/^(\d+)/)[1];
+        var level = parseInt(item.innerText.match(/^(\d+)/)[1]);
         if ($("#" + type + "-" + rarity).prop('checked') && level >= LOG[type].MinLevel && level <= LOG[type].MaxLevel) { //New change
             itemToDE = item;
             i = possibleItems.length;
