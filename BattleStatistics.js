@@ -30,9 +30,11 @@ const battleHelper = {
 
     getTotalLootItems: (battles) => battleHelper._getTotal(battles, battleHelper.getLoot),
     getAverageLootItems: (battles) => battleHelper._getAverage(battleHelper.getTotalLootItems(battles), battles),
+    getUnopenedLootBags: (lootBags) => lootBags.filter(lootBag => lootBag.opened === false),
 
     getTotalWonBattles: (battles) => battleHelper._getTotal(battles, (battle) => battleHelper.wasVictorious(battle) ? 1 : 0),
-    getTotalWonBattlesWithoutLoot: (battles) => battleHelper._getTotal(battles, (battle) => battleHelper.wasVictorious(battle) && battleHelper.getLoot(battle) === 0 ? 1 : 0)
+    getTotalWonBattlesWithoutLoot: (battles) => battleHelper._getTotal(battles, (battle) => battleHelper.wasVictorious(battle) && battleHelper.getLoot(battle) === 0 ? 1 : 0),
+    getTotalWonBattlesWithLoot: (battles) => battleHelper.getTotalWonBattles(battles) - battleHelper.getTotalWonBattlesWithoutLoot(battles)
 };
 
 const battleStatisticsStorage = {
@@ -70,12 +72,15 @@ function initBattleStatistics() {
 
     $(document).ajaxComplete(mapAjax);
     window.battleStatisticsStorage = battleStatisticsStorage;
-    window.addEventListener("unload", battleStatisticsStorage._saveToLocalStorage());
+    window.addEventListener("unload", battleStatisticsStorage._saveToLocalStorage);
 }
 
 function fixLootDisplay() {
     const store = battleStatisticsStorage.get();
-    modifyLootBag(getTotalLootBagItems(store.battles) - store.lootBags.length - parseInt(document.querySelector('#load-openloot span').innerText));
+    if (battleHelper.getTotalWonBattlesWithLoot(battleHelper.objectToArray(store.battles)) === store.lootBags.length) {
+        return;
+    }
+    modifyLootBag(getTotalLootBagItems(store.battles) - store.lootBags.reduce((total, lootBag) => total += lootBag.items.length, 0) - parseInt(document.querySelector('#load-openloot span').innerText));
 }
 
 function getTotalLootBagItems(battles) {
@@ -254,6 +259,9 @@ function getBattleData(responseText) {
             battleData.victory = true;
             battleData.experience = getGainedExperience(responseText);
             battleData.gold = getDroppedGold(responseText);
+            // TODO: Add gold gained from mystery gold?
+            // <div class="npcReward">0 gold has dropped.<span class="perkValue playTitle">(+12 gold)</span></div>
+
             battleData.loot = wasLootDropped(responseText) ? getAmountOfItemsInLootBag(responseText) : 0;
             if (battleData.loot > 1) {
                 modifyLootBag(battleData.loot - 1);
@@ -369,6 +377,7 @@ function handleOpenLootAll(responseText) {
     const lootBags = getLootBags(responseText);
     const store = battleStatisticsStorage.get();
     store.lootBags = store.lootBags.concat(lootBags);
+    store.lootBags.forEach(lootBag => lootBag.opened = true);
     resetLootBag();
     log('Opened ' + lootBags.length + ' loot bag(s) with ' + lootBags.reduce((total, lootBag) => total + lootBag.items.length, 0) + ' item(s)');
 }
@@ -384,7 +393,8 @@ function getLootBags(responseText) {
 function getLootBagData(lootBagText) {
     return {
         type: getLootBagType(lootBagText),
-        items: getLootBagItems(lootBagText)
+        items: getLootBagItems(lootBagText),
+        opened: false,
     };
 }
 
@@ -416,7 +426,9 @@ function resetLootBag() {
 }
 
 function handleOpenLoot(responseText) {
-    battleStatisticsStorage.get().lootBags.push(getLootBagData(responseText));
+    const lootBag = getLootBagData(responseText);
+    lootBag.opened = true;
+    battleStatisticsStorage.get().lootBags.push(lootBag);
 }
 
 function addShortcut(element, keyCode, keyName) {
