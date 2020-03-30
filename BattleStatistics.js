@@ -193,7 +193,7 @@ function trackSelling(element, clickButton = false) {
             store.sellData.itemsSold++;
             const cardElement = document.getElementById('card' + getCardId(element));
             const sellValue = isElementDurabilityRepairer(element) ? getDurabilityScrollValue(cardElement) : getItemValue(cardElement);
-            store.sellData.goldGained = sellValue;
+            store.sellData.goldGained += sellValue;
             log('Sold an item for ' + sellValue + ' gold');
             if (clickButton) {
                 $(getSellButtonForCard(element)).off('click'); // Remove listener to prevent double-logging
