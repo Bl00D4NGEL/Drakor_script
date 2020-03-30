@@ -61,6 +61,11 @@ const battleStatisticsStorage = {
     },
     _saveToLocalStorage: () => {
         localStorage.setItem(battleStatisticsStorage.storageKey, JSON.stringify(battleStatisticsStorage._store));
+    },
+    _reset: () => {
+        battleStatisticsStorage._store = {};
+        battleStatisticsStorage._init();
+        alert('Storage has been reset!');
     }
 };
 
@@ -108,6 +113,7 @@ function mapAjax(event, xhr, settings) {
 
 function handleArena() {
     document.querySelectorAll('.arenaContainer')[2].innerHTML = generateArenaOutput().replace(/\n/g, '<br>');
+    document.getElementById('reset-battle-statistics').addEventListener('click', battleStatisticsStorage._reset);
 }
 
 function generateArenaOutput() {
@@ -118,7 +124,8 @@ You looted ${battleHelper.getTotalLootItems(battles)} total items (${battleHelpe
 You sold ${store.sellData.itemsSold} items for ${store.sellData.goldGained} gold.
 You gained no loot in ${battleHelper.getTotalWonBattlesWithoutLoot(battles)} (${percent(battleHelper.getTotalWonBattlesWithoutLoot(battles), battleHelper.getTotalWonBattles(battles))}%) victorious battle(s).
 You gained a total of ${battleHelper.getTotalExperience(battles)} experience (${battleHelper.getAverageExperience(battles)} on average) and earned a total of ${battleHelper.getTotalGold(battles)} gold (${battleHelper.getAverageGold(battles)} on average).
-You won ${battleHelper.getTotalWonBattles(battles)} / ${battles.length} (${percent(battleHelper.getTotalWonBattles(battles), battles.length)}%) battle(s).`;
+You won ${battleHelper.getTotalWonBattles(battles)} / ${battles.length} (${percent(battleHelper.getTotalWonBattles(battles), battles.length)}%) battle(s).
+<div id="reset-battle-statistics" class="bv_button bv_small_font">Reset Statistics</div>`;
 }
 
 function percent(val1, val2) {
