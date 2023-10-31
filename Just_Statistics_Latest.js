@@ -8,18 +8,6 @@
 // ==/UserScript==
 
 
-/*
-Tables should have equal size in columns (tr.css?)
-labels for tradeskills missing?
-new tradeskills are not added to graphs thing
-*/
-/*
-New feature (Node data) still need to be tested on pattern skills (e.g. ring crafting) and Treasure Hunting
-*/
-String.prototype.paddingLeft = function (paddingValue) {
-    return String(paddingValue + this).slice(-paddingValue.length);
-};
-
 var LOG; //Global variable
 var RARITIES = ["Common", "Superior", "Rare", "Epic", "Legendary"];
 var RARITIES_N = ["Nothing", "Common", "Superior", "Rare", "Epic", "Legendary"];
@@ -76,199 +64,139 @@ $(document).ready(function () {
     SetupLog();
     Info("You're currently using Just Statistics version " + version + "\nThis version was last edited on the " + last_change);
 
-    $(".menuItem").on("click", function () {
-        if ($(this).attr('class').match(/menuFighting/i)) { return; } //Don't do this for combat nodes..
-        else {
-            GetAndSetRank();
-        }
-    });
     $(document).ajaxComplete(function (event, xhr, settings) {
-        if (xhr.status === 200) { //Check if ajax is OK
-            if (settings.url === "/adventure" || settings.url.match(/travel/)) {
-                $(".menuItem").on("click", function () {
-                    if ($(this).attr('class').match(/menuFighting/i)) { return; } //Don't do this for combat nodes..
-                    else {
-                        GetAndSetRank();
-                    }
-                });
-            }
-            else if (settings.url.match(/combinepattern/) && !settings.url.match(/action/)) {
-                GetAndSetRank();
-            }
-            else if (settings.url.match(/\/world\/action_/)) { //Look if the ajax is a tradeskill action
-                var amount, exp, gold, item, history, buffActive = false, titleData, actionStatus;
-                var tradeskill = settings.url.match(/action_([a-zA-Z]+).*?\//)[1];
-                if (tradeskill === "teleport") { Info("You teleported.. that's no tradeskill!"); return; }
-                GetAndSetRank();
-                tradeskill = (tradeskill[0].toUpperCase() + tradeskill.substring(1)); //Convert first char to uppercase (Just for beauty reasons)
-                if (!LOG[tradeskill]) {//If tradeskill is not present in log create it
-                    Info("New Tradeskill: '" + tradeskill + "'");
-                    LOG[tradeskill] = {};
-                    LOG[tradeskill].Rarity = {};
-                    for (var rar = 0; rar < RARITIES.length; rar++) {
-                        LOG[tradeskill].Rarity[RARITIES[rar]] = 0;
-                    }
-                    LOG[tradeskill].Items = {};
-                    LOG[tradeskill].Multi = {};
-                    LOG[tradeskill].Node = {};
-                    LOG[tradeskill].Attempts = 0;
-                    LOG[tradeskill].Indexes = "";
-                    LOG[tradeskill].Experience = 0;
-                    var op = $(document.createElement("option"))
-                        .attr({ name: tradeskill, value: tradeskill })
-                        .text(tradeskill)
-                        .appendTo($("#tradeSelect"));
-                    op.clone().appendTo($("#tradeSelectRarityChart"));
+        if (xhr.status !== 200) { //Check if ajax is OK
+            return
+        }
+
+        if (settings.url.match(/\/world\/action_/)) { //Look if the ajax is a tradeskill action
+            var amount, exp, gold, item, history, buffActive = false, titleData, actionStatus;
+            var tradeskill = settings.url.match(/action_([a-zA-Z]+).*?\//)[1];
+            if (tradeskill === "teleport") { Info("You teleported.. that's no tradeskill!"); return; }
+            tradeskill = (tradeskill[0].toUpperCase() + tradeskill.substring(1)); //Convert first char to uppercase (Just for beauty reasons)
+            if (!LOG[tradeskill]) {//If tradeskill is not present in log create it
+                Info("New Tradeskill: '" + tradeskill + "'");
+                LOG[tradeskill] = {};
+                LOG[tradeskill].Rarity = {};
+                for (var rar = 0; rar < RARITIES.length; rar++) {
+                    LOG[tradeskill].Rarity[RARITIES[rar]] = 0;
                 }
-                if (!xhr.responseText.match(/depleted/i)) {
-                    try {
-                        // var regex = /<div class="roundResult areaName">(.*?exp\)?<\/span><\/div>)/gi;
-                        // var result = regex.exec(xhr.responseText); //Basic regex to get only the necessary data.
-                        var result = xhr.responseText.match(/<div class="roundResult areaName">.*?(?:exp|beginner)\s*\)?<\/span.*?><\/div>/gi);
-                        //Attention, creating skills will confuse this because not every creation gives exp, but rather a full attempt will.
-                        if (result) { //This will always say true UNLESS you worked in another window thus the result will be empty -> no log entry will be made
-                            var nodeName = $(".locationTitle").text();
-                            //Attention! If the node is a settlement node, the level-range can be adjusted. Same goes for TH => adjust node level range to currently selected level range
-                            if (nodeName.match(/settlement|treasure/i)) {
-                                Debug("You're working on a Settlement node or a TH node!");
-                                nodeName = nodeName.match(/(.*?)\(/)[1]; //Only the text is what we want for the log.
-                                var selectLevelFrom = $("#minRange").val();
-                                var selectLevelTo = $("#maxRange").val();
-                                nodeName += "(Node Level " + selectLevelFrom + " - " + selectLevelTo + ")";
-                                Debug("Changed node-name to: " + nodeName);
+                LOG[tradeskill].Items = {};
+                LOG[tradeskill].Multi = {};
+                LOG[tradeskill].Node = {};
+                LOG[tradeskill].Attempts = 0;
+                LOG[tradeskill].Indexes = "";
+                LOG[tradeskill].Experience = 0;
+                var op = $(document.createElement("option"))
+                    .attr({ name: tradeskill, value: tradeskill })
+                    .text(tradeskill)
+                    .appendTo($("#tradeSelect"));
+                op.clone().appendTo($("#tradeSelectRarityChart"));
+            }
+            if (!xhr.responseText.match(/depleted/i)) {
+                try {
+                    var result = xhr.responseText.match(/<div class="roundResult areaName">.*?(?:exp|beginner)\s*\)?<\/span.*?><\/div>/gi);
+                    //Attention, creating skills will confuse this because not every creation gives exp, but rather a full attempt will.
+                    if (!result) { //This will always say true UNLESS you worked in another window thus the result will be empty -> no log entry will be made
+                        return
+                    }
+                    var nodeName = $(".locationTitle").text();
+                    //Attention! If the node is a settlement node, the level-range can be adjusted. Same goes for TH => adjust node level range to currently selected level range
+                    if (nodeName.match(/settlement|treasure/i)) {
+                        Debug("You're working on a Settlement node or a TH node!");
+                        nodeName = nodeName.match(/(.*?)\(/)[1]; //Only the text is what we want for the log.
+                        var selectLevelFrom = $("#minRange").val();
+                        var selectLevelTo = $("#maxRange").val();
+                        nodeName += "(Node Level " + selectLevelFrom + " - " + selectLevelTo + ")";
+                        Debug("Changed node-name to: " + nodeName);
+                    }
+                    var temp = result[0].match(/^<div.*?>(.*?(?:exp|beginner)\s*\)?<\/span.*?>)<\/div>/gi);
+                    if (result.length === 1) {
+                        if (result[0].match(/^<div class="roundResult areaName">Your combines are complete./)) {
+                            titleData = "Creation done!";
+                            actionStatus = 'alert';
+                        }
+                        result = result[0].replace("<div class=\"roundResult areaName\">Your combines are complete.</div>", "");
+                        result = result.match(/^<div.*?>(.*?(?:exp|beginner)\s*\)?<\/span.*?>)<\/div>/i)[1];
+                        result = result.replace(/<script>.*?<\/script>/, "");
+                        ProcessData(xhr.responseText, result, tradeskill, nodeName);
+                    }
+                    else {
+                        for (var i = 0; i < result.length; i++) {
+                            if (result[i].match(/^<div class="roundResult areaName">Your combines are complete./)) {
+                                titleData = "Creation done!";
+                                actionStatus = 'alert';
                             }
-                            var temp = result[0].match(/^<div.*?>(.*?(?:exp|beginner)\s*\)?<\/span.*?>)<\/div>/gi);
-                            if (result.length === 1) {
-                                if (result[0].match(/^<div class="roundResult areaName">Your combines are complete./)) {
-                                    titleData = "Creation done!";
-                                    actionStatus = 'alert';
-                                }
-                                result = result[0].replace("<div class=\"roundResult areaName\">Your combines are complete.</div>", "");
-                                result = result.match(/^<div.*?>(.*?(?:exp|beginner)\s*\)?<\/span.*?>)<\/div>/i)[1];
-                                result = result.replace(/<script>.*?<\/script>/, "");
-                                ProcessData(xhr.responseText, result, tradeskill, nodeName);
-                            }
-                            else {
-                                for (var i = 0; i < result.length; i++) {
-                                    if (result[i].match(/^<div class="roundResult areaName">Your combines are complete./)) {
-                                        titleData = "Creation done!";
-                                        actionStatus = 'alert';
-                                    }
-                                    result[i] = result[i].replace("<div class=\"roundResult areaName\">Your combines are complete.</div>", "");
-                                    result[i] = result[i].replace(/<script>.*?<\/script>/, "");
-                                    result[i] = result[i].match(/^<div.*?>(.*?<\/span.*?>)<\/div>/i)[1];
-                                    ProcessData(xhr.responseText, result[i], tradeskill, nodeName);
-                                }
-                            }
-                            LOG.Misc.Attempts.Total++;
-                            LOG.Misc.Attempts.Node = $(".roundResult").length;
-                            //Drop analysis done, let's start with the rest
-                            var scripts = xhr.responseText.match(/<script>(.*?)<\/script>/g);
-                            var miscData = scripts[scripts.length - 1];
-                            var currentExp = miscData.match(/\(\'exp\:\s*(.*?)\s\//mi)[1].replace(",", "");
-                            var neededExp = miscData.match(/\(\'exp\:\s*.*?\/\s*(.*?)\s\(/mi)[1].replace(",", "");
-                            var attemptTime;
-                            if (!settings.url.match(/Disenchanting/i)) {
-                                attemptTime = miscData.match(/startTimer\((\d+),*/mi)[1];
-                                if (attemptTime < 5000) { attemptTime = 60000; } //Node depleted
-                            }
-                            else {
-                                attemptTime = 0;
-                            }
-                            //Calculate the needed attempts to next level and update div text in the dialog
-                            GetAttemptsToNextLevel(currentExp, neededExp, attemptTime, LOG[tradeskill].Experience, LOG[tradeskill].Attempts, tradeskill);
-                            //Titlechanging data
-                            var buffrarity = xhr.responseText.match(/dricon\scard(\w+)\sslot_default/i);
-                            if (buffrarity[1] !== 'None') { buffActive = true; }
-                            if (titleData !== 'Creation done!') {
-                                if (xhr.responseText.match(/\d+%\sof/gi)) {
-                                    titleData = xhr.responseText.match(/(\d+)%\sof/i)[1] + "% of Node left";
-                                }
-                                else if (xhr.responseText.match(/x\d+\.\.\./)) {
-                                    titleData = xhr.responseText.match(/x(\d+)\.\.\./)[1] + " attempts left";
-                                }
-                            }
-                            DisplayData();//Rarity-, Multi- and Materialoverview
+                            result[i] = result[i].replace("<div class=\"roundResult areaName\">Your combines are complete.</div>", "");
+                            result[i] = result[i].replace(/<script>.*?<\/script>/, "");
+                            result[i] = result[i].match(/^<div.*?>(.*?<\/span.*?>)<\/div>/i)[1];
+                            ProcessData(xhr.responseText, result[i], tradeskill, nodeName);
                         }
                     }
-                    catch (e) {
-                        Error("Handling Responsetext: " + e.message);
+                    LOG.Misc.Attempts.Total++;
+                    LOG.Misc.Attempts.Node = $(".roundResult").length;
+                    //Drop analysis done, let's start with the rest
+                    var scripts = xhr.responseText.match(/<script>(.*?)<\/script>/g);
+                    var miscData = scripts[scripts.length - 1];
+                    var currentExp = miscData.match(/\(\'exp\:\s*(.*?)\s\//mi)[1].replace(",", "");
+                    var neededExp = miscData.match(/\(\'exp\:\s*.*?\/\s*(.*?)\s\(/mi)[1].replace(",", "");
+                    var attemptTime;
+                    if (!settings.url.match(/Disenchanting/i)) {
+                        attemptTime = miscData.match(/startTimer\((\d+),*/mi)[1];
+                        if (attemptTime < 5000) { attemptTime = 60000; } //Node depleted
                     }
-                }
-                else {
-                    titleData = "Node depleted!";
-                    actionStatus = "alert";
-                }
-            }
-            else if (settings.url.match(/workers\/collectworker/)) {
-                var material = xhr.responseText.match(/\[(.*?)\]/)[1];
-                HandleOfflineWorker("delete", material);
-            }
-            else if (settings.url.match(/workers/i)) {
-                var text = xhr.responseText;
-                var items = text.match(/(<div>Worker collecting.*?<\/div><\/div>)/ig);
-                if (!items) { return; }
-                for (var i = 0; i < items.length; i++) {
-                    var material = items[i].match(/\[(.*?)\]/);
-                    var time = items[i].match(/Collect <b>\d+<\/b> in (.*?)<\/div>/);
-                    if (!time) { HandleOfflineWorker("delete", material[1]); }
                     else {
-                        var seconds = ConvertStringIntoSeconds(time[1]);
-                        var utc = new Date(new Date().getTime() + parseInt(seconds) * 1000).getTime();
-                        var param = {
-                            "Material": material[1],
-                            "Time": utc
-                        };
-                        HandleOfflineWorker("check", param);
+                        attemptTime = 0;
                     }
+                    //Calculate the needed attempts to next level and update div text in the dialog
+                    GetAttemptsToNextLevel(currentExp, neededExp, attemptTime, LOG[tradeskill].Experience, LOG[tradeskill].Attempts, tradeskill);
+                    //Titlechanging data
+                    var buffrarity = xhr.responseText.match(/dricon\scard(\w+)\sslot_default/i);
+                    if (buffrarity[1] !== 'None') { buffActive = true; }
+                    if (titleData !== 'Creation done!') {
+                        if (xhr.responseText.match(/\d+%\sof/gi)) {
+                            titleData = xhr.responseText.match(/(\d+)%\sof/i)[1] + "% of Node left";
+                        }
+                        else if (xhr.responseText.match(/x\d+\.\.\./)) {
+                            titleData = xhr.responseText.match(/x(\d+)\.\.\./)[1] + " attempts left";
+                        }
+                    }
+                    DisplayData();//Rarity-, Multi- and Materialoverview
+                }
+                catch (e) {
+                    Error("Handling Responsetext: " + e.message);
+                }
+            }
+            else {
+                titleData = "Node depleted!";
+                actionStatus = "alert";
+            }
+        }
+        else if (settings.url.match(/workers\/collectworker/)) {
+            var material = xhr.responseText.match(/\[(.*?)\]/)[1];
+            HandleOfflineWorker("delete", material);
+        }
+        else if (settings.url.match(/workers/i)) {
+            var text = xhr.responseText;
+            var items = text.match(/(<div>Worker collecting.*?<\/div><\/div>)/ig);
+            if (!items) { return; }
+            for (var i = 0; i < items.length; i++) {
+                var material = items[i].match(/\[(.*?)\]/);
+                var time = items[i].match(/Collect <b>\d+<\/b> in (.*?)<\/div>/);
+                if (!time) { HandleOfflineWorker("delete", material[1]); }
+                else {
+                    var seconds = ConvertStringIntoSeconds(time[1]);
+                    var utc = new Date(new Date().getTime() + parseInt(seconds) * 1000).getTime();
+                    var param = {
+                        "Material": material[1],
+                        "Time": utc
+                    };
+                    HandleOfflineWorker("check", param);
                 }
             }
         }
     });
 });
-
-function GetAndSetRank() {
-
-    return;
-    // TEMPORARY disable this
-
-
-
-    var log = JSON.parse(localStorage.getItem("localLog"));
-    if (log.profileId === undefined) {
-        $.ajax("/profile").success(function (data) {
-            var profId = data.match(/<a href="\/armory\/profile\/(\d+)\?show=noheader/);
-            if (profId) {
-                var log = JSON.parse(localStorage.getItem("localLog"));
-                log.profileId = profId[1];
-                localStorage.setItem("localLog", JSON.stringify(log));
-            }
-        });
-    }
-    else {
-        $.ajax("/armory/profile/" + log.profileId + "?show=noheader").success(function (data) {
-            var trades = data.match(/<div class="tradeskillBox".*?>.*?<\/div><\/div>/gi);
-            var titleText = $(".skillTitle").html();
-            titleText = titleText.replace(/<.*?>/g, "");
-            var current_trade = titleText.match(/^([\w\s]+)\s/)[1];
-            for (var i = 0; i < trades.length; i++) {
-                var trade = trades[i];
-                var tradeskill = trade.match(/<span class="tradeLabel">(.*?\))<\/span>/)[1];
-                tradeskill = tradeskill.replace(/<.*?>/g, "");
-                var real_trade = tradeskill.match(/^([\w\s]+)\s/)[1];
-                if (real_trade === current_trade) {
-                    //console.log("TRADESKILL: " + real_trade);
-                    var level = trade.match(/<div class="tradeLevel">(\d+)<\/div>/)[1];
-                    //console.log("LEVEL: " + level);
-                    var rank = tradeskill.match(/(\(#[\d,]+\))/)[1];
-                    //console.log("RANK: " + rank);
-                    $(".skillTitle").html(real_trade + " - Level " + level + " " + rank);
-                }
-
-            }
-        });
-    }
-}
 
 function addCommas(x) {
     return x.toString().replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1,");
@@ -288,10 +216,6 @@ function ProcessData(responseText, history, tradeskill, nodeName) {
             exp = history.match(/\+<b>(\d+)<\/b>/i);
             if (!exp) { //If this still fails for whatever reason, just default to 0 exp
                 exp = 0;
-                //Okay one last time since you might just not have enough inventory spaces
-                if (history.match(/get more space/)) {
-                    Error("Out of inventory space!");
-                }
                 //Log the error in the history (The last resort for this).
                 Error("When processing the experience gained an error occured and the gained exp was set to 0..\nMessage: " + e.message);
                 if (!LOG.Misc.Log[LOG.Misc.Index]) {
@@ -320,7 +244,6 @@ function ProcessData(responseText, history, tradeskill, nodeName) {
             LOG[tradeskill][key].Experience = 0;
             LOG[tradeskill][key].Attempts = 0;
         }
-        if (!LOG[tradeskill].Node) { LOG[tradeskill].Node = {}; } //For older versions
         if (!LOG[tradeskill].Node[nodeName]) {
             Info("NEW NODE: '" + nodeName + "'");
             LOG[tradeskill].Node[nodeName] = {};
@@ -408,7 +331,6 @@ function ProcessData(responseText, history, tradeskill, nodeName) {
             LOG[tradeskill].Node[nodeName].Items[item] = {};
             LOG[tradeskill].Node[nodeName].Items[item].Attempts = 1;
             LOG[tradeskill].Node[nodeName].Items[item].Rarity = rarity; //This will take the last-generated rarity on this function (Pattern that create different rarities *will* bug on this.
-
         }
         else {
             LOG[tradeskill].Node[nodeName].Items[item].Attempts++;
@@ -1135,10 +1057,6 @@ function SetupLog() {
         .css("text-align", "left")
         .appendTo(logDiv);
 
-    var graphDiv = $(document.createElement("div"))
-        .attr({ id: "graphDiv", "class": "statisticDiv" })
-        .appendTo(logDiv);
-
     var graph_div = $(document.createElement("div"))
         .attr({ id: "graph_div", "class": "statisticDiv" })
         .css("width", "auto")
@@ -1160,91 +1078,6 @@ function SetupLog() {
     }
 
     formDiv.append("More Statistics comming soon!");
-    /*
-    $(document.createElement("button")).html("Test!").on("click", function(){
-        var trade = "Mining";
-        var data = {
-            "Attempts": [],
-            "Amount": []
-
-        };
-        for(key in LOG[trade]){
-            var attempts = {};
-            var amounts = {};
-            if(!key.match(/^\d+$/)){continue;} //Only select the dates
-            attempts.Index = key;
-            amounts.Index = key;
-            attempts.Value = LOG[trade][key].Attempts;
-            amounts.Value = LOG[trade][key].Experience;
-            data.Attempts.push(attempts);
-            data.Amount.push(amounts);
-        }
-        MakePolyChart(data);
-    }).appendTo(formDiv);
-    /*
-        $(document.createElement("span")).html("Select the details you want to display<br/>").appendTo(graphForm);
-        var details = ["Amount", "Attempts", "Experience"];
-        for (var i = 0; i < details.length; i++) {
-            $(document.createElement("input")).attr({ type: "checkbox", class: "checkbox-graph", id: "graph-" + details[i] }).appendTo(graphForm);
-            $(document.createElement("span")).text(details[i]).on("click", function () { $("#graph-" + $(this).text()).click(); }).appendTo(graphForm);
-        }
-        var fromToArray = ["from", "to"]; //For id-mapping
-        var selectArray = ["Year", "Month", "Day", "Hour"]; //For select-id-
-        for (var j = 0; j < fromToArray.length; j++) {
-            $(document.createElement("span")).html("<br/>Select data " + fromToArray[j] + " (Format: Year/Month/Day/Hour)<br/>").appendTo(graphForm);
-            for (var element = 0; element < selectArray.length; element++) {
-                var isCurrent = false;
-                var d = new Date();
-                d.setTime(d.getTime() + (-3 + d.getTimezoneOffset() / 60) * 60 * 60 * 1000);
-                var select = $(document.createElement("select")).attr({ id: fromToArray[j] + "-" + selectArray[element] }).appendTo(graphForm);
-                if (selectArray[element] === "Year") {
-                    for (var year = 2016; year <= d.getFullYear() ; year++) {
-                        $(document.createElement("option")).attr({ value: year }).text(year).appendTo(select);
-                    }
-                }
-                else if (selectArray[element] === "Month") {
-                    var monthArray = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-                    for (var month = 0; month < monthArray.length; month++) {
-                        if (d.getMonth() === month) { isCurrent = true; } else { isCurrent = false; }
-                        $(document.createElement("option")).attr({ value: (month < 10 ? '0' : '') + month, selected: isCurrent }).text(monthArray[month]).appendTo(select);
-                    }
-                }
-                else if (selectArray[element] === "Day") {
-                    for (var day = 1; day < 32; day++) {
-                        if (parseInt(d.getDate()) - 1 === day && fromToArray[j] === "from") { isCurrent = true; }
-                        else if (parseInt(d.getDate()) === day && fromToArray[j] === "to") { isCurrent = true; }
-                        else { isCurrent = false; }
-                        $(document.createElement("option")).attr({ value: (day < 10 ? '0' : '') + day, selected: isCurrent }).text(day).appendTo(select);
-                    }
-                }
-                else {
-                    for (var hour = 0; hour < 24; hour++) {
-                        if (d.getHours() === hour) { isCurrent = true; } else { isCurrent = false; }
-                        $(document.createElement("option")).attr({ value: (hour < 10 ? '0' : '') + hour, selected: isCurrent }).text(hour).appendTo(select);
-                    }
-                }
-            }
-
-        }
-        /*
-        $(document.createElement("button")).attr({ type: "submit", "disabled": "disabled" }).text("Show graph").on("click", function () {
-            var graphArray = [];
-            var checkboxes = $(".checkbox-graph");
-            for (var i = 0; i < checkboxes.length; i++) {
-                if ($(checkboxes[i]).prop('checked')) {
-                    graphArray.push($(checkboxes[i]).attr('id').substring(6));
-                }
-            }
-            if (graphArray.length === 0) { alert("You need to at least select one of the three details to display.."); return; }
-            var timeFrom = $("#from-Year").val() + $("#from-Month").val() + $("#from-Day").val() + $("#from-Hour").val();
-            var timeTo = $("#to-Year").val() + $("#to-Month").val() + $("#to-Day").val() + $("#to-Hour").val();
-            if (parseInt(timeFrom) > parseInt(timeTo)) { alert("Your date range is not correct, check again!"); return; }
-            var jsonArray = CollectDataForChart(log[$(tradeskillSelect).val()], graphArray, timeFrom, timeTo);
-            DrawChart(jsonArray, "", "graph");
-        }).appendTo(graphForm);
-        */
-    //Rarity in bar chart
-    //drawChart([log[tradeskill].Rarity],"Stats", "graph_div");
 
     var tradeLog = $(document.createElement("div"))
         .attr({ id: "log" })
